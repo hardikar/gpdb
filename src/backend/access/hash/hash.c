@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hash.c,v 1.98.2.1 2008/11/13 17:42:18 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hash.c,v 1.99 2008/03/15 20:46:31 tgl Exp $
  *
  * NOTES
  *	  This file contains only the public interface routines.
@@ -17,11 +17,13 @@
  */
 
 #include "postgres.h"
-#include "miscadmin.h"
 #include "access/genam.h"
 #include "access/hash.h"
 #include "catalog/index.h"
 #include "commands/vacuum.h"
+#include "optimizer/plancat.h"
+
+#include "miscadmin.h"
 #include "nodes/tidbitmap.h"
 #include "cdb/cdbfilerepprimary.h"
 
@@ -49,6 +51,7 @@ hashbuild(PG_FUNCTION_ARGS)
 	Relation	index = (Relation) PG_GETARG_POINTER(1);
 	IndexInfo  *indexInfo = (IndexInfo *) PG_GETARG_POINTER(2);
 	IndexBuildResult *result;
+	BlockNumber	relpages;
 	double		reltuples;
 	HashBuildState buildstate;
 
@@ -60,8 +63,11 @@ hashbuild(PG_FUNCTION_ARGS)
 		elog(ERROR, "index \"%s\" already contains data",
 			 RelationGetRelationName(index));
 
-	/* initialize the hash index metadata page */
-	_hash_metapinit(index);
+	/* estimate the number of rows currently present in the table */
+	estimate_rel_size(heap, NULL, &relpages, &reltuples);
+
+	/* initialize the hash index metadata page and initial buckets */
+	_hash_metapinit(index, reltuples);
 
 	/* build the index */
 	buildstate.indtuples = 0;
