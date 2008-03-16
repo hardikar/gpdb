@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashpage.c,v 1.73 2008/03/15 20:46:31 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashpage.c,v 1.74 2008/03/16 23:15:08 tgl Exp $
  *
  * NOTES
  *	  Postgres hash pages look like ordinary relation pages.  The opaque
@@ -330,13 +330,14 @@ _hash_chgbufaccess(Relation rel __attribute__((unused)),
  *				the initial buckets, and the initial bitmap page.
  *
  * The initial number of buckets is dependent on num_tuples, an estimate
- * of the number of tuples to be loaded into the index initially.
+ * of the number of tuples to be loaded into the index initially.  The
+ * chosen number of buckets is returned.
  *
  * We are fairly cavalier about locking here, since we know that no one else
  * could be accessing this index.  In particular the rule about not holding
  * multiple buffer locks is ignored.
  */
-void
+uint32
 _hash_metapinit(Relation rel, double num_tuples)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
@@ -458,10 +459,21 @@ _hash_metapinit(Relation rel, double num_tuples)
 	metap->hashm_firstfree = 0;
 
 	/*
+	 * Release buffer lock on the metapage while we initialize buckets.
+	 * Otherwise, we'll be in interrupt holdoff and the CHECK_FOR_INTERRUPTS
+	 * won't accomplish anything.  It's a bad idea to hold buffer locks
+	 * for long intervals in any case, since that can block the bgwriter.
+	 */
+	_hash_chgbufaccess(rel, metabuf, HASH_WRITE, HASH_NOLOCK);
+
+	/*
 	 * Initialize the first N buckets
 	 */
 	for (i = 0; i < num_buckets; i++)
 	{
+		/* Allow interrupts, in case N is huge */
+		CHECK_FOR_INTERRUPTS();
+
 		buf = _hash_getnewbuf(rel, BUCKET_TO_BLKNO(metap, i));
 		pg = BufferGetPage(buf);
 		pageopaque = (HashPageOpaque) PageGetSpecialPointer(pg);
@@ -472,6 +484,9 @@ _hash_metapinit(Relation rel, double num_tuples)
 		pageopaque->hasho_page_id = HASHO_PAGE_ID;
 		_hash_wrtbuf(rel, buf);
 	}
+
+	/* Now reacquire buffer lock on metapage */
+	_hash_chgbufaccess(rel, metabuf, HASH_NOLOCK, HASH_WRITE);
 
 	/*
 	 * Initialize first bitmap page
@@ -484,6 +499,8 @@ _hash_metapinit(Relation rel, double num_tuples)
 	MIRROREDLOCK_BUFMGR_UNLOCK;
 	// -------- MirroredLock ----------
 	
+
+	return num_buckets;
 }
 
 /*
