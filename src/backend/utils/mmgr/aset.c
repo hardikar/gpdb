@@ -729,7 +729,11 @@ AllocSetContextCreate(MemoryContext parent,
 	 * allocChunkLimit a power of two, because the requested and
 	 * actually-allocated sizes of any chunk must be on the same side of the
 	 * limit, else we get confused about whether the chunk is "big".
+	 *
+	 * Also, allocChunkLimit must not exceed ALLOCSET_SEPARATE_THRESHOLD.
 	 */
+	Assert(ALLOC_CHUNK_LIMIT == ALLOCSET_SEPARATE_THRESHOLD);
+
 	context->allocChunkLimit = ALLOC_CHUNK_LIMIT;
 	while (context->allocChunkLimit >
 		   (Size) (maxBlockSize - ALLOC_BLOCKHDRSZ - ALLOC_CHUNKHDRSZ))
