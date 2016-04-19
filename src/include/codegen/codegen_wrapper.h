@@ -174,7 +174,7 @@ ExecVariableListCodegenEnroll(ExecVariableListFn regular_func_ptr,
  * Initialize LLVM library
  */
 #define init_codegen() \
-	if (codegen) { \
+	if (init_codegen) { \
 			if (InitCodegen() == 0) { \
 				ereport(FATAL, \
 					(errcode(ERRCODE_INTERNAL_ERROR), \
