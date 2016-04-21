@@ -43,6 +43,7 @@ extern "C" {
 using gpcodegen::CodegenManager;
 
 CodegenManager::CodegenManager(const std::string& module_name) {
+  module_name_ = module_name;
   codegen_utils_.reset(new gpcodegen::CodegenUtils(module_name));
 }
 
@@ -75,7 +76,7 @@ unsigned int CodegenManager::PrepareGeneratedFunctions() {
 
   // Call CodegenUtils to compile entire module
   bool compilation_status = codegen_utils_->PrepareForExecution(
-      gpcodegen::CodegenUtils::OptimizationLevel::kNone, true);
+      gpcodegen::CodegenUtils::OptimizationLevel::kNone, true, error_msg);
 
   if (!compilation_status) {
     return success_count;
