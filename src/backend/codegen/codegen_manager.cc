@@ -36,6 +36,10 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Casting.h"
 
+extern "C" {
+#include <utils/elog.h>
+}
+
 using gpcodegen::CodegenManager;
 
 CodegenManager::CodegenManager(const std::string& module_name) {
