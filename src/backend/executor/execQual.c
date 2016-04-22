@@ -5943,6 +5943,7 @@ ExecProject(ProjectionInfo *projInfo, ExprDoneCond *isDone)
 	}
 	else
 	{
+		elog(INFO, "Calling ExecTargetList");
 		if (ExecTargetList(projInfo->pi_targetlist,
 						   projInfo->pi_exprContext,
 						   slot_get_values(slot),
