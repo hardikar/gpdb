@@ -689,6 +689,11 @@ ExecGetResultType(PlanState *planstate)
 	return slot->tts_tupleDescriptor;
 }
 
+extern void
+ExecVariableList(ProjectionInfo *projInfo,
+				 Datum *values,
+				 bool *isnull);
+
 /* ----------------
  *		ExecBuildProjectionInfo
  *
