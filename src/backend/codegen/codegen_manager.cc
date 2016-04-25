@@ -78,7 +78,7 @@ unsigned int CodegenManager::PrepareGeneratedFunctions() {
   // Call CodegenUtils to compile entire module
   std::string error_msg = "";
   bool compilation_status = codegen_utils_->PrepareForExecution(
-      gpcodegen::CodegenUtils::OptimizationLevel::kNone, true, error_msg);
+      gpcodegen::CodegenUtils::OptimizationLevel::kDefault, true, error_msg);
 
   if (!compilation_status) {
     return success_count;
