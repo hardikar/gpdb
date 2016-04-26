@@ -571,12 +571,12 @@ bool ExecVariableListCodegen::GenerateCodeInternal(CodegenUtils* codegen_utils) 
 
   if (isGenerated)
   {
-    elog(INFO, "ExecVariableList was generated successfully!");
+    elog(DEBUG1, "ExecVariableList was generated successfully!");
     return true;
   }
   else
   {
-    elog(INFO, "ExecVariableList generation failed!");
+    elog(DEBUG1, "ExecVariableList generation failed!");
     return false;
   }
 }
