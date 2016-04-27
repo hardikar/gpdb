@@ -15,7 +15,11 @@
 #include "pg_config.h"
 #include "c.h"
 
+#ifndef __cplusplus
+#include "postgres.h"
+#else
 typedef int64 Datum;
+#endif
 
 /*
  * Code that needs to be shared irrespective of whether USE_CODEGEN is enabled or not.
@@ -66,13 +70,13 @@ typedef enum CodegenFuncLifespan
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
 /*
  * Forward extern declaration of code generated functions if code gen is enabled
  */
-
 extern void ExecVariableList(struct ProjectionInfo *projInfo, Datum *values, bool *isnull);
 
-#endif
 
 /*
  * Do one-time global initialization of LLVM library. Returns 1
