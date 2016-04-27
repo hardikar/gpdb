@@ -144,9 +144,6 @@ int GetMax(int* numbers, int length) {
 }
 
 
-/* void *memset(void *s, int c, size_t n); */
-
-
 bool ExecVariableListCodegen::GenerateExecVariableList(
     gpcodegen::CodegenUtils* codegen_utils) {
 
@@ -532,37 +529,17 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
    * Fallback block
    */
   irb->SetInsertPoint(fallback_block);
-  llvm::PHINode* llvm_error = irb->CreatePHI(codegen_utils->GetType<int>(), 10);
+  llvm::PHINode* llvm_error = irb->CreatePHI(codegen_utils->GetType<int>(), 4);
   llvm_error->addIncoming(codegen_utils->GetConstant(0), slot_check_block);
   llvm_error->addIncoming(codegen_utils->GetConstant(1), tuple_type_check_block);
   llvm_error->addIncoming(codegen_utils->GetConstant(2), heap_tuple_check_block);
   llvm_error->addIncoming(codegen_utils->GetConstant(3), null_check_block);
 
-  auto regular_func_pointer = GetRegularFuncPointer();
-  llvm::Function* llvm_regular_function =
-		  codegen_utils->RegisterExternalFunction(regular_func_pointer);
-  assert(llvm_regular_function != nullptr);
+  elogwrapper.CreateElog(DEBUG1, "Falling back to regular ExecVariableList, reason = %d", llvm_error);
 
-  std::vector<llvm::Value*> forwarded_args;
-
-  for (llvm::Argument& arg : ExecVariableList_func->args()) {
-	  forwarded_args.push_back(&arg);
-  }
-
-  llvm::CallInst* call_fallback_func = codegen_utils->ir_builder()->CreateCall(
-        llvm_regular_function, forwarded_args);
-
-  /* Return the result of the call, or void if the function returns void. */
-  if (std::is_same<
-		  gpcodegen::codegen_utils_detail::FunctionTypeUnpacker<
-		  decltype(regular_func_pointer)>::R, void>::value) {
-	  codegen_utils->ir_builder()->CreateRetVoid();
-  }
-  else
-  {
-	  codegen_utils->ir_builder()->CreateRet(call_fallback_func);
-  }
-
+  codegen_utils->CreateFallback<ExecVariableListFn>(
+      codegen_utils->RegisterExternalFunction(GetRegularFuncPointer()),
+      ExecVariableList_func);
   return true;
 }
 
