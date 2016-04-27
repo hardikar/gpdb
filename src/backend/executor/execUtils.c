@@ -817,8 +817,6 @@ ExecBuildProjectionInfo(List *targetList,
 			}
 			char	   *slotptr = ((char *) projInfo->pi_exprContext) + varSlotOffsets[resind];
 			TupleTableSlot *varSlot = *((TupleTableSlot **) slotptr);
-			elog(INFO, "FOR_LOOP varSlot = %x", varSlot);
-
 
 		}
 		projInfo->pi_lastInnerVar = lastInnerVar;

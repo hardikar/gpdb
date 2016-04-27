@@ -5934,8 +5934,6 @@ ExecProject(ProjectionInfo *projInfo, ExprDoneCond *isDone)
 		if (isDone)
 			*isDone = ExprSingleResult;
 
-		elog(INFO, "Calling ExecVariableList");
-
 		call_ExecVariableList(projInfo,
 						 slot_get_values(slot),
 						 slot_get_isnull(slot));
@@ -5943,7 +5941,6 @@ ExecProject(ProjectionInfo *projInfo, ExprDoneCond *isDone)
 	}
 	else
 	{
-		elog(INFO, "Calling ExecTargetList");
 		if (ExecTargetList(projInfo->pi_targetlist,
 						   projInfo->pi_exprContext,
 						   slot_get_values(slot),
