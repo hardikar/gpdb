@@ -46,6 +46,79 @@ using gpcodegen::ExecVariableListCodegen;
 
 constexpr char ExecVariableListCodegen::kExecVariableListPrefix[];
 
+class ElogWrapper {
+ public:
+  ElogWrapper(gpcodegen::CodegenUtils* codegen_utils) :
+      codegen_utils_(codegen_utils) {
+    SetupElog();
+  }
+  ~ElogWrapper() {
+    TearDownElog();
+  }
+
+  template<typename... V>
+  void CreateElog(
+      llvm::Value* llvm_elevel,
+      llvm::Value* llvm_fmt,
+      V ... args ) {
+
+    // TODO Add asserts
+
+    codegen_utils_->ir_builder()->CreateCall(
+        llvm_elog_start_, {
+            codegen_utils_->GetConstant(""), // Filename
+            codegen_utils_->GetConstant(0),  // line number
+            codegen_utils_->GetConstant("")  // function name
+        });
+    codegen_utils_->ir_builder()->CreateCall(
+        llvm_elog_finish_, {
+            llvm_elevel,
+            llvm_fmt,
+            args...
+        });
+  }
+  template<typename... V>
+    void CreateElog(
+        int elevel,
+        const char* fmt,
+        V ... args ) {
+
+      // TODO Add asserts
+
+      codegen_utils_->ir_builder()->CreateCall(
+          llvm_elog_start_, {
+              codegen_utils_->GetConstant(""), // Filename
+              codegen_utils_->GetConstant(0),  // line number
+              codegen_utils_->GetConstant("")  // function name
+          });
+      codegen_utils_->ir_builder()->CreateCall(
+          llvm_elog_finish_, {
+              codegen_utils_->GetConstant(elevel),
+              codegen_utils_->GetConstant(fmt),
+              args...
+          });
+    }
+ private:
+  llvm::Function* llvm_elog_start_;
+  llvm::Function* llvm_elog_finish_;
+
+  gpcodegen::CodegenUtils* codegen_utils_;
+
+  void SetupElog(){
+    assert(codegen_utils_ != nullptr);
+    llvm_elog_start_ = codegen_utils_->RegisterExternalFunction(elog_start);
+    assert(llvm_elog_start_ != nullptr);
+    llvm_elog_finish_ = codegen_utils_->RegisterExternalFunction(elog_finish);
+    assert(llvm_elog_finish_ != nullptr);
+  }
+
+  void TearDownElog(){
+    llvm_elog_start_ = nullptr;
+    llvm_elog_finish_ = nullptr;
+  }
+
+};
+
 ExecVariableListCodegen::ExecVariableListCodegen
 (
     ExecVariableListFn regular_func_ptr,
@@ -60,13 +133,6 @@ ExecVariableListCodegen::ExecVariableListCodegen
 		slot_(slot){
 }
 
-static void ElogWrapperString(const char* format, const char* message) {
-  elog(INFO, format, message);
-}
-static void ElogWrapperInt(const char* format, const int integer) {
-  elog(INFO, format, integer);
-}
-
 int GetMax(int* numbers, int length) {
 	int i, max=-1;
 	for(i=0; i < length; i++){
@@ -77,27 +143,9 @@ int GetMax(int* numbers, int length) {
 	return max;
 }
 
-static llvm::Function* llvm_elog_string_wrapper_ = nullptr;
-static llvm::Function* llvm_elog_int_wrapper_ = nullptr;
-static llvm::Function* llvm_fflush_wrapper_ = nullptr;
 static llvm::Function* llvm_memset_wrapper_ = nullptr;
 
 static void SetUpExternalFunctions(gpcodegen::CodegenUtils* codegen_utils) {
-	if (nullptr == llvm_elog_string_wrapper_) {
-	  llvm_elog_string_wrapper_ = codegen_utils->RegisterExternalFunction(
-				  ElogWrapperString);
-	  assert(llvm_elog_string_wrapper_ != nullptr);
-	}
-	if (nullptr == llvm_elog_int_wrapper_) {
-	  llvm_elog_int_wrapper_ = codegen_utils->RegisterExternalFunction(
-				  ElogWrapperInt);
-	  assert(llvm_elog_int_wrapper_ != nullptr);
-	}
-	if (nullptr == llvm_fflush_wrapper_) {
-	  llvm_fflush_wrapper_ = codegen_utils->RegisterExternalFunction(
-		  		  fflush);
-	  assert(llvm_fflush_wrapper_ != nullptr);
-	}
 	if (nullptr == llvm_memset_wrapper_) {
 	  llvm_memset_wrapper_ =
 				codegen_utils->RegisterExternalFunction(memset);
@@ -106,32 +154,10 @@ static void SetUpExternalFunctions(gpcodegen::CodegenUtils* codegen_utils) {
 }
 
 static void TearDownExternalFunctions(gpcodegen::CodegenUtils* codegen_utils){
-	llvm_fflush_wrapper_ = nullptr;
-	llvm_elog_int_wrapper_ = nullptr;
-	llvm_elog_string_wrapper_ = nullptr;
 	llvm_memset_wrapper_ = nullptr;
 }
 
-static void CreateElogInt(gpcodegen::CodegenUtils* codegen_utils,
-		const char* format,
-		llvm::Value* llvm_int_value){
-	llvm::Value* llvm_format = codegen_utils->GetConstant(format);
-	std::vector<llvm::Value*> llvm_args;
-	llvm_args.push_back(llvm_format);
-	llvm_args.push_back(llvm_int_value);
-	codegen_utils->ir_builder()->CreateCall(llvm_elog_int_wrapper_, llvm_args);
-	codegen_utils->ir_builder()->CreateCall(llvm_fflush_wrapper_, { codegen_utils->GetConstant((FILE *) NULL) });
-}
-static void CreateElogString(gpcodegen::CodegenUtils* codegen_utils,
-		const char* format,
-		llvm::Value* llvm_string_value){
-	llvm::Value* llvm_format = codegen_utils->GetConstant(format);
-	std::vector<llvm::Value*> llvm_args;
-	llvm_args.push_back(llvm_format);
-	llvm_args.push_back(llvm_string_value);
-	codegen_utils->ir_builder()->CreateCall(llvm_elog_string_wrapper_, llvm_args);
-	codegen_utils->ir_builder()->CreateCall(llvm_fflush_wrapper_, { codegen_utils->GetConstant((FILE *) NULL) });
-}
+
 
 /* void *memset(void *s, int c, size_t n); */
 static void CreateMemset(gpcodegen::CodegenUtils* codegen_utils,
@@ -148,6 +174,7 @@ static void CreateMemset(gpcodegen::CodegenUtils* codegen_utils,
 bool ExecVariableListCodegen::GenerateExecVariableList(
     gpcodegen::CodegenUtils* codegen_utils) {
 
+  ElogWrapper elogwrapper(codegen_utils);
   SetUpExternalFunctions(codegen_utils);
   COMPILE_ASSERT(sizeof(Datum) == sizeof(int64));
 
@@ -157,10 +184,12 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
    */
   if ( NULL == proj_info_->pi_varSlotOffsets ) {
 	// Being in this state is ridiculous - we fucked up!
+    elog(INFO, "Cannot codegen ExecVariableList because varSlotOffsets are null");
     return false;
   }
   for (int i = list_length(proj_info_->pi_targetlist) - 1; i > 0; i--){
 	  if (proj_info_->pi_varSlotOffsets[i] != proj_info_->pi_varSlotOffsets[i-1]){
+		  elog(INFO, "Cannot codegen ExecVariableList because multiple slots to deform.");
 		  return false;
 	  }
   }
@@ -171,8 +200,10 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   /* System attribute */
   if(max_attr <= 0)
   {
+	  elog(INFO, "Cannot generate code for ExecVariableList because max_attr is negative (i.e., system attribute).");
 	  return false;
   }else if (max_attr > slot_->tts_tupleDescriptor->natts) {
+	  elog(INFO, "Cannot generate code for ExecVariableList because max_attr is greater than natts.");
 	  return false;
   }
 
@@ -181,6 +212,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 		  CreateFunction<ExecVariableListFn>(
 				  GetUniqueFuncName());
 
+  //elog(INFO, "proj_info_ = %x, slot = %x, pi_slot = %x", proj_info_, slot, proj_info_->pi_slot);
 
   auto irb = codegen_utils->ir_builder();
 
@@ -239,6 +271,10 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   llvm::Value* llvm_slot_arg =
 		  irb->CreateLoad(codegen_utils->GetPointerToMember(
 				  llvm_econtext, &ExprContext::ecxt_scantuple));
+
+  //CreateElogString(codegen_utils, "%s\n", codegen_utils->GetConstant("OK in generated code!"));
+  elogwrapper.CreateElog(INFO, "slot = %x ", irb->CreatePtrToInt(llvm_slot, codegen_utils->GetType<int>()));
+  elogwrapper.CreateElog(INFO, "input_slot = %x \n", irb->CreatePtrToInt(llvm_slot_arg, codegen_utils->GetType<int>()));
 
   irb->CreateCondBr(
 		  irb->CreateICmpEQ(llvm_slot, llvm_slot_arg),
@@ -354,6 +390,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
    * Finally we try to codegen slot_deform_tuple
    */
   irb->SetInsertPoint(main_block);
+  elogwrapper.CreateElog(INFO, "%s\n", codegen_utils->GetConstant("In Main block."));
 
   /* Find the start of input data byte array */
   // tp - ptr to tuple data
@@ -481,6 +518,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 	  llvm::Value* llvm_values_ptr =
 			  irb->CreateInBoundsGEP(llvm_values_arg, {codegen_utils->GetConstant(i)});
 	  irb->CreateStore(llvm_value_from_slot_val, llvm_values_ptr);
+	  elogwrapper.CreateElog(INFO, "isnull = %d", irb->CreateZExt(llvm_isnull_from_slot_val, codegen_utils->GetType<int>()));
   }
 
 
@@ -534,6 +572,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   llvm_error->addIncoming(codegen_utils->GetConstant(2), heap_tuple_check_block);
   llvm_error->addIncoming(codegen_utils->GetConstant(3), null_check_block);
 
+  elogwrapper.CreateElog(DEBUG1, " >> Falling back to regular ExecVariableList: ecode = %d\n", llvm_error);
 
   auto regular_func_pointer = GetRegularFuncPointer();
   llvm::Function* llvm_regular_function =
