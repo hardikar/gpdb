@@ -443,9 +443,10 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
           return false;
       }
     } else {
-      /* Treat it as a pointer (PointerGetDatum). */
-      llvm_colVal = irb->CreateLoad(irb->CreateBitCast(
-          llvm_next_t_data_ptr, codegen_utils->GetType<Datum*>()));
+      // We do not support values by reference
+      return false;
+      //llvm_colVal = irb->CreateLoad(irb->CreateBitCast(
+      //    llvm_next_t_data_ptr, codegen_utils->GetType<Datum*>()));
     }
 
     irb->CreateStore(
