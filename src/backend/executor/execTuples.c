@@ -103,7 +103,6 @@
 #include "utils/typcache.h"
 
 #include "cdb/cdbvars.h"                    /* Gp_segment */
-#include "codegen/codegen_wrapper.h"
 
 static TupleDesc ExecTypeFromTLInternal(List *targetList,
 					   bool hasoid, bool skipjunk);
@@ -364,10 +363,6 @@ ExecSetSlotDescriptor(TupleTableSlot *slot,		/* slot to change */
 
 		MemoryContextSwitchTo(oldcontext);
 	}
-	/*
-	 * This will enroll to codegen manager if USE_CODEGEN is enabled
-	 */
-	slot->slot_deform_tuple_gen_info.slot_deform_tuple_fn = slot_deform_tuple;
 }
 
 /* --------------------------------
