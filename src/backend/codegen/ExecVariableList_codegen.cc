@@ -288,14 +288,14 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
       irb->CreateLoad(codegen_utils->GetPointerToMember(
           llvm_slot, &TupleTableSlot::PRIVATE_tts_memtuple));
 
-  // Next code executes: (slot->PRIVATE_tts_flags & TTS_VIRTUAL) != 0
+  // (slot->PRIVATE_tts_flags & TTS_VIRTUAL) != 0
   llvm::Value* llvm_tuple_is_virtual = irb->CreateICmpNE(
       irb->CreateAnd(
           irb->CreateLoad(llvm_slot_PRIVATE_tts_flags_ptr),
           codegen_utils->GetConstant(TTS_VIRTUAL)),
           codegen_utils->GetConstant(0));
 
-  // Next code executes: slot->PRIVATE_tts_memtuple != NULL
+  // slot->PRIVATE_tts_memtuple != NULL
   llvm::Value* llvm_tuple_has_memtuple = irb->CreateICmpNE(
       llvm_slot_PRIVATE_tts_memtuple, codegen_utils->GetConstant((MemTuple) NULL));
 
@@ -320,18 +320,43 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
                     null_check_block /*true*/,
                     fallback_block /*false*/);
 
-  // Check for null attributes
-  // slot should not have any null attributes
+  // Start of slot_deform_tuple
+
+  // Null check block
+  // -------------------------
+  // Fall back if the slot has any null attributes
+  // TODO: What to do if any attribute is null????
   irb->SetInsertPoint(null_check_block);
 
-  // Next code executes:
-  // attno = HeapTupleHeaderGetNatts(tuple->t_data);
-  // attno = Min(attno, attnum);
   llvm::Value* llvm_heaptuple_t_data =
       irb->CreateLoad(codegen_utils->GetPointerToMember(
           llvm_slot_PRIVATE_tts_heaptuple,
           &HeapTupleData::t_data
       ));
+
+  llvm::Value* llvm_heaptuple_t_data_t_infomask =
+      irb->CreateLoad( codegen_utils->GetPointerToMember(
+          llvm_heaptuple_t_data, &HeapTupleHeaderData::t_infomask));
+
+  // Check if tuple slot has nulls and fall back accordingly
+  irb->CreateCondBr(
+      irb->CreateICmpNE(
+          irb->CreateAnd(
+              llvm_heaptuple_t_data_t_infomask,
+              codegen_utils->GetConstant<uint16>(HEAP_HASNULL)),
+              codegen_utils->GetConstant<uint16>(0)),
+              fallback_block, /* true */
+              main_block /* false */
+  );
+
+  // Main block
+  // ----------
+  // Finally we generate code for slot_deform_tuple
+  irb->SetInsertPoint(main_block);
+
+  // Implementation for : {{{
+  // attno = HeapTupleHeaderGetNatts(tuple->t_data);
+  // attno = Min(attno, attnum);
   llvm::Value* llvm_heaptuple_t_data_t_infomask2 =
       irb->CreateLoad(codegen_utils->GetPointerToMember(
           llvm_heaptuple_t_data,
@@ -348,6 +373,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
           llvm_attno_t0,
           llvm_max_attr
       );
+  // }}}
 
   // Retrieve slot's PRIVATE variables
   llvm::Value* llvm_slot_PRIVATE_tts_isnull /* bool* */=
@@ -357,36 +383,18 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
       irb->CreateLoad(codegen_utils->GetPointerToMember(
           llvm_slot, &TupleTableSlot::PRIVATE_tts_values));
   llvm::Value* llvm_slot_PRIVATE_tts_nvalid_ptr /* int* */=
-      codegen_utils->GetPointerToMember(llvm_slot,
-                                        &TupleTableSlot::PRIVATE_tts_nvalid);
+      codegen_utils->GetPointerToMember(
+          llvm_slot, &TupleTableSlot::PRIVATE_tts_nvalid);
 
-  // Start of slot_deform_tuple
   llvm::Value* llvm_heaptuple_t_data_t_hoff = irb->CreateLoad(
       codegen_utils->GetPointerToMember(llvm_heaptuple_t_data,
                                         &HeapTupleHeaderData::t_hoff));
-  llvm::Value* llvm_heaptuple_t_data_t_infomask =
-      irb->CreateLoad( codegen_utils->GetPointerToMember(
-          llvm_heaptuple_t_data, &HeapTupleHeaderData::t_infomask));
-
-  // Check if tuple has nulls and fall back accordingly
-  irb->CreateCondBr(
-      irb->CreateICmpNE(
-          irb->CreateAnd(
-              llvm_heaptuple_t_data_t_infomask,
-              codegen_utils->GetConstant<uint16>(HEAP_HASNULL)),
-              codegen_utils->GetConstant<uint16>(0)),
-              fallback_block, /* true */
-              main_block /* false */
-  );
-
-  // Main block
-  // Finally we try to codegen slot_deform_tuple
-  irb->SetInsertPoint(main_block);
 
   // Find the start of input data byte array
-  // similar to tp in slot_deform_tuple (pointer to tuple data)
+  // same as tp in slot_deform_tuple (pointer to tuple data)
   llvm::Value* llvm_tuple_data_ptr = irb->CreateInBoundsGEP(
       llvm_heaptuple_t_data, {llvm_heaptuple_t_data_t_hoff});
+
 
   int off = 0;
   TupleDesc tupleDesc = slot_->tts_tupleDescriptor;
@@ -402,7 +410,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
       return false;
     }
 
-    // Next code implements: values[attnum] = fetchatt(thisatt, tp = off) {{{
+    // values[attnum] = fetchatt(thisatt, tp + off) {{{
     llvm::Value* llvm_next_t_data_ptr =
         irb->CreateInBoundsGEP(llvm_tuple_data_ptr,
                                {codegen_utils->GetConstant(off)});
@@ -417,31 +425,30 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
       switch(thisatt->attlen)
       {
         case sizeof(char):
-              // Read 1 byte at next_address_load
-              llvm_colVal = irb->CreateLoad(llvm_next_t_data_ptr);
+                  llvm_colVal = irb->CreateLoad(llvm_next_t_data_ptr);
         break;
         case sizeof(int16):
-              llvm_colVal = irb->CreateLoad(
-                  codegen_utils->GetType<int16>(),irb->CreateBitCast(
-                      llvm_next_t_data_ptr, codegen_utils->GetType<int16*>()));
+                  llvm_colVal = irb->CreateLoad(
+                      codegen_utils->GetType<int16>(),irb->CreateBitCast(
+                          llvm_next_t_data_ptr, codegen_utils->GetType<int16*>()));
         break;
         case sizeof(int32):
-              llvm_colVal = irb->CreateLoad(
-                  codegen_utils->GetType<int32>(),
-                  irb->CreateBitCast(llvm_next_t_data_ptr,
-                                     codegen_utils->GetType<int32*>()));
+                  llvm_colVal = irb->CreateLoad(
+                      codegen_utils->GetType<int32>(),
+                      irb->CreateBitCast(llvm_next_t_data_ptr,
+                                         codegen_utils->GetType<int32*>()));
         break;
-        case sizeof(int64):  /* Size of Datum */
-              llvm_colVal = irb->CreateLoad(
-                  codegen_utils->GetType<int64>(), irb->CreateBitCast(
-                      llvm_next_t_data_ptr, codegen_utils->GetType<int64*>()));
+        case sizeof(Datum):
+                  llvm_colVal = irb->CreateLoad(
+                      codegen_utils->GetType<int64>(), irb->CreateBitCast(
+                          llvm_next_t_data_ptr, codegen_utils->GetType<int64*>()));
         break;
         default:
-          // Manager will clean up the incomplete generated code.
+          // We do not support other data type length, passed by value
           return false;
       }
     } else {
-      // We do not support values by reference
+      // We do not support attributes by reference
       return false;
     }
 
@@ -450,9 +457,9 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
         irb->CreateZExt(llvm_colVal, codegen_utils->GetType<Datum>()),
         llvm_next_values_ptr);
 
-    // }}} End of values[attnum] = fetchatt(thisatt, tp = off
+    // }}} End of values[attnum] = fetchatt(thisatt, tp + off)
 
-    // Next code implements: isnull[attnum] = false; {{{
+    // isnull[attnum] = false; {{{
     llvm::Value* llvm_next_isnull_ptr =
         irb->CreateInBoundsGEP(llvm_slot_PRIVATE_tts_isnull,
                                {codegen_utils->GetConstant(attnum)});
@@ -462,16 +469,16 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
     // }}} End of isnull[attnum] = false;
 
     off += thisatt->attlen;
-  }
+  } // end for
 
-  // Next code implements: slot->PRIVATE_tts_off = off;
+  // slot->PRIVATE_tts_off = off;
   llvm::Value* llvm_slot_PRIVATE_tts_off_ptr /* long* */=
       codegen_utils->GetPointerToMember(
           llvm_slot, &TupleTableSlot::PRIVATE_tts_off);
   irb->CreateStore(codegen_utils->GetConstant<long>(off),
                    llvm_slot_PRIVATE_tts_off_ptr);
 
-  // Next code implements: slot->PRIVATE_tts_slow = slow;
+  // slot->PRIVATE_tts_slow = slow;
   llvm::Value* llvm_slot_PRIVATE_tts_slow_ptr /* bool* */=
       codegen_utils->GetPointerToMember(
           llvm_slot, &TupleTableSlot::PRIVATE_tts_slow);
@@ -480,19 +487,54 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   // End of slot_deform_tuple
 
-  /*
-   * The loop unrolling magic
-   * Note this implements the code from ExecVariableList that copies the contents
-   * of the isnull & values in the slot and copies them to output variables
-   */
-  int  *varNumbers = proj_info_->pi_varNumbers;
-  for (int i = list_length(proj_info_->pi_targetlist) - 1; i >= 0; i--)
-  {
-    //  	values[i] = slot_getattr(varSlot, varNumbers[i] -1 +1, &(isnull[i]));
-    //  	*isnull = slot->PRIVATE_tts_isnull[attnum-1];
-    //  	*(&(isnull[i])) = slot->PRIVATE_tts_isnull[ varNumbers[i] - 1];
-    //  	values[i] = varSlot->PRIVATE_tts_values[varNumbers[i] -1];
 
+  // _slot_getsomeattrs() after calling slot_deform_tuple {{{
+  // for (; attno < attnum; attno++)
+  // {
+  //   slot->PRIVATE_tts_values[attno] = (Datum) 0;
+  //   slot->PRIVATE_tts_isnull[attno] = true;
+  // }
+
+  // TODO: Convert these to loops
+  codegen_utils->ir_builder()->CreateCall(
+      llvm_memset, {
+          irb->CreateBitCast(
+              irb->CreateInBoundsGEP(llvm_slot_PRIVATE_tts_values, {llvm_attno}),
+              codegen_utils->GetType<void*>()),
+              codegen_utils->GetConstant(0),
+              irb->CreateMul(codegen_utils->GetConstant(sizeof(Datum)),
+                             irb->CreateZExtOrTrunc(irb->CreateSub(llvm_max_attr, llvm_attno),
+                                                    codegen_utils->GetType<size_t>()))});
+
+  codegen_utils->ir_builder()->CreateCall(
+      llvm_memset, {
+          irb->CreateBitCast(
+              irb->CreateInBoundsGEP(llvm_slot_PRIVATE_tts_isnull, {llvm_attno}),
+              codegen_utils->GetType<void*>()),
+              codegen_utils->GetConstant((int) true),
+              irb->CreateMul(codegen_utils->GetConstant(sizeof(Datum)),
+                             irb->CreateZExtOrTrunc(irb->CreateSub(llvm_max_attr, llvm_attno),
+                                                    codegen_utils->GetType<size_t>()))});
+
+  // slot->PRIVATE_tts_nvalid = attnum;
+  irb->CreateStore(llvm_max_attr, llvm_slot_PRIVATE_tts_nvalid_ptr);
+
+  // TupSetVirtualTuple(slot);
+  irb->CreateStore(
+      irb->CreateOr(
+          irb->CreateLoad(llvm_slot_PRIVATE_tts_flags_ptr),
+          codegen_utils->GetConstant<int>(TTS_VIRTUAL)),
+          llvm_slot_PRIVATE_tts_flags_ptr);
+
+  // }}}
+
+  // slot_getattr() after calling _slot_getsomeattrs() and remainder of ExecVariableList {{{
+  //
+  // This code from ExecVariableList copies the contents of the isnull & values arrays
+  // in the slot to output variable from the function parameters to ExecVariableList
+  int  *varNumbers = proj_info_->pi_varNumbers;
+  for (int i = list_length(proj_info_->pi_targetlist) - 1; i >= 0; i--) {
+    // *isnull = slot->PRIVATE_tts_isnull[attnum-1];
     llvm::Value* llvm_isnull_from_slot_val =
         irb->CreateLoad(irb->CreateInBoundsGEP(llvm_slot_PRIVATE_tts_isnull,
                                                {codegen_utils->GetConstant(varNumbers[i] - 1)}));
@@ -500,6 +542,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
         irb->CreateInBoundsGEP(llvm_isnull_arg, {codegen_utils->GetConstant(i)});
     irb->CreateStore(llvm_isnull_from_slot_val, llvm_isnull_ptr);
 
+    // values[i] = slot_getattr(varSlot, varNumber+1, &(isnull[i]));
     llvm::Value* llvm_value_from_slot_val =
         irb->CreateLoad(irb->CreateInBoundsGEP(llvm_slot_PRIVATE_tts_values,
                                                {codegen_utils->GetConstant(varNumbers[i] - 1)}));
@@ -509,47 +552,13 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   }
 
 
-  // TODO: we can avoid this {{{
-  //  for (; attno < attnum; attno++)
-  // {
-  //   slot->PRIVATE_tts_values[attno] = (Datum) 0;
-  //   slot->PRIVATE_tts_isnull[attno] = true;
-  // }
-
-  codegen_utils->ir_builder()->CreateCall(
-      llvm_memset, {
-          irb->CreateBitCast(
-              irb->CreateInBoundsGEP(llvm_slot_PRIVATE_tts_values, {llvm_attno}),
-              codegen_utils->GetType<void*>()),
-              codegen_utils->GetConstant(0),
-              irb->CreateMul(codegen_utils->GetConstant(sizeof(Datum)),
-                             irb->CreateZExtOrTrunc(irb->CreateSub(llvm_max_attr, llvm_attno), codegen_utils->GetType<size_t>()))});
-
-  codegen_utils->ir_builder()->CreateCall(
-      llvm_memset, {
-          irb->CreateBitCast(
-              irb->CreateInBoundsGEP(llvm_slot_PRIVATE_tts_isnull, {llvm_attno}),
-              codegen_utils->GetType<void*>()),
-              codegen_utils->GetConstant((int) true),
-              irb->CreateMul(codegen_utils->GetConstant(sizeof(Datum)),
-                             irb->CreateZExtOrTrunc(irb->CreateSub(llvm_max_attr, llvm_attno), codegen_utils->GetType<size_t>()))});
-  // }}}
-
-  /* slot->PRIVATE_tts_nvalid = attnum; */
-  irb->CreateStore(llvm_max_attr, llvm_slot_PRIVATE_tts_nvalid_ptr);
-
-  /* TupSetVirtualTuple(slot); */
-  irb->CreateStore(
-      irb->CreateOr(
-          irb->CreateLoad(llvm_slot_PRIVATE_tts_flags_ptr),
-          codegen_utils->GetConstant<int>(TTS_VIRTUAL)),
-          llvm_slot_PRIVATE_tts_flags_ptr);
-
+  // We're all done!
   codegen_utils->ir_builder()->CreateRetVoid();
 
-  /*
-   * Fallback block
-   */
+  // Fall back block
+  // ---------------
+  // Note: We collect error code information, based on the block from which we fall back,
+  // and log it for debugging purposes.
   irb->SetInsertPoint(fallback_block);
   llvm::PHINode* llvm_error = irb->CreatePHI(codegen_utils->GetType<int>(), 4);
   llvm_error->addIncoming(codegen_utils->GetConstant(0), slot_check_block);
