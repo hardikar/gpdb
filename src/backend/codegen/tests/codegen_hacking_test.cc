@@ -206,14 +206,27 @@ TEST_F(CodegenManagerTest, TestGetters) {
 
   Datum values[16];
   bool isnull[16];
-  //generated_function(&proj_info, values, isnull);
 
-  const int NUM_RUNS = 1000;
+  time_t start, stop;
+  clock_t ticks; long count;
 
-  for (int i=0; i<NUM_RUNS; i++) {
+  const long NUM_RUNS = 100;
+
+  time(&start);
+  for (long i=0; i<NUM_RUNS; i++) {
     slot.PRIVATE_tts_nvalid = 0;
-    ExecVariableList(&proj_info, values, isnull);
+    slot.PRIVATE_tts_off = 0;
+    slot.PRIVATE_tts_flags &= ~TTS_VIRTUAL;
+    //values[0] = 0;
+    //ExecVariableList(&proj_info, values, isnull);
+    generated_function(&proj_info, values, isnull);
+    //ASSERT_EQ(42, values[0]);
   }
+
+  ticks = clock();
+  time(&stop);
+  printf("Used %0.2f seconds of CPU time. \n", (double)ticks/CLOCKS_PER_SEC);
+  printf("Finished in about %.0f seconds. \n", difftime(stop, start));
 
   ASSERT_EQ(42, values[0]);
   ASSERT_EQ(383, values[1]);
