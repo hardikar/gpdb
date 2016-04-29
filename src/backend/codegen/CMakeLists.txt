@@ -300,6 +300,10 @@ if(EXISTS ${TXT_OBJFILE})
         tests/codegen_framework_unittest.cc
         ${MOCK_DIR}/backend/utils/error/elog_mock.o
     )
+    add_cmockery_gtest(codegen_hacking_test.t
+        tests/codegen_hacking_test.cc
+        ${MOCK_DIR}/backend/utils/error/elog_mock.o
+    )
 endif()
 
 
