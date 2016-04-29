@@ -25,6 +25,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "gtest/gtest.h"
 
@@ -88,17 +89,51 @@ class CodegenManagerTest : public ::testing::Test {
   std::unique_ptr<CodegenManager> manager_;
 };
 
+void DummyExecVariableList(ProjectionInfo* proj_info,
+                           Datum *values, bool *isnull) {
+
+  std::cerr<<"In dummy"<<std::endl;
+}
+
+
 TEST_F(CodegenManagerTest, TestGetters) {
   FormData_pg_attribute formdata_attributes[20];
+  memset(formdata_attributes, 0, 20*sizeof(FormData_pg_attribute));
   FormData_pg_attribute* attrs[20];
   for(int i=0; i<20; i++) {
     attrs[i] = &formdata_attributes[i];
     attrs[i]->attlen = 8;
     attrs[i]->attnum = i + 1;
     attrs[i]->attbyval = true;
+    attrs[i]->attcacheoff = 8 * i;
     attrs[i]->attstorage = 'p';
     attrs[i]->attalign = 'd';
   }
+
+  char tuple_data_bytes[256];
+  memset(tuple_data_bytes, 0, sizeof(tuple_data_bytes));
+
+  // TODO : check if the infomasks change
+  struct HeapTupleHeaderData heaptuple_header_data = {
+      { { 1072, 0, 0 } },
+      { 0, 1 },
+      21, // t_infomask2 = 2068
+      2048, // t_infomask = 2304
+      '\x18', // t_hoff = '\x18'
+      {u'\xff'} // t_bits = ([0] = '\0')
+  };
+  // Place the header and data into tuple_data_bytes
+  memcpy(tuple_data_bytes, &heaptuple_header_data, sizeof(heaptuple_header_data));
+  *(int64*)(tuple_data_bytes + sizeof(heaptuple_header_data) + 0) =  (int64) 42;
+  *(int64*)(tuple_data_bytes + sizeof(heaptuple_header_data) + 8) =  (int64) 342;
+  *(int64*)(tuple_data_bytes + sizeof(heaptuple_header_data) + 16) = (int64) 83;
+  *(int64*)(tuple_data_bytes + sizeof(heaptuple_header_data) + 24) = (int64) 383;
+
+  struct HeapTupleData heaptuple = {
+     136, //  t_len = 136
+     { 0, 1 }, // t_self
+     (HeapTupleHeaderData*)&tuple_data_bytes // t_data = 0x000000010ca0df78
+  };
 
   struct tupleDesc tupleDesc = {
     20, // natts = 20
@@ -111,10 +146,14 @@ TEST_F(CodegenManagerTest, TestGetters) {
     -1 // reference count -1 if not counting
   };
 
+  Datum PRIVATE_tts_values[16];
+  bool PRIVATE_tts_isnull[16];
+
   struct TupleTableSlot slot;
-  slot.PRIVATE_tts_heaptuple = nullptr; // 0x00007fc644025238
-  slot.PRIVATE_tts_values = {};
-  slot.PRIVATE_tts_isnull = {};
+  memset(&slot, 0, sizeof(TupleTableSlot));
+  slot.PRIVATE_tts_heaptuple = &heaptuple; // 0x00007fc644025238
+  slot.PRIVATE_tts_values = PRIVATE_tts_values;
+  slot.PRIVATE_tts_isnull = PRIVATE_tts_isnull;
   slot.tts_tupleDescriptor = &tupleDesc; // 0x0000000119988638
   slot.tts_buffer = 154;
   slot.tts_tableOid = 16396;
@@ -155,7 +194,7 @@ TEST_F(CodegenManagerTest, TestGetters) {
   ExecVariableListFn generated_function;
 
   ExecVariableListCodegen* code_gen =
-      new ExecVariableListCodegen(ExecVariableList,
+      new ExecVariableListCodegen(DummyExecVariableList,
                                   &generated_function,
                                   &proj_info,
                                   &slot);
@@ -163,8 +202,20 @@ TEST_F(CodegenManagerTest, TestGetters) {
       CodegenFuncLifespan_Parameter_Invariant, code_gen));
   ASSERT_EQ(1, manager_->GenerateCode());
   ASSERT_EQ(true, code_gen->IsGenerated());
+  ASSERT_EQ(1, manager_->PrepareGeneratedFunctions());
 
-  ASSERT_TRUE(true);
+  Datum values[16];
+  bool isnull[16];
+  generated_function(&proj_info, values, isnull);
+  //ExecVariableList(&proj_info, values, isnull);
+
+  ASSERT_EQ(42, values[0]);
+  ASSERT_EQ(383, values[1]);
+
+  std::cerr<<values[0]<<std::endl;
+  std::cerr<<values[1]<<std::endl;
+
+  //ASSERT_TRUE(false);
 }
 
 }  // namespace gpcodegen
