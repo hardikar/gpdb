@@ -206,8 +206,14 @@ TEST_F(CodegenManagerTest, TestGetters) {
 
   Datum values[16];
   bool isnull[16];
-  generated_function(&proj_info, values, isnull);
-  //ExecVariableList(&proj_info, values, isnull);
+  //generated_function(&proj_info, values, isnull);
+
+  const int NUM_RUNS = 1000;
+
+  for (int i=0; i<NUM_RUNS; i++) {
+    slot.PRIVATE_tts_nvalid = 0;
+    ExecVariableList(&proj_info, values, isnull);
+  }
 
   ASSERT_EQ(42, values[0]);
   ASSERT_EQ(383, values[1]);
