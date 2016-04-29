@@ -378,7 +378,7 @@ class CodegenUtils {
    *         error occured.
    **/
   bool PrepareForExecution(const OptimizationLevel cpu_opt_level,
-                           const bool optimize_for_host_cpu, std::string& error_msg);
+                           const bool optimize_for_host_cpu);
 
   /**
    * @brief Get a pointer to the compiled machine-code version of a function

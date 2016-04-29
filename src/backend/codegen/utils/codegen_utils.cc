@@ -201,16 +201,14 @@ bool CodegenUtils::Optimize(const OptimizationLevel generic_opt_level,
 }
 
 bool CodegenUtils::PrepareForExecution(const OptimizationLevel cpu_opt_level,
-                                        const bool optimize_for_host_cpu, std::string& error_msg) {
+                                        const bool optimize_for_host_cpu) {
   if (engine_.get() != nullptr) {
     // This method was already called successfully.
-	 error_msg = "This method was already called successfully.";
     return false;
   }
 
   if (module_.get() == nullptr) {
     // No Module to compile.
-	  error_msg = "No Module to compile.";
     return false;
   }
 
@@ -223,7 +221,6 @@ bool CodegenUtils::PrepareForExecution(const OptimizationLevel cpu_opt_level,
 
   engine_.reset(builder.create());
   if (engine_.get() == nullptr) {
-	  error_msg = "Build wasn't created";
     return false;
   }
 
