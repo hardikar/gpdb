@@ -57,8 +57,66 @@ extern "C" {
 #include "postgres.h"
 #include "nodes/execnodes.h"
 #include "nodes/pg_list.h"
+
+// For perf instrumentation
+#include <unistd.h>
+#include <linux/perf_event.h>
+#include <sys/ioctl.h>
+#include <asm/unistd.h>
+
+
 }
 
+long
+perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
+               int cpu, int group_fd, unsigned long flags) {
+   int ret;
+
+   ret = syscall(__NR_perf_event_open, hw_event, pid, cpu,
+                  group_fd, flags);
+   return ret;
+}
+
+int
+perf_setup() {
+  struct perf_event_attr pe;
+  long long count;
+  int fd;
+
+  memset(&pe, 0, sizeof(struct perf_event_attr));
+  pe.type = PERF_TYPE_HARDWARE;
+  pe.size = sizeof(struct perf_event_attr);
+  pe.config = PERF_COUNT_HW_INSTRUCTIONS;
+  pe.disabled = 1;
+  pe.exclude_kernel = 1;
+  pe.exclude_hv = 1;
+
+  fd = perf_event_open(&pe, 0 /* pid */, -1 /* cpu */, -1 /* group_fd */, 0 /* flags */);
+
+  return fd;
+}
+
+void
+perf_reset(int fd) {
+  ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+}
+
+void
+perf_start(int fd) {
+  ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+}
+
+void
+perf_stop(int fd) {
+  ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+}
+
+long long
+perf_get(int fd) {
+  long long count; 
+  read(fd, &count, sizeof(long long));
+  return count; 
+}
 
 namespace gpcodegen {
 
@@ -75,6 +133,7 @@ class CodegenManagerTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
     manager_.reset(new CodegenManager("CodegenManagerTest"));
+    fd = perf_setup(); 
   }
 
   template <typename ClassType, typename FuncType>
@@ -86,6 +145,7 @@ class CodegenManagerTest : public ::testing::Test {
         code_gen));
   }
 
+  int fd; 
   std::unique_ptr<CodegenManager> manager_;
 };
 
@@ -208,32 +268,37 @@ TEST_F(CodegenManagerTest, TestGetters) {
   bool isnull[16];
 
   time_t start, stop;
-  clock_t ticks; long count;
+  clock_t ticks;
 
-  const long NUM_RUNS = 1000 * 1000 * 1000;
+  const long NUM_RUNS = 1;
 
   time(&start);
+  perf_reset(fd); 
+  perf_start(fd);
   for (long i=0; i<NUM_RUNS; i++) {
     slot.PRIVATE_tts_nvalid = 0;
     slot.PRIVATE_tts_off = 0;
     slot.PRIVATE_tts_flags &= ~TTS_VIRTUAL;
     //values[0] = 0;
-    //ExecVariableList(&proj_info, values, isnull);
-    generated_function(&proj_info, values, isnull);
+    ExecVariableList(&proj_info, values, isnull);
+    //generated_function(&proj_info, values, isnull);
     //ASSERT_EQ(42, values[0]);
   }
+  perf_stop(fd); 
 
   ticks = clock();
   time(&stop);
   printf("Used %0.2f seconds of CPU time. \n", (double)ticks/CLOCKS_PER_SEC);
   printf("Finished in about %.0f seconds. \n", difftime(stop, start));
+  printf("Number of instructions: %lld. \n", perf_get(fd));  
 
   ASSERT_EQ(42, values[0]);
   ASSERT_EQ(383, values[1]);
 
   std::cerr<<values[0]<<std::endl;
   std::cerr<<values[1]<<std::endl;
-
+  std::cerr<<values[2]<<std::endl;
+ 
   //ASSERT_TRUE(false);
 }
 
