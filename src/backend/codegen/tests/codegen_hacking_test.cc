@@ -210,7 +210,7 @@ TEST_F(CodegenManagerTest, TestGetters) {
   time_t start, stop;
   clock_t ticks; long count;
 
-  const long NUM_RUNS = 100;
+  const long NUM_RUNS = 1000 * 1000 * 1000;
 
   time(&start);
   for (long i=0; i<NUM_RUNS; i++) {
