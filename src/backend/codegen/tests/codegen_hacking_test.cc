@@ -146,6 +146,7 @@ class CodegenManagerTest : public ::testing::Test {
   }
 
   int fd; 
+  ExecVariableListFn generated_function;
   std::unique_ptr<CodegenManager> manager_;
 };
 
@@ -251,7 +252,6 @@ TEST_F(CodegenManagerTest, TestGetters) {
     nullptr, //ExecVariableList_gen_info = {
   };
 
-  ExecVariableListFn generated_function;
 
   ExecVariableListCodegen* code_gen =
       new ExecVariableListCodegen(DummyExecVariableList,
