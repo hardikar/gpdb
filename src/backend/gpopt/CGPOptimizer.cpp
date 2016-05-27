@@ -15,6 +15,7 @@
 
 #include "gpopt/CGPOptimizer.h"
 #include "gpopt/utils/COptTasks.h"
+#include "gpopt/gpdbwrappers.h"
 
 // the following headers are needed to reference optimizer library initializers
 #include "naucrates/init.h"
@@ -86,7 +87,7 @@ void
 CGPOptimizer::InitGPOPT ()
 {
   // Use GPORCA's default allocators
-  struct gpos_init_params params = { NULL, NULL };
+  struct gpos_init_params params = { gpdb::GPMalloc, gpdb::GPFree };
   gpos_init(&params);
   gpdxl_init();
   gpopt_init();
