@@ -9,7 +9,7 @@
 //    Contains different code generators
 //
 //---------------------------------------------------------------------------
-#include "codegen/ExecVariableList_codegen.h"
+#include "codegen/exec_variable_list_codegen.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -167,32 +167,32 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   }
 
   // So looks like we're going to generate code
-  llvm::Function* ExecVariableList_func = CreateFunction<ExecVariableListFn>(
+  llvm::Function* exec_variable_list_func = CreateFunction<ExecVariableListFn>(
       codegen_utils, GetUniqueFuncName());
 
   auto irb = codegen_utils->ir_builder();
 
   // BasicBlock of function entry.
   llvm::BasicBlock* entry_block = codegen_utils->CreateBasicBlock(
-      "entry", ExecVariableList_func);
+      "entry", exec_variable_list_func);
   // BasicBlock for checking correct slot
   llvm::BasicBlock* slot_check_block = codegen_utils->CreateBasicBlock(
-      "slot_check", ExecVariableList_func);
+      "slot_check", exec_variable_list_func);
   // BasicBlock for checking tuple type.
   llvm::BasicBlock* tuple_type_check_block = codegen_utils->CreateBasicBlock(
-      "tuple_type_check", ExecVariableList_func);
+      "tuple_type_check", exec_variable_list_func);
   // BasicBlock for heap tuple check.
   llvm::BasicBlock* heap_tuple_check_block = codegen_utils->CreateBasicBlock(
-      "heap_tuple_check", ExecVariableList_func);
+      "heap_tuple_check", exec_variable_list_func);
   // BasicBlock for main.
   llvm::BasicBlock* main_block = codegen_utils->CreateBasicBlock(
-      "main", ExecVariableList_func);
+      "main", exec_variable_list_func);
   // BasicBlock for final computations.
   llvm::BasicBlock* final_block = codegen_utils->CreateBasicBlock(
-      "final", ExecVariableList_func);
+      "final", exec_variable_list_func);
   // BasicBlock for fall back.
   llvm::BasicBlock* fallback_block = codegen_utils->CreateBasicBlock(
-      "fallback", ExecVariableList_func);
+      "fallback", exec_variable_list_func);
 
   // External functions
   llvm::Function* llvm_memset = codegen_utils->RegisterExternalFunction(memset);
@@ -202,9 +202,9 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   llvm::Value* llvm_slot = codegen_utils->GetConstant(slot_);
 
   // Function arguments to ExecVariableList
-  llvm::Value* llvm_projInfo_arg = ArgumentByPosition(ExecVariableList_func, 0);
-  llvm::Value* llvm_values_arg = ArgumentByPosition(ExecVariableList_func, 1);
-  llvm::Value* llvm_isnull_arg = ArgumentByPosition(ExecVariableList_func, 2);
+  llvm::Value* llvm_projInfo_arg = ArgumentByPosition(exec_variable_list_func, 0);
+  llvm::Value* llvm_values_arg = ArgumentByPosition(exec_variable_list_func, 1);
+  llvm::Value* llvm_isnull_arg = ArgumentByPosition(exec_variable_list_func, 2);
 
   // Entry block
   // -----------
@@ -363,7 +363,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   // block of first attribute
   attribute_block = codegen_utils->CreateBasicBlock(
-      "attribute_block_"+0, ExecVariableList_func);
+      "attribute_block_"+0, exec_variable_list_func);
 
   irb->CreateBr(attribute_block);
 
@@ -385,7 +385,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
     // Create the block of (attnum+1)th attribute and jump to it after
     // you finish with current attribute.
     next_attribute_block = codegen_utils->CreateBasicBlock(
-        "attribute_block_"+(attnum+1), ExecVariableList_func);
+        "attribute_block_"+(attnum+1), exec_variable_list_func);
 
     llvm::Value* llvm_next_values_ptr =
         irb->CreateInBoundsGEP(llvm_slot_PRIVATE_tts_values,
@@ -396,9 +396,9 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
     if (!thisatt->attnotnull) {
       // Create blocks
       is_null_block = codegen_utils->CreateBasicBlock(
-          "is_null_block_"+attnum, ExecVariableList_func);
+          "is_null_block_"+attnum, exec_variable_list_func);
       is_not_null_block = codegen_utils->CreateBasicBlock(
-          "is_not_null_block_"+attnum, ExecVariableList_func);
+          "is_not_null_block_"+attnum, exec_variable_list_func);
 
       llvm::Value* llvm_attnum = codegen_utils->GetConstant(attnum);
 
@@ -649,7 +649,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   codegen_utils->CreateFallback<ExecVariableListFn>(
       codegen_utils->RegisterExternalFunction(GetRegularFuncPointer()),
-      ExecVariableList_func);
+      exec_variable_list_func);
   return true;
 }
 
