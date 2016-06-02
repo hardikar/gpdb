@@ -83,10 +83,15 @@ CGPOptimizer::SzDXLPlan
 //
 //---------------------------------------------------------------------------
 void
-CGPOptimizer::InitGPOPT ()
+CGPOptimizer::InitGPOPT (bool use_gpdb_allocators)
 {
   // Use GPORCA's default allocators
   struct gpos_init_params params = { NULL, NULL };
+  if ( use_gpdb_allocators ) {
+    params.alloc = gpdb::GPMalloc;
+    params.free = gpdb::GPFree;
+  }
+
   gpos_init(&params);
   gpdxl_init();
   gpopt_init();
@@ -157,9 +162,9 @@ char *SzDXLPlan
 //---------------------------------------------------------------------------
 extern "C"
 {
-void InitGPOPT ()
+void InitGPOPT (bool use_gpdb_allocators)
 {
-	return CGPOptimizer::InitGPOPT();
+	return CGPOptimizer::InitGPOPT(use_gpdb_allocators);
 }
 }
 
