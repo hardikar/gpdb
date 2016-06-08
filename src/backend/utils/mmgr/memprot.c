@@ -501,7 +501,7 @@ void gp_free(void *user_pointer)
 	VmemTracker_ReleaseVmem(UserPtrSize_GetVmemPtrSize(usable_size));
 }
 
-void *gp_accounted_alloc(int64 size)
+void *gp_accounted_malloc(int64 size)
 {
 	Assert(gp_mp_inited);
 

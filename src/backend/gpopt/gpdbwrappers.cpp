@@ -2232,7 +2232,7 @@ gpdb::GPMalloc
 {
 	GP_WRAP_START;
 	{
-		return gp_malloc(size);
+		return gp_accounted_malloc(size);
 	}
 	GP_WRAP_END;
 	return NULL;
@@ -2260,7 +2260,7 @@ gpdb::GPFree
 {
 	GP_WRAP_START;
 	{
-		gp_free(ptr);
+		gp_accounted_free(ptr);
 		return;
 	}
 	GP_WRAP_END;
