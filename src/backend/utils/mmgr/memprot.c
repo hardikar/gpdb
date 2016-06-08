@@ -501,43 +501,64 @@ void gp_free(void *user_pointer)
 	VmemTracker_ReleaseVmem(UserPtrSize_GetVmemPtrSize(usable_size));
 }
 
+/* Allocate memory and account it in the ActiveMemoryAccount */
 void *gp_accounted_malloc(int64 size)
 {
-	Assert(gp_mp_inited);
+	Assert(!MySessionState || gp_mp_inited);
 
-	AccountedAllocHeader *header = (AccountedAllocHeader*) gp_malloc(size + sizeof(AccountedAllocHeader));
+	AccountedAllocHeader *header =
+			(AccountedAllocHeader*) gp_malloc(size + sizeof(AccountedAllocHeader));
+	/* return NULL if allocation fails */
+	if (NULL == header) {
+		return NULL;
+	}
+
 	AccountedAllocPtr_Initialize(header);
-	MemoryAccounting_Allocate(header->memoryAccount, UserPtr_GetVmemPtrSize(header));
+	MemoryAccounting_Allocate(AccountedAllocPtr_GetMemoryAccount(header),
+			UserPtr_GetVmemPtrSize(header));
 
 	return AccountedAllocPtrToUserPtr(header);
 }
 
+/* Reallocate memory and update accounts */
 void *gp_accounted_realloc(void *ptr, int64 newSize)
 {
-	AccountedAllocHeader* header = UserPtrToAccountedAllocPtr(ptr);
+	Assert(!MySessionState || gp_mp_inited);
+	Assert(NULL != ptr);
 
+
+	AccountedAllocHeader* header = UserPtrToAccountedAllocPtr(ptr);
 	int64 oldAllocSize = UserPtr_GetVmemPtrSize(header);
 
 	header = gp_realloc(header, newSize + sizeof(AccountedAllocHeader));
+	/* return NULL if reallocation fails */
 	if (NULL == header)
 	{
 		return NULL;
 	}
-	MemoryAccounting_Free(header->memoryAccount, header->memoryAccountGeneration, oldAllocSize);
+
+	MemoryAccounting_Free(AccountedAllocPtr_GetMemoryAccount(header),
+			AccountedAllocPtr_GetMemoryAccountGeneration(header),
+			oldAllocSize);
+	/* Re-initialize header with the new MemoryAccount */
 	AccountedAllocPtr_Initialize(header);
-	MemoryAccounting_Allocate(header->memoryAccount, UserPtr_GetVmemPtrSize(header));
+	MemoryAccounting_Allocate(AccountedAllocPtr_GetMemoryAccount(header),
+			UserPtr_GetVmemPtrSize(header));
 
 	return AccountedAllocPtrToUserPtr(header);
 }
 
+/* Free memory and account for it in the allocated account. */
 void gp_accounted_free(void* ptr)
 {
-	Assert(gp_mp_inited);
+	Assert(!MySessionState || gp_mp_inited);
+	Assert(NULL != ptr);
 
 	AccountedAllocHeader* header = UserPtrToAccountedAllocPtr(ptr);
 	uint16 totalSize = UserPtr_GetVmemPtrSize(header);
 
-	MemoryAccounting_Free(header->memoryAccount, header->memoryAccountGeneration, totalSize);
+	MemoryAccounting_Free(AccountedAllocPtr_GetMemoryAccount(header),
+			AccountedAllocPtr_GetMemoryAccountGeneration(header), totalSize);
 
 	gp_free(header);
 }
