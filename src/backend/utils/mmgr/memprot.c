@@ -554,7 +554,9 @@ void gp_accounted_free(void* ptr)
 	Assert(NULL != ptr);
 
 	AccountedAllocHeader* header = UserPtrToAccountedAllocPtr(ptr);
-	uint16 totalSize = UserPtr_GetVmemPtrSize(header);
+	size_t totalSize = UserPtr_GetVmemPtrSize(header);
+
+	Assert(UserPtr_GetUserPtrSize(header) - sizeof(AccountedAllocHeader) > 0);
 
 	MemoryAccounting_Free(AccountedAllocPtr_GetMemoryAccount(header),
 			AccountedAllocPtr_GetMemoryAccountGeneration(header), totalSize);
