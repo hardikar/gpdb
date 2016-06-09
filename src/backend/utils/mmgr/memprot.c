@@ -526,7 +526,6 @@ void *gp_accounted_realloc(void *ptr, int64 newSize)
 	Assert(!MySessionState || gp_mp_inited);
 	Assert(NULL != ptr);
 
-
 	AccountedAllocHeader* header = UserPtrToAccountedAllocPtr(ptr);
 	int64 oldAllocSize = UserPtr_GetVmemPtrSize(header);
 

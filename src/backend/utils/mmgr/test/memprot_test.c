@@ -54,6 +54,9 @@ _ExceptionalCondition()
      PG_RE_THROW();
 }
 
+#define TEST_MEMORY_ACCOUNT_ADDR 0x65656565
+#define TEST_MEMORY_ACCOUNT_GENERATION 0x2
+
 /*
  * This method sets up memprot.
  */
@@ -61,6 +64,8 @@ void MemProtTestSetup(void **state)
 {
 	gp_mp_inited = true;
 	memprotOwnerThread = pthread_self();
+	ActiveMemoryAccount = (MemoryAccount*) TEST_MEMORY_ACCOUNT_ADDR;
+	MemoryAccountingCurrentGeneration = TEST_MEMORY_ACCOUNT_GENERATION;
 }
 
 /*
@@ -69,6 +74,8 @@ void MemProtTestSetup(void **state)
 void MemProtTestTeardown(void **state)
 {
 	gp_mp_inited = false;
+	ActiveMemoryAccount = NULL;
+	MemoryAccountingCurrentGeneration = 0;
 }
 
 static size_t CalculateVmemSizeFromUserSize(size_t user_size)
@@ -80,6 +87,11 @@ static size_t CalculateVmemSizeFromUserSize(size_t user_size)
 #endif
 
 	return chosen_vmem_size;
+}
+
+static size_t CalculateAccountedAllocSizeFromUserSize(size_t user_size)
+{
+	return CalculateVmemSizeFromUserSize(sizeof(AccountedAllocHeader) + user_size);
 }
 
 /*
@@ -297,7 +309,34 @@ static void FreeWithCheck(void* ptr, size_t size)
 
 	}
 	PG_END_TRY();
+
 }
+
+/* Wrapper around gp_allocated_malloc that executes basic sets of tests during allocations */
+static void* AccountedAllocateWithCheck(size_t size)
+{
+	size_t chosen_vmem_size = CalculateAccountedAllocSizeFromUserSize(size);
+
+	expect_value(VmemTracker_ReserveVmem, newlyRequestedBytes, chosen_vmem_size);
+	will_return(VmemTracker_ReserveVmem, MemoryAllocation_Success);
+
+	expect_value(MemoryAccounting_Allocate, memoryAccount, TEST_MEMORY_ACCOUNT_ADDR);
+	expect_value(MemoryAccounting_Allocate, allocatedSize, chosen_vmem_size);
+	will_return(MemoryAccounting_Allocate, true);
+
+	void *ptr = gp_accounted_malloc(size);
+	assert_true(NULL != ptr);
+
+	char* stored_header = ((char*) ptr) - sizeof(AccountedAllocHeader);
+	MemoryAccount* stored_memory_account = *(MemoryAccount **)(stored_header + offsetof(AccountedAllocHeader, memoryAccount));
+	uint16 stored_memory_account_generation = *(uint16 *)(stored_header + offsetof(AccountedAllocHeader, memoryAccountGeneration));
+
+	assert_true(stored_memory_account == (MemoryAccount*) TEST_MEMORY_ACCOUNT_ADDR);
+	assert_true(stored_memory_account_generation == (uint16) TEST_MEMORY_ACCOUNT_GENERATION);
+
+	return ptr;
+}
+
 
 /* Checks if we bypass vmem tracker when mp_init is false */
 void
@@ -370,6 +409,16 @@ test__gp_realloc__basic_tests(void **state)
 	}
 }
 
+/*
+ * Tests basic functionality of gp_accounted_malloc and gp_accounted_free
+ */
+void
+test__gp_accounted_malloc__basic_tests(void **state)
+{
+	void* ptr = AccountedAllocateWithCheck(10);
+	//AccountedFreeWithCheck(ptr, 10);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -380,6 +429,7 @@ main(int argc, char* argv[])
 		unit_test_setup_teardown(test__gp_malloc_calls_vmem_tracker_when_mp_init_true, MemProtTestSetup, MemProtTestTeardown),
 		unit_test_setup_teardown(test__gp_malloc_and_free__basic_tests, MemProtTestSetup, MemProtTestTeardown),
 		unit_test_setup_teardown(test__gp_realloc__basic_tests, MemProtTestSetup, MemProtTestTeardown),
+		unit_test_setup_teardown(test__gp_accounted_malloc__basic_tests, MemProtTestSetup, MemProtTestTeardown),
 	};
 
 	return run_tests(tests);
