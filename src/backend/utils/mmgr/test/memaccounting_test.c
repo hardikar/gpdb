@@ -1560,6 +1560,13 @@ test__MemoryAccounting_SaveToFile__GeneratesCorrectString(void **state)
     pfree(newAccount);
 }
 
+void
+test__MemoryAccounting__AccountedAllocators(void **state)
+{
+
+	assert_true(true);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -1598,6 +1605,7 @@ main(int argc, char* argv[])
 		unit_test_setup_teardown(test__MemoryAccounting_ToString__Validate, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__MemoryAccounting_SaveToLog__GeneratesCorrectString, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__MemoryAccounting_SaveToFile__GeneratesCorrectString, SetupMemoryDataStructures, TeardownMemoryDataStructures),
+		unit_test_setup_teardown(test__MemoryAccounting__AccountedAllocators, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 	};
 
 	return run_tests(tests);
