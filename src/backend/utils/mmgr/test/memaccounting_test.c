@@ -1562,6 +1562,10 @@ test__MemoryAccounting_SaveToFile__GeneratesCorrectString(void **state)
     pfree(newAccount);
 }
 
+/*
+ * Tests basic functionality of accounting allocators to record and
+ * retrieve allocation information from the active memory account.
+ */
 void
 test__MemoryAccounting__AccountedAllocators(void **state)
 {
@@ -1569,15 +1573,19 @@ test__MemoryAccounting__AccountedAllocators(void **state)
 	size_t allocated = 0;
 	void *ptr1, *ptr2;
 
+	/* Switch to a new memory account */
 	START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Optimizer));
 
+	/* Reset the account for calculations */
 	MemoryAccounting_Reset();
 	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == 0);
 
+	/* Check if we account for allocation in the account balance */
 	ptr1 = gp_accounted_malloc(allocation_size);
 	allocated += UserPtr_GetVmemPtrSize(UserPtrToAccountedAllocPtr(ptr1));
 	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == allocated);
 
+	/* Allocate some more */
 	ptr2 = gp_accounted_malloc(2 * allocation_size);
 	allocated += UserPtr_GetVmemPtrSize(UserPtrToAccountedAllocPtr(ptr2));
 	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == allocated);
@@ -1585,7 +1593,9 @@ test__MemoryAccounting__AccountedAllocators(void **state)
 	gp_accounted_free(ptr1);
 	gp_accounted_free(ptr2);
 
+	/* Check if we accounted for all allocated memory freed in account balance */
 	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == 0);
+	/* Check if we accounted peak allocation in the account peak */
 	assert_true(MemoryAccounting_GetPeak(ActiveMemoryAccount) == allocated);
 
 	END_MEMORY_ACCOUNT();
