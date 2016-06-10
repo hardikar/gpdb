@@ -4,6 +4,8 @@
 #include "cmockery.h"
 
 #include "postgres.h"
+#include "utils/gp_alloc.h"
+#include "utils/gp_accounted_alloc.h"
 
 /*
  * We assume the maximum output size from any memory accounting output
@@ -1563,8 +1565,30 @@ test__MemoryAccounting_SaveToFile__GeneratesCorrectString(void **state)
 void
 test__MemoryAccounting__AccountedAllocators(void **state)
 {
+	const size_t allocation_size = 30;
+	size_t allocated = 0;
+	void *ptr1, *ptr2;
 
-	assert_true(true);
+	START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Optimizer));
+
+	MemoryAccounting_Reset();
+	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == 0);
+
+	ptr1 = gp_accounted_malloc(allocation_size);
+	allocated += UserPtr_GetVmemPtrSize(UserPtrToAccountedAllocPtr(ptr1));
+	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == allocated);
+
+	ptr2 = gp_accounted_malloc(2 * allocation_size);
+	allocated += UserPtr_GetVmemPtrSize(UserPtrToAccountedAllocPtr(ptr2));
+	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == allocated);
+
+	gp_accounted_free(ptr1);
+	gp_accounted_free(ptr2);
+
+	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == 0);
+	assert_true(MemoryAccounting_GetPeak(ActiveMemoryAccount) == allocated);
+
+	END_MEMORY_ACCOUNT();
 }
 
 int
