@@ -619,7 +619,8 @@ main(int argc, char* argv[])
 		unit_test_setup_teardown(test__gp_malloc_calls_vmem_tracker_when_mp_init_true, MemProtTestSetup, MemProtTestTeardown),
 		unit_test_setup_teardown(test__gp_malloc_and_free__basic_tests, MemProtTestSetup, MemProtTestTeardown),
 		unit_test_setup_teardown(test__gp_realloc__basic_tests, MemProtTestSetup, MemProtTestTeardown),
-		unit_test_setup_teardown(test__gp_accounted_malloc__basic_tests, MemProtTestSetup, MemProtTestTeardown),
+
+		unit_test_setup_teardown(test__gp_accounted_malloc_and_free__basic_tests, MemProtTestSetup, MemProtTestTeardown),
 		unit_test_setup_teardown(test__gp_accounted_realloc__basic_tests, MemProtTestSetup, MemProtTestTeardown),
 	};
 
