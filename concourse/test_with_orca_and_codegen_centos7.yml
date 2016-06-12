@@ -1,0 +1,16 @@
+platform: linux
+image: docker:///yolo/orcadev#centos6
+inputs:
+  - name: gpdb_src
+  - name: bin_orca
+  - name: bin_gpos
+  - name: bin_xerces
+  - name: bin_gpdb_with_orca_and_codegen_centos7
+outputs:
+run:
+  path: gpdb_src/concourse/scripts/test_with_orca_and_codegen.py
+  args:
+    - --gpdb_name=bin_gpdb_with_orca_and_codegen_centos7
+    - bin_orca
+    - bin_gpos
+    - bin_xerces
