@@ -70,12 +70,10 @@ class GporcaCommon:
         return status
     
     def install_dependency(self, dependency_name):
-        return subprocess.call(
-            ["tar",
-             "-xzf",
-             dependency_name + "/" + dependency_name + ".tar.gz",
-             "-C",
-             "/usr/local"])
+        for f in os.listdir(dependency_name):
+            if f.endswith(".tar.gz"):
+                return subprocess.call(
+                        ["tar", "-xzf", os.path.join(dependency_name, f), "-C", "/usr/local"])
     
     def configure(self):
         return subprocess.call(["./configure",
