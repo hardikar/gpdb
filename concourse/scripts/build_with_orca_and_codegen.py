@@ -39,9 +39,9 @@ def main():
     status = make()
     if status:
         return status
-    status = unittest()
-    if status:
-        return status
+#    status = unittest()
+#    if status:
+#        return status
     status = install(options.output_dir)
     if status:
         return status
