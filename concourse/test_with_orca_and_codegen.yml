@@ -1,5 +1,5 @@
 platform: linux
-image: docker:///shardikar/gpcodegen#latest
+image: docker:///yolo/orcadev#centos6
 inputs:
   - name: gpdb_src
   - name: bin_orca

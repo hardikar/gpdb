@@ -1,5 +1,5 @@
 platform: linux
-image: docker:///shardikar/gpcodegen#latest
+image: docker:///yolo/orcadev#centos6
 inputs:
   - name: bin_orca
   - name: bin_gpos
@@ -10,7 +10,7 @@ outputs:
 run:
   path: gpdb_src/concourse/scripts/build_with_orca_and_codegen.py
   args:
-    - --output_dir=bin_gpdb_with_orca_and_codegen_centos7/install
+    - --output_dir=bin_gpdb_with_orca_and_codegen_centos6/install
     - bin_orca
     - bin_gpos
     - bin_xerces
