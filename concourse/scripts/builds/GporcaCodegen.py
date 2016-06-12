@@ -9,7 +9,7 @@ CLANG_RPM_URL="https://github.com/hardikar/rpm-specs/releases/download/centos6/c
 
 class GporcaCodegen(GporcaCommon):
     def _download_and_install_rpm(self, url):
-        status = subprocess.call(["curl", url, "-o", "t.rpm"])
+        status = subprocess.call(["wget", url, "-O", "t.rpm"])
         if status:
             return status
         status = subprocess.call(["rpm", "-i", "t.rpm"])
