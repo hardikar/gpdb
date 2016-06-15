@@ -266,11 +266,14 @@ planner(Query *parse, int cursorOptions,
 		{
 			INSTR_TIME_SET_CURRENT(starttime);
 		}
+
+		MemoryContext oldContext = MemoryContextSwitchTo(OptimizerMemoryContext);
 		START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Optimizer));
 		{
 			result = optimize_query(parse, boundParams);
 		}
 		END_MEMORY_ACCOUNT();
+		MemoryContextSwitchTo(oldContext);
 
 		if (gp_log_optimization_time)
 		{

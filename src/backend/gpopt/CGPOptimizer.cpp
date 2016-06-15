@@ -88,8 +88,8 @@ CGPOptimizer::InitGPOPT (bool use_gpdb_allocators)
   // Use GPORCA's default allocators
   struct gpos_init_params params = { NULL, NULL };
   if ( use_gpdb_allocators ) {
-    params.alloc = gpdb::GPMalloc;
-    params.free = gpdb::GPFree;
+    params.alloc = gpdb::GPDBAlloc;
+    params.free = gpdb::GPDBFree;
   }
 
   gpos_init(&params);

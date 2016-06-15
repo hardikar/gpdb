@@ -58,6 +58,7 @@
 #include "utils/syscache.h"
 #include "pgstat.h"
 #include "utils/session_state.h"
+#include "utils/memutils.h"
 #include "codegen/codegen_wrapper.h"
 
 static HeapTuple GetDatabaseTuple(const char *dbname);
@@ -593,8 +594,17 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	GPMemoryProtect_Init();
 
 #ifdef USE_ORCA
+	if (NULL == OptimizerMemoryContext) {
+	OptimizerMemoryContext = AllocSetContextCreate(TopMemoryContext,
+										   "OptimizerMemoryContext",
+										   ALLOCSET_DEFAULT_MINSIZE,
+										   ALLOCSET_DEFAULT_INITSIZE,
+										   ALLOCSET_DEFAULT_MAXSIZE);
+	}
 	/* Initialize GPOPT */
+	MemoryContext oldContext = MemoryContextSwitchTo(OptimizerMemoryContext);
 	InitGPOPT(optimizer_use_gpdb_allocators);
+	MemoryContextSwitchTo(oldContext);
 #endif
 
 	/*

@@ -190,6 +190,7 @@ extern PGDLLIMPORT MemoryContext MessageContext;
 extern PGDLLIMPORT MemoryContext TopTransactionContext;
 extern PGDLLIMPORT MemoryContext CurTransactionContext;
 extern PGDLLIMPORT MemoryContext MemoryAccountMemoryContext;
+extern PGDLLIMPORT MemoryContext OptimizerMemoryContext;
 
 /* These two are transient links to contexts owned by other objects: */
 extern PGDLLIMPORT MemoryContext QueryContext;

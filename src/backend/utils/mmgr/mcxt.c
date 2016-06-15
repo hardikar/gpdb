@@ -73,6 +73,7 @@ MemoryContext MessageContext = NULL;
 MemoryContext TopTransactionContext = NULL;
 MemoryContext CurTransactionContext = NULL;
 MemoryContext MemoryAccountMemoryContext = NULL;
+MemoryContext OptimizerMemoryContext = NULL;
 
 /* These two are transient links to contexts owned by other objects: */
 MemoryContext QueryContext = NULL;
