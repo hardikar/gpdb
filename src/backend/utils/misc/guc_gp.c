@@ -3408,7 +3408,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_use_gpdb_allocators,
-		false, NULL, NULL
+		true, NULL, NULL
 	},
 
 	{
