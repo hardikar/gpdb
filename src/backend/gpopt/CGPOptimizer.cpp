@@ -20,6 +20,7 @@
 #include "naucrates/init.h"
 #include "gpopt/init.h"
 #include "gpos/_api.h"
+#include "gpopt/gpdbwrappers.h"
 
 //---------------------------------------------------------------------------
 //	@function:
