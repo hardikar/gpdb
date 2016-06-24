@@ -17,7 +17,7 @@
 #include "codegen/utils/clang_compiler.h"
 #include "codegen/utils/utility.h"
 #include "codegen/utils/instance_method_wrappers.h"
-#include "codegen/utils/codegen_utils.h"
+#include "codegen/utils/gp_codegen_utils.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -46,7 +46,7 @@ constexpr char ExecQualCodegen::kExecQualPrefix[];
 
 class ElogWrapper {
  public:
-  ElogWrapper(gpcodegen::CodegenUtils* codegen_utils) :
+  ElogWrapper(gpcodegen::GpCodegenUtils* codegen_utils) :
     codegen_utils_(codegen_utils) {
     SetupElog();
   }
@@ -89,7 +89,7 @@ class ElogWrapper {
   llvm::Function* llvm_elog_start_;
   llvm::Function* llvm_elog_finish_;
 
-  gpcodegen::CodegenUtils* codegen_utils_;
+  gpcodegen::GpCodegenUtils* codegen_utils_;
 
   void SetupElog(){
     assert(codegen_utils_ != nullptr);
@@ -117,7 +117,7 @@ ExecQualCodegen::ExecQualCodegen
 
 
 bool ExecQualCodegen::GenerateExecQual(
-    gpcodegen::CodegenUtils* codegen_utils) {
+    gpcodegen::GpCodegenUtils* codegen_utils) {
 
   assert(NULL != codegen_utils);
 
@@ -144,7 +144,7 @@ bool ExecQualCodegen::GenerateExecQual(
 }
 
 
-bool ExecQualCodegen::GenerateCodeInternal(CodegenUtils* codegen_utils) {
+bool ExecQualCodegen::GenerateCodeInternal(GpCodegenUtils* codegen_utils) {
   bool isGenerated = GenerateExecQual(codegen_utils);
 
   if (isGenerated) {
