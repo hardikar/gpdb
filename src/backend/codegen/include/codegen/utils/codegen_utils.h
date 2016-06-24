@@ -114,6 +114,10 @@ class CodegenUtils {
     return module_.get();
   }
 
+  llvm::LLVMContext& context() {
+    return context_;
+  }
+
   /**
    * @brief Get a C++ type's equivalent in the LLVM type system.
    *
@@ -409,6 +413,10 @@ class CodegenUtils {
   template<typename FunctionType>
   void CreateFallback(llvm::Function* regular_function,
                       llvm::Function* generated_function);
+
+  void addModule(std::unique_ptr<llvm::Module>& module) {
+    auxiliary_modules_.push_back(std::move(module));
+  }
 
  private:
   // Give ClangCompiler access to 'context_' add allow it to add compiled C++
