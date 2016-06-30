@@ -1076,7 +1076,7 @@ class CodegenUtilsTest : public ::testing::Test {
      InputType* input = new InputType[input_size];
      for (size_t idx = 0; idx < input_size; ++idx) {
          unsigned int seed = idx;
-         input[idx] = rand_r(&seed) % (2 ^ (sizeof(InputType) * 8) - 1);
+         input[idx] = rand_r(&seed) % ((2 ^ (sizeof(InputType) * 8)) - 1);
      }
      return input;
   }

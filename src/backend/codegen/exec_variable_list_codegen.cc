@@ -161,9 +161,6 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   llvm::Value* llvm_econtext =
       irb->CreateLoad(codegen_utils->GetPointerToMember(
           llvm_projInfo_arg, &ProjectionInfo::pi_exprContext));
-  llvm::Value* llvm_varSlotOffsets =
-      irb->CreateLoad(codegen_utils->GetPointerToMember(
-          llvm_projInfo_arg, &ProjectionInfo::pi_varSlotOffsets));
 
   // We want to fall back when ExecVariableList is called with a slot that's
   // different from the one we generated the function (eg HashJoin). We also
