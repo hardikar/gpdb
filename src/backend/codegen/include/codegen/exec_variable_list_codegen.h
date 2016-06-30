@@ -92,6 +92,13 @@ class ExecVariableListCodegen: public BaseCodegen<ExecVariableListFn> {
    * @return true on successful generation.
    **/
   bool GenerateExecVariableList(gpcodegen::GpCodegenUtils* codegen_utils);
+
+  template<typename FuncType>
+  static bool FooBar(gpcodegen::BaseCodegen<FuncType>* base_codegen,
+gpcodegen::GpCodegenUtils* codegen_utils,
+                                     TupleTableSlot* slot,
+                                     ProjectionInfo* proj_info,
+              int max_attr);
 };
 
 /** @} */

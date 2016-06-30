@@ -19,6 +19,7 @@
 #include "codegen/utils/utility.h"
 #include "codegen/utils/instance_method_wrappers.h"
 #include "codegen/utils/gp_codegen_utils.h"
+#include "codegen/base_codegen.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -64,9 +65,7 @@ ExecVariableListCodegen::ExecVariableListCodegen
 
 bool ExecVariableListCodegen::GenerateExecVariableList(
     gpcodegen::GpCodegenUtils* codegen_utils) {
-
   assert(NULL != codegen_utils);
-
   static_assert(sizeof(Datum) == sizeof(int64),
       "sizeof(Datum) doesn't match sizeof(int64)");
 
@@ -104,9 +103,22 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
     return false;
   }
 
+
+  // Err what DEBUG DEBUG
+  return ExecVariableListCodegen::FooBar(this, codegen_utils, slot_, proj_info_, max_attr);
+}
+
+
+template <typename FuncType>
+bool ExecVariableListCodegen::FooBar(gpcodegen::BaseCodegen<FuncType>* base_codegen,
+                                     gpcodegen::GpCodegenUtils* codegen_utils,
+                                     TupleTableSlot* slot,
+                                     ProjectionInfo* proj_info,
+                                     int max_attr) {
+
   // So looks like we're going to generate code
-  llvm::Function* exec_variable_list_func = CreateFunction<ExecVariableListFn>(
-      codegen_utils, GetUniqueFuncName());
+  llvm::Function* exec_variable_list_func = base_codegen->template CreateFunction<FuncType>(
+      codegen_utils, base_codegen->template GetUniqueFuncName());
 
   auto irb = codegen_utils->ir_builder();
 
@@ -138,7 +150,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   // Generation-time constants
   llvm::Value* llvm_max_attr = codegen_utils->GetConstant(max_attr);
-  llvm::Value* llvm_slot = codegen_utils->GetConstant(slot_);
+  llvm::Value* llvm_slot = codegen_utils->GetConstant(slot);
 
   // Function arguments to ExecVariableList
   llvm::Value* llvm_projInfo_arg = ArgumentByPosition(exec_variable_list_func,
@@ -284,7 +296,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
       llvm_heaptuple_t_data, {llvm_heaptuple_t_data_t_hoff});
 
   int off = 0;
-  TupleDesc tupleDesc = slot_->tts_tupleDescriptor;
+  TupleDesc tupleDesc = slot->tts_tupleDescriptor;
   Form_pg_attribute* att = tupleDesc->attrs;
 
   // For each attribute we use three blocks to i) check for null,
@@ -541,8 +553,8 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   // This code from ExecVariableList copies the contents of the isnull & values
   // arrays in the slot to output variable from the function parameters to
   // ExecVariableList
-  int  *varNumbers = proj_info_->pi_varNumbers;
-  for (int i = list_length(proj_info_->pi_targetlist) - 1; i >= 0; i--) {
+  int  *varNumbers = proj_info->pi_varNumbers;
+  for (int i = list_length(proj_info->pi_targetlist) - 1; i >= 0; i--) {
     // *isnull = slot->PRIVATE_tts_isnull[attnum-1];
     llvm::Value* llvm_isnull_from_slot_val =
         irb->CreateLoad(irb->CreateInBoundsGEP(
@@ -587,7 +599,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
       llvm_error);
 
   codegen_utils->CreateFallback<ExecVariableListFn>(
-      codegen_utils->GetOrRegisterExternalFunction(GetRegularFuncPointer()),
+      codegen_utils->GetOrRegisterExternalFunction(base_codegen->template GetRegularFuncPointer()),
       exec_variable_list_func);
   return true;
 }
