@@ -93,11 +93,10 @@ class ExecVariableListCodegen: public BaseCodegen<ExecVariableListFn> {
    **/
   bool GenerateExecVariableList(gpcodegen::GpCodegenUtils* codegen_utils);
 
-  template<typename FuncType>
-  static bool FooBar(gpcodegen::BaseCodegen<FuncType>* base_codegen,
-gpcodegen::GpCodegenUtils* codegen_utils,
-                                     TupleTableSlot* slot,
-                                     ProjectionInfo* proj_info,
+  static bool GenerateSlotGetAttr(
+              gpcodegen::GpCodegenUtils* codegen_utils,
+              const std::string& function_name,
+              TupleTableSlot* slot,
               int max_attr);
 };
 
