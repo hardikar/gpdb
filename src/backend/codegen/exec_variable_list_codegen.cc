@@ -335,7 +335,8 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
       is_null_block = codegen_utils->CreateBasicBlock(
           "is_null_block_" + std::to_string(attnum), exec_variable_list_func);
       is_not_null_block = codegen_utils->CreateBasicBlock(
-          "is_not_null_block_" + std::to_string(attnum), exec_variable_list_func);
+          "is_not_null_block_" + std::to_string(attnum),
+          exec_variable_list_func);
 
       llvm::Value* llvm_attnum = codegen_utils->GetConstant(attnum);
 
