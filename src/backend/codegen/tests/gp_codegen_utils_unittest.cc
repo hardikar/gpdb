@@ -92,6 +92,27 @@ TEST_F(GpCodegenUtilsTest, TestTryCatch) {
   PG_END_TRY();
   printf("At the end\n");
   EXPECT_TRUE(true);
+
+  typedef void (*VoidFn) ();
+  auto irb = codegen_utils_->ir_builder();
+
+  llvm::Function* foo_func =
+      codegen_utils_->CreateFunction<VoidFn>("foo");
+  llvm::Function* printf_func =
+      codegen_utils_->GetOrRegisterExternalFunction(printf, "printf");
+
+  llvm::BasicBlock* main = codegen_utils_->CreateBasicBlock("main", foo_func);
+  irb->SetInsertPoint(main);
+  irb->CreateCall(printf_func, {
+      codegen_utils_->GetConstant("CODEGEN: In main code\n")
+  });
+  irb->CreateRetVoid();
+
+  EXPECT_TRUE(codegen_utils_->PrepareForExecution(
+        CodegenUtils::OptimizationLevel::kNone,
+        true));
+  VoidFn void_func = codegen_utils_->GetFunctionPointer<VoidFn>("foo");
+  void_func();
 }
 
 }  // namespace gpcodegen

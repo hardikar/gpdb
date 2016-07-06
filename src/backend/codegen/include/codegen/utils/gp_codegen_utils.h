@@ -41,6 +41,14 @@ class GpCodegenUtils : public CodegenUtils {
   ~GpCodegenUtils() {
   }
 
+  void CreateTry() {
+    // Get Insert point ??
+    llvm::Value save_exception_stack = GetConstant(PG_exception_stack);
+    llvm::Value save_context_stack = GetConstant(error_context_stack);
+    llvm::Value
+
+  }
+
   /*
    * @brief Create LLVM instructions to call elog_start() and elog_finish().
    *
