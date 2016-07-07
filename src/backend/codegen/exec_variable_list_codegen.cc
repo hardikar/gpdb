@@ -136,8 +136,10 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   // Generate slot_getattr for attributes all the way to max_attr
   std::string slot_getattr_func_name = "slot_getattr_" + std::to_string(max_attr);
-  if (!ExecVariableListCodegen::GenerateSlotGetAttr(
+  if (!ExecVariableListCodegen::WrapGenerateSlotGetAttr(
       codegen_utils, slot_getattr_func_name, slot_, max_attr)) {
+    elog(DEBUG1, "Cannot generate code for ExecVariableList"
+                 "because slot_getattr generation failed!");
     return false;
   }
   llvm::Function* slot_getattr_func =
@@ -240,12 +242,33 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 }
 
 
-// DANGER : If this fails - there will be no automatic clean up
-bool ExecVariableListCodegen::GenerateSlotGetAttr(
+// TODO(shardikar, krajaraman) Remove this wrapper after implementing shared
+// code generation interface
+ bool ExecVariableListCodegen::WrapGenerateSlotGetAttr(
     gpcodegen::GpCodegenUtils* codegen_utils,
     const std::string& function_name,
     TupleTableSlot *slot,
     int max_attr) {
+
+  llvm::Function* func = nullptr;
+  bool ret = ExecVariableListCodegen::GenerateSlotGetAttr(
+      codegen_utils, function_name, slot, max_attr, &func);
+
+  if (func && !llvm::verifyFunction(*func)) {
+    func->eraseFromParent();
+  }
+
+  return ret;
+}
+
+
+
+bool ExecVariableListCodegen::GenerateSlotGetAttr(
+    gpcodegen::GpCodegenUtils* codegen_utils,
+    const std::string& function_name,
+    TupleTableSlot *slot,
+    int max_attr,
+    llvm::Function** out_func) {
 
   // So looks like we're going to generate code
   llvm::Function* slot_getattr_func =
