@@ -46,7 +46,8 @@ class ExecVariableListCodegen: public BaseCodegen<ExecVariableListFn> {
               gpcodegen::GpCodegenUtils* codegen_utils,
               const std::string& function_name,
               TupleTableSlot* slot,
-              int max_attr);
+              int max_attr,
+              llvm::Function** out_func);
  protected:
   /**
    * @brief Generate code for the code path ExecVariableList > slot_getattr >

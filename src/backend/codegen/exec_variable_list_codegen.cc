@@ -136,14 +136,13 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   // Generate slot_getattr for attributes all the way to max_attr
   std::string slot_getattr_func_name = "slot_getattr_" + std::to_string(max_attr);
+  llvm::Function* slot_getattr_func = nullptr;
   if (!ExecVariableListCodegen::WrapGenerateSlotGetAttr(
-      codegen_utils, slot_getattr_func_name, slot_, max_attr)) {
+      codegen_utils, slot_getattr_func_name, slot_, max_attr, &slot_getattr_func)) {
     elog(DEBUG1, "Cannot generate code for ExecVariableList"
                  "because slot_getattr generation failed!");
     return false;
   }
-  llvm::Function* slot_getattr_func =
-      codegen_utils->module()->getFunction(slot_getattr_func_name);
   assert(nullptr != slot_getattr_func);
 
   // Entry block
@@ -248,14 +247,16 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
     gpcodegen::GpCodegenUtils* codegen_utils,
     const std::string& function_name,
     TupleTableSlot *slot,
-    int max_attr) {
+    int max_attr,
+    llvm::Function** out_func) {
 
-  llvm::Function* func = nullptr;
+  *out_func = nullptr;
+
   bool ret = ExecVariableListCodegen::GenerateSlotGetAttr(
-      codegen_utils, function_name, slot, max_attr, &func);
+      codegen_utils, function_name, slot, max_attr, out_func);
 
-  if (func && !llvm::verifyFunction(*func)) {
-    func->eraseFromParent();
+  if (*out_func && !llvm::verifyFunction(**out_func)) {
+    (*out_func)->eraseFromParent();
   }
 
   return ret;
