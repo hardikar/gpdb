@@ -43,6 +43,7 @@ class OpExprTreeGenerator : public ExprTreeGenerator {
   static bool VerifyAndCreateExprTree(
         ExprState* expr_state,
         ExprContext* econtext,
+        ExprTreeGeneratorInfo* expr_tree_generator_info,
         std::unique_ptr<ExprTreeGenerator>* expr_tree);
 
   bool GenerateCode(gpcodegen::CodegenUtils* codegen_utils,

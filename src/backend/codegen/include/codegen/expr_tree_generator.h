@@ -41,6 +41,11 @@ enum class ExprTreeNodeType {
   kOperator = 2
 };
 
+struct ExprTreeGeneratorInfo {
+  std::unordered_map<void*, int> max_attrs_by_slot;
+  std::unordered_map<void*, llvm::Function*> slot_getattr_funcs_by_slot;
+};
+
 class ExprTreeGenerator {
  public:
   virtual ~ExprTreeGenerator() = default;
@@ -58,6 +63,7 @@ class ExprTreeGenerator {
   static bool VerifyAndCreateExprTree(
       ExprState* expr_state,
       ExprContext* econtext,
+      ExprTreeGeneratorInfo* expr_tree_generator_info,
       std::unique_ptr<ExprTreeGenerator>* expr_tree);
 
   /**

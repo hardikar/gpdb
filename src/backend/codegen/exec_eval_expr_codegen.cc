@@ -93,9 +93,10 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
         "Calling codegen'ed expression evaluation");
 
   // Check if we can codegen. If so create ExprTreeGenerator
+  ExprTreeGeneratorInfo expr_tree_generator_info;
   std::unique_ptr<ExprTreeGenerator> expr_tree_generator(nullptr);
   bool can_generate = ExprTreeGenerator::VerifyAndCreateExprTree(
-      exprstate_, econtext_, &expr_tree_generator);
+      exprstate_, econtext_, &expr_tree_generator_info, &expr_tree_generator);
   if (!can_generate ||
       expr_tree_generator.get() == nullptr) {
     return false;

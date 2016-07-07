@@ -95,6 +95,7 @@ OpExprTreeGenerator::OpExprTreeGenerator(
 bool OpExprTreeGenerator::VerifyAndCreateExprTree(
     ExprState* expr_state,
     ExprContext* econtext,
+    ExprTreeGeneratorInfo* expr_tree_generator_info,
     std::unique_ptr<ExprTreeGenerator>* expr_tree) {
   assert(nullptr != expr_state &&
          nullptr != expr_state->expr &&
@@ -126,6 +127,7 @@ bool OpExprTreeGenerator::VerifyAndCreateExprTree(
     std::unique_ptr<ExprTreeGenerator> arg(nullptr);
     supported_tree &= ExprTreeGenerator::VerifyAndCreateExprTree(argstate,
                                                                 econtext,
+                                                                expr_tree_generator_info,
                                                                 &arg);
     if (!supported_tree) {
       break;
