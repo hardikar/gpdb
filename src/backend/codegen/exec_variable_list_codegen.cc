@@ -257,6 +257,8 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   if (*out_func && !llvm::verifyFunction(**out_func)) {
     (*out_func)->eraseFromParent();
+    *out_func = nullptr;
+    return false;
   }
 
   return ret;
@@ -272,8 +274,8 @@ bool ExecVariableListCodegen::GenerateSlotGetAttr(
     llvm::Function** out_func) {
 
   // So looks like we're going to generate code
-  llvm::Function* slot_getattr_func =
-      codegen_utils->CreateFunction<SlotGetAttrFn>(function_name);
+  *out_func = codegen_utils->CreateFunction<SlotGetAttrFn>(function_name);
+  llvm::Function* slot_getattr_func = *out_func;
 
   auto irb = codegen_utils->ir_builder();
 
