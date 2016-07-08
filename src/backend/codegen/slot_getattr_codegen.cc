@@ -60,7 +60,9 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
   bool ret = GenerateSlotGetAttrInternal(
       codegen_utils, function_name, slot, max_attr, out_func);
 
-  if (*out_func && codegen_validate_functions && llvm::verifyFunction(**out_func)) {
+  assert(nullptr != *out_func);
+
+  if (!ret || (codegen_validate_functions && llvm::verifyFunction(**out_func))) {
     (*out_func)->eraseFromParent();
     *out_func = nullptr;
     return false;

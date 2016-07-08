@@ -141,7 +141,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   llvm::Function* slot_getattr_func = nullptr;
   if (!SlotGetAttrCodegen::GenerateSlotGetAttr(
       codegen_utils, slot_getattr_func_name, slot_, max_attr, &slot_getattr_func)) {
-    elog(DEBUG1, "Cannot generate code for ExecVariableList"
+    elog(DEBUG1, "Cannot generate code for ExecVariableList "
                  "because slot_getattr generation failed!");
     return false;
   }
