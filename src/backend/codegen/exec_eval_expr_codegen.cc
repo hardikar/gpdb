@@ -89,12 +89,6 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
 
   auto irb = codegen_utils->ir_builder();
 
-  irb->SetInsertPoint(llvm_entry_block);
-
-  codegen_utils->CreateElog(
-        DEBUG1,
-        "Calling codegen'ed expression evaluation");
-
   // Check if we can codegen. If so create ExprTreeGenerator
   ExprTreeGeneratorInfo gen_info(econtext_,
                                  exec_eval_expr_func,
@@ -135,6 +129,13 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
     gen_info.llvm_slot_getattr_func =
         codegen_utils->GetOrRegisterExternalFunction(slot_getattr);
   }
+
+  irb->SetInsertPoint(llvm_entry_block);
+
+  codegen_utils->CreateElog(
+      DEBUG1,
+      "Calling codegen'ed expression evaluation");
+
 
   // Generate code from expression tree generator
   llvm::Value* value = nullptr;
