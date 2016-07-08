@@ -60,7 +60,7 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
   bool ret = GenerateSlotGetAttrInternal(
       codegen_utils, function_name, slot, max_attr, out_func);
 
-  if (*out_func && !llvm::verifyFunction(**out_func)) {
+  if (*out_func && codegen_validate_functions && llvm::verifyFunction(**out_func)) {
     (*out_func)->eraseFromParent();
     *out_func = nullptr;
     return false;
@@ -122,7 +122,7 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
    irb->SetInsertPoint(entry_block);
    // We start a sequence of checks to ensure that everything is fine and
    // we do not need to fall back.
-   irb->CreateBr(tuple_type_check_block);
+   irb->CreateBr(slot_check_block);
 
 
    // Slot check block
@@ -132,7 +132,7 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
    // in as an argument to slot_getattr
    irb->CreateCondBr(
        irb->CreateICmpEQ(llvm_slot, llvm_slot_arg),
-       main_block /* true */,
+       tuple_type_check_block /* true */,
        fallback_block /* false */);
 
 
@@ -271,6 +271,7 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
      // If any thisatt is varlen
      if (thisatt->attlen < 0) {
        // We don't support variable length attributes.
+       elog(DEBUG1, "We don't support variable length attributes.");
        return false;
      }
 
@@ -399,10 +400,12 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
          break;
          default:
            // We do not support other data type length, passed by value
+           elog(DEBUG1, "We do not support other data type length, passed by value");
            return false;
        }
      } else {
        // We do not support attributes by reference
+       elog(DEBUG1, "We do not support attributes by reference");
        return false;
      }
 
