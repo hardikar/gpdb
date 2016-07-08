@@ -10,6 +10,8 @@
 //
 //---------------------------------------------------------------------------
 
+#include <algorithm>
+
 #include "codegen/expr_tree_generator.h"
 #include "codegen/var_expr_tree_generator.h"
 
@@ -32,8 +34,11 @@ bool VarExprTreeGenerator::VerifyAndCreateExprTree(
   assert(nullptr != expr_state &&
          nullptr != expr_state->expr &&
          T_Var == nodeTag(expr_state->expr) &&
-         nullptr != expr_tree);
+         nullptr != expr_tree &&
+         nullptr != gen_info);
   expr_tree->reset(new VarExprTreeGenerator(expr_state));
+  gen_info->max_attr = std::max(gen_info->max_attr,
+                           reinterpret_cast<Var*>(expr_state->expr)->varattno);
   return true;
 }
 
@@ -77,14 +82,10 @@ bool VarExprTreeGenerator::GenerateCode(CodegenUtils* codegen_utils,
   llvm::Value *llvm_variable_varattno = codegen_utils->
       GetConstant<int32_t>(attnum);
 
-  // External functions
-  // TODO(shardikar) : Don't forget to do this HAHAHH OOOOH
-  llvm::Function* llvm_slot_getattr =
-      codegen_utils->GetOrRegisterExternalFunction(slot_getattr);
-
+  assert(nullptr != gen_info.llvm_slot_getattr_func);
   // retrieve variable
   *llvm_out_value = irb->CreateCall(
-      llvm_slot_getattr, {
+      gen_info.llvm_slot_getattr_func, {
           llvm_slot,
           llvm_variable_varattno,
           llvm_isnull_ptr /* TODO: Fix isNull */ });

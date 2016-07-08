@@ -50,15 +50,20 @@ struct ExprTreeGeneratorInfo {
 
   llvm::Function* llvm_slot_getattr_func;
 
+  // Members that will be updated by ExprTreeGenerator
+  int16_t max_attr;
+
   ExprTreeGeneratorInfo(
     ExprContext* econtext,
     llvm::Function* llvm_main_func,
     llvm::BasicBlock* llvm_error_block,
-    llvm::Function* llvm_slot_getattr_func) :
+    llvm::Function* llvm_slot_getattr_func,
+    int16_t max_attr) :
       econtext(econtext),
       llvm_main_func(llvm_main_func),
       llvm_error_block(llvm_error_block),
-      llvm_slot_getattr_func(llvm_slot_getattr_func) {
+      llvm_slot_getattr_func(llvm_slot_getattr_func),
+      max_attr(max_attr) {
   }
 };
 
