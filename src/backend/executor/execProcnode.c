@@ -166,7 +166,7 @@ static void ExecCdbTraceNode(PlanState *node, bool entry, TupleTableSlot *result
  EnrollQualList(PlanState* result, TupleTableSlot* slot);
 
  static void
- EnrollProjInfoTargetList(ProjectionInfo* ProjInfo, TupleTableSlot* slot);
+ EnrollProjInfoTargetList(ProjectionInfo* ProjInfo, TupleTableSlot* slot, bool skip_var);
 
 /*
  * setSubplanSliceId
@@ -349,7 +349,10 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			EnrollQualList(result, ((ScanState*) result)->ss_ScanTupleSlot);
 			if (NULL !=result)
 			{
-			  EnrollProjInfoTargetList(result->ps_ProjInfo, ((ScanState*) result)->ss_ScanTupleSlot);
+			  bool skip_var = true;
+			  EnrollProjInfoTargetList(result->ps_ProjInfo,
+			                           ((ScanState*) result)->ss_ScanTupleSlot,
+			                           skip_var);
 			}
 			}
 			END_MEMORY_ACCOUNT();
@@ -583,11 +586,14 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			EnrollQualList(result, ((ScanState*) result)->ss_ScanTupleSlot);
 			if (NULL != result)
 			{
+			  bool skip_var = false;
 			  AggState* aggstate = (AggState*)result;
 			  for (int aggno = 0; aggno < aggstate->numaggs; aggno++)
 			  {
 			    AggStatePerAgg peraggstate = &aggstate->peragg[aggno];
-			    EnrollProjInfoTargetList(peraggstate->evalproj, ((ScanState*) result)->ss_ScanTupleSlot);
+			    EnrollProjInfoTargetList(peraggstate->evalproj,
+			                             ((ScanState*) result)->ss_ScanTupleSlot,
+			                             skip_var);
 			  }
 			}
 			}
@@ -806,7 +812,9 @@ EnrollQualList(PlanState* result, TupleTableSlot* slot)
  * ----------------------------------------------------------------
  */
 void
-EnrollProjInfoTargetList(ProjectionInfo* ProjInfo, TupleTableSlot* slot)
+EnrollProjInfoTargetList(ProjectionInfo* ProjInfo,
+                         TupleTableSlot* slot,
+                         bool skip_var)
 {
 #ifdef USE_CODEGEN
   if (NULL == ProjInfo ||
@@ -819,7 +827,13 @@ EnrollProjInfoTargetList(ProjectionInfo* ProjInfo, TupleTableSlot* slot)
   {
     GenericExprState *gstate = (GenericExprState *) lfirst(l);
     if (NULL == gstate->arg ||
-        NULL == gstate->arg->evalfunc) {
+        NULL == gstate->arg->evalfunc)
+    {
+      continue;
+    }
+    if (skip_var &&
+        T_Var == nodeTag(gstate->arg->expr))
+    {
       continue;
     }
     enroll_ExecEvalExpr_codegen(gstate->arg->evalfunc,
