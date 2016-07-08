@@ -52,11 +52,13 @@ ExecEvalExprCodegen::ExecEvalExprCodegen
     ExecEvalExprFn regular_func_ptr,
     ExecEvalExprFn* ptr_to_regular_func_ptr,
     ExprState *exprstate,
-    ExprContext *econtext) :
+    ExprContext *econtext,
+    TupleTableSlot* slot) :
     BaseCodegen(kExecEvalExprPrefix,
                 regular_func_ptr, ptr_to_regular_func_ptr),
                 exprstate_(exprstate),
-                econtext_(econtext) {
+                econtext_(econtext),
+                slot_(slot) {
 }
 
 
@@ -94,6 +96,7 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
 
   // Check if we can codegen. If so create ExprTreeGenerator
   ExprTreeGeneratorInfo expr_tree_generator_info;
+  expr_tree_generator_info.slot = slot_;
   std::unique_ptr<ExprTreeGenerator> expr_tree_generator(nullptr);
   bool can_generate = ExprTreeGenerator::VerifyAndCreateExprTree(
       exprstate_, econtext_, &expr_tree_generator_info, &expr_tree_generator);

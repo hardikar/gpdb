@@ -39,7 +39,8 @@ class ExecEvalExprCodegen: public BaseCodegen<ExecEvalExprFn> {
   explicit ExecEvalExprCodegen(ExecEvalExprFn regular_func_ptr,
                                ExecEvalExprFn* ptr_to_regular_func_ptr,
                                ExprState *exprstate,
-                               ExprContext *econtext);
+                               ExprContext *econtext,
+                               TupleTableSlot* slot);
 
   virtual ~ExecEvalExprCodegen() = default;
 
@@ -67,6 +68,7 @@ class ExecEvalExprCodegen: public BaseCodegen<ExecEvalExprFn> {
  private:
   ExprState *exprstate_;
   ExprContext *econtext_;
+  TupleTableSlot* slot_;
 
   static constexpr char kExecEvalExprPrefix[] = "ExecEvalExpr";
 

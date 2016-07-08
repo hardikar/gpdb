@@ -13,6 +13,7 @@
 #define GPCODEGEN_VAR_EXPR_TREE_GENERATOR_H_
 
 #include "codegen/expr_tree_generator.h"
+#include "codegen/codegen_wrapper.h"
 
 #include "llvm/IR/Value.h"
 
@@ -45,7 +46,9 @@ class VarExprTreeGenerator : public ExprTreeGenerator {
    *
    * @param expr_state Expression state
    **/
-  explicit VarExprTreeGenerator(ExprState* expr_state);
+  explicit VarExprTreeGenerator(ExprState* expr_state,
+                                TupleTableSlot* slot);
+  TupleTableSlot* slot_;
 };
 
 /** @} */

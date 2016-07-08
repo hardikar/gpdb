@@ -19,6 +19,7 @@
 #include <unordered_map>
 
 #include "codegen/utils/codegen_utils.h"
+#include "codegen/codegen_wrapper.h"
 
 #include "llvm/IR/Value.h"
 
@@ -44,6 +45,7 @@ enum class ExprTreeNodeType {
 struct ExprTreeGeneratorInfo {
   std::unordered_map<void*, int> max_attrs_by_slot;
   std::unordered_map<void*, llvm::Function*> slot_getattr_funcs_by_slot;
+  TupleTableSlot* slot;
 };
 
 class ExprTreeGenerator {

@@ -34,12 +34,12 @@ bool VarExprTreeGenerator::VerifyAndCreateExprTree(
          nullptr != expr_state->expr &&
          T_Var == nodeTag(expr_state->expr) &&
          nullptr != expr_tree);
-  expr_tree->reset(new VarExprTreeGenerator(expr_state));
+  expr_tree->reset(new VarExprTreeGenerator(expr_state, expr_tree_generator_info->slot));
   return true;
 }
 
-VarExprTreeGenerator::VarExprTreeGenerator(ExprState* expr_state) :
-    ExprTreeGenerator(expr_state, ExprTreeNodeType::kVar) {
+VarExprTreeGenerator::VarExprTreeGenerator(ExprState* expr_state, TupleTableSlot* slot) :
+    ExprTreeGenerator(expr_state, ExprTreeNodeType::kVar), slot_(slot) {
 }
 
 bool VarExprTreeGenerator::GenerateCode(CodegenUtils* codegen_utils,
@@ -54,28 +54,29 @@ bool VarExprTreeGenerator::GenerateCode(CodegenUtils* codegen_utils,
   int attnum = var_expr->varattno;
   auto irb = codegen_utils->ir_builder();
 
-  // slot = econtext->ecxt_scantuple; {{{
-  // At code generation time, slot is NULL.
-  // For that reason, we keep a double pointer to slot and at execution time
-  // we load slot.
-  TupleTableSlot **ptr_to_slot_ptr = NULL;
-  switch (var_expr->varno) {
-    case INNER:  /* get the tuple from the inner node */
-      ptr_to_slot_ptr = &econtext->ecxt_innertuple;
-      break;
+  //// slot = econtext->ecxt_scantuple; {{{
+  //// At code generation time, slot is NULL.
+  //// For that reason, we keep a double pointer to slot and at execution time
+  //// we load slot.
+  //TupleTableSlot **ptr_to_slot_ptr = NULL;
+  //switch (var_expr->varno) {
+  //  case INNER:  /* get the tuple from the inner node */
+  //    ptr_to_slot_ptr = &econtext->ecxt_innertuple;
+  //    break;
 
-    case OUTER:  /* get the tuple from the outer node */
-      ptr_to_slot_ptr = &econtext->ecxt_outertuple;
-      break;
+  //  case OUTER:  /* get the tuple from the outer node */
+  //    ptr_to_slot_ptr = &econtext->ecxt_outertuple;
+  //    break;
 
-    default:     /* get the tuple from the relation being scanned */
-      ptr_to_slot_ptr = &econtext->ecxt_scantuple;
-      break;
-  }
+  //  default:     /* get the tuple from the relation being scanned */
+  //    ptr_to_slot_ptr = &econtext->ecxt_scantuple;
+  //    break;
+  //}
 
-  llvm::Value *llvm_slot = irb->CreateLoad(
-      codegen_utils->GetConstant(ptr_to_slot_ptr));
-  //}}}
+  //llvm::Value *llvm_slot = irb->CreateLoad(
+  //    codegen_utils->GetConstant(ptr_to_slot_ptr));
+  ////}}}
+  llvm::Value *llvm_slot = codegen_utils->GetConstant(slot_);
 
   llvm::Value *llvm_variable_varattno = codegen_utils->
       GetConstant<int32_t>(attnum);
