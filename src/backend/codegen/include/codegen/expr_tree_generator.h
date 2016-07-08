@@ -43,9 +43,23 @@ enum class ExprTreeNodeType {
 };
 
 struct ExprTreeGeneratorInfo {
-  std::unordered_map<void*, int> max_attrs_by_slot;
-  std::unordered_map<void*, llvm::Function*> slot_getattr_funcs_by_slot;
-  TupleTableSlot* slot;
+  ExprContext* econtext;
+
+  llvm::Function* llvm_main_func;
+  llvm::BasicBlock* llvm_error_block;
+
+  llvm::Function* llvm_slot_getattr_func;
+
+  ExprTreeGeneratorInfo(
+    ExprContext* econtext,
+    llvm::Function* llvm_main_func,
+    llvm::BasicBlock* llvm_error_block,
+    llvm::Function* llvm_slot_getattr_func) :
+      econtext(econtext),
+      llvm_main_func(llvm_main_func),
+      llvm_error_block(llvm_error_block),
+      llvm_slot_getattr_func(llvm_slot_getattr_func) {
+  }
 };
 
 class ExprTreeGenerator {
@@ -63,9 +77,8 @@ class ExprTreeGenerator {
    * @return true when it can codegen otherwise it return false.
    **/
   static bool VerifyAndCreateExprTree(
-      ExprState* expr_state,
-      ExprContext* econtext,
-      ExprTreeGeneratorInfo* expr_tree_generator_info,
+      const ExprState* expr_state,
+      ExprTreeGeneratorInfo* gen_info,
       std::unique_ptr<ExprTreeGenerator>* expr_tree);
 
   /**
@@ -80,17 +93,15 @@ class ExprTreeGenerator {
    * @return true when it generated successfully otherwise it return false.
    **/
   virtual bool GenerateCode(gpcodegen::CodegenUtils* codegen_utils,
-                            ExprContext* econtext,
-                            llvm::Function* llvm_main_func,
-                            llvm::BasicBlock* llvm_error_block,
-                            llvm::Value* llvm_isnull_arg,
+                            const ExprTreeGeneratorInfo& gen_info,
+                            llvm::Value* llvm_isnull_ptr,
                             llvm::Value** value) = 0;
 
 
   /**
    * @return Expression state
    **/
-  ExprState* expr_state() { return expr_state_; }
+  const ExprState* expr_state() { return expr_state_; }
 
  protected:
   /**
@@ -99,12 +110,12 @@ class ExprTreeGenerator {
    * @param expr_state Expression state
    * @param node_type   Type of the ExprTreeGenerator
    **/
-  ExprTreeGenerator(ExprState* expr_state,
+  ExprTreeGenerator(const ExprState* expr_state,
                     ExprTreeNodeType node_type) :
                       expr_state_(expr_state) {}
 
  private:
-  ExprState* expr_state_;
+  const ExprState* expr_state_;
   DISALLOW_COPY_AND_ASSIGN(ExprTreeGenerator);
 };
 

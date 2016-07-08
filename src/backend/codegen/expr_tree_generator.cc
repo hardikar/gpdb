@@ -26,9 +26,8 @@ extern "C" {
 using gpcodegen::ExprTreeGenerator;
 
 bool ExprTreeGenerator::VerifyAndCreateExprTree(
-    ExprState* expr_state,
-    ExprContext* econtext,
-    ExprTreeGeneratorInfo* expr_tree_generator_info,
+    const ExprState* expr_state,
+    ExprTreeGeneratorInfo* gen_info,
     std::unique_ptr<ExprTreeGenerator>* expr_tree) {
   assert(nullptr != expr_state &&
          nullptr != expr_state->expr &&
@@ -37,18 +36,18 @@ bool ExprTreeGenerator::VerifyAndCreateExprTree(
   bool supported_expr_tree = false;
   switch (nodeTag(expr_state->expr)) {
     case T_OpExpr: {
-       supported_expr_tree = OpExprTreeGenerator::VerifyAndCreateExprTree(
-           expr_state, econtext, expr_tree_generator_info, expr_tree);
-       break;
+      supported_expr_tree = OpExprTreeGenerator::VerifyAndCreateExprTree(
+          expr_state, gen_info, expr_tree);
+      break;
     }
     case T_Var: {
       supported_expr_tree = VarExprTreeGenerator::VerifyAndCreateExprTree(
-          expr_state, econtext, expr_tree_generator_info, expr_tree);
+          expr_state, gen_info, expr_tree);
       break;
     }
     case T_Const: {
       supported_expr_tree = ConstExprTreeGenerator::VerifyAndCreateExprTree(
-          expr_state, econtext, expr_tree_generator_info, expr_tree);
+          expr_state, gen_info, expr_tree);
       break;
     }
     default : {
