@@ -281,6 +281,11 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
        // When we have variable length attributes, we can no longer benefit
        // from codegen, since the next offset needs to be computed after the
        // tuple is read into memory.
+       if(attnum <= 5) {
+         // Also, if the first few attributes are varlen, might as well
+         // call slot_deform_tuple directly.
+         return false;
+       }
        varlen_attrs_found = true;
        break;
      }
