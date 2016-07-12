@@ -349,10 +349,9 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			EnrollQualList(result, ((ScanState*) result)->ss_ScanTupleSlot);
 			if (NULL !=result)
 			{
-			  bool skip_var = true;
 			  EnrollProjInfoTargetList(result->ps_ProjInfo,
 			                           ((ScanState*) result)->ss_ScanTupleSlot,
-			                           skip_var);
+			                           true /* skip_var */);
 			}
 			}
 			END_MEMORY_ACCOUNT();
@@ -586,14 +585,13 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			EnrollQualList(result, ((ScanState*) result)->ss_ScanTupleSlot);
 			if (NULL != result)
 			{
-			  bool skip_var = false;
 			  AggState* aggstate = (AggState*)result;
 			  for (int aggno = 0; aggno < aggstate->numaggs; aggno++)
 			  {
 			    AggStatePerAgg peraggstate = &aggstate->peragg[aggno];
 			    EnrollProjInfoTargetList(peraggstate->evalproj,
 			                             ((ScanState*) result)->ss_ScanTupleSlot,
-			                             skip_var);
+			                             false /* skip_var */);
 			  }
 			}
 			}
