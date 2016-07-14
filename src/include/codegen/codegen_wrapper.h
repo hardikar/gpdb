@@ -127,6 +127,9 @@ CodeGeneratorManagerNotifyParameterChange(void* manager);
 void
 CodeGeneratorManagerDestroy(void* manager);
 
+void
+CodeGeneratorManagerPrint(void* manager);
+
 /*
  * Get the active code generator manager
  */

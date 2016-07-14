@@ -102,3 +102,8 @@ bool CodegenManager::InvalidateGeneratedFunctions() {
   assert(false);
   return false;
 }
+
+void CodegenManager::Print() {
+  gpcodegen::eout << module_name_;
+  codegen_utils_->printUnderlyingModules(gpcodegen::eout);
+}

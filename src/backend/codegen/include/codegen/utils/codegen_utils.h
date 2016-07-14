@@ -499,6 +499,15 @@ class CodegenUtils {
     return llvm::InlineFunction(llvm::CallSite(call_inst), info);
   }
 
+  void printUnderlyingModules(llvm::raw_ostream& out) {
+    // Print main module
+    module()->print(out, nullptr);
+    // Print auxilary modules
+    for (std::unique_ptr<llvm::Module>& auxiliary_module : auxiliary_modules_) {
+        auxiliary_module->print(out, nullptr);
+      }
+  }
+
  private:
   // Give ClangCompiler access to 'context_' add allow it to add compiled C++
   // sources to 'auxiliary_modules_'.

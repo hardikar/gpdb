@@ -467,6 +467,7 @@ extern bool init_codegen;
 extern bool codegen;
 extern bool codegen_validate_functions;
 extern int codegen_varlen_tolerance;
+extern bool codegen_dump_modules;
 
 /**
  * Enable logging of DPE match in optimizer.

@@ -19,12 +19,16 @@
 #define GPCODEGEN_GP_CODEGEN_UTILS_H_
 
 #include "codegen/utils/codegen_utils.h"
+#include "llvm/Support/raw_ostream.h"
 
 extern "C" {
 #include "utils/elog.h"
 }
 
 namespace gpcodegen {
+
+class elog_ostream;
+extern elog_ostream eout;
 
 class GpCodegenUtils : public CodegenUtils {
  public:
@@ -100,6 +104,18 @@ class GpCodegenUtils : public CodegenUtils {
         const char* fmt,
         const V ... args ) {
     CreateElog(GetConstant(elevel), GetConstant(fmt), args...);
+  }
+};
+
+
+class elog_ostream : public llvm::raw_ostream {
+  void write_impl(const char *ptr, size_t size) override;
+
+  uint64_t current_pos() const override { return 0; }
+
+ public:
+  ~elog_ostream() override {
+    flush();
   }
 };
 

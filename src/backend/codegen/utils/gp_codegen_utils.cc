@@ -19,6 +19,12 @@
 #include "codegen/utils/gp_codegen_utils.h"
 
 namespace gpcodegen {
+  // Global elog_ostream matching C++'s cout
+elog_ostream eout;
+
+void elog_ostream::write_impl(const char *ptr, size_t size) {
+  elog(INFO, "%.*s>", static_cast<int>(size), ptr);
+}
 }  // namespace gpcodegen
 
 // EOF

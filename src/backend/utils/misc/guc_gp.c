@@ -569,6 +569,7 @@ bool		init_codegen;
 bool		codegen;
 bool		codegen_validate_functions;
 int			codegen_varlen_tolerance;
+bool			codegen_dump_modules;
 
 /* Security */
 bool		gp_reject_internal_tcp_conn = true;
@@ -3377,6 +3378,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false, NULL, NULL
 #endif
 
+	},
+
+	{
+		{"codegen_dump_modules", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Dump all the generate IR modules at the end of the query."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&codegen_dump_modules,
+		false, NULL, NULL
 	},
 	/* End-of-list marker */
 	{

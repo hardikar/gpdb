@@ -99,6 +99,9 @@ class CodegenManager {
     return enrolled_code_generators_.size();
   }
 
+  // TODO: wonder what's a good name for this ??
+  void Print();
+
  private:
   // GpCodegenUtils provides a facade to LLVM subsystem.
   std::unique_ptr<gpcodegen::GpCodegenUtils> codegen_utils_;

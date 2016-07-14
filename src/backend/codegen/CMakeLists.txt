@@ -134,7 +134,6 @@ include_directories(${CLANG_INCLUDE_DIRS})
 add_library(gpcodegen SHARED
             utils/clang_compiler.cc
             utils/codegen_utils.cc
-            utils/gp_codegen_utils.cc
             ${codegen_tmpfile_sources})
 if(APPLE)
   set(WL_START_GROUP "")
@@ -168,6 +167,7 @@ set_target_properties(
     MACOSX_RPATH ON)
 
 set(GPCODEGEN_SRC
+    utils/gp_codegen_utils.cc
     codegen_interface.cc
     codegen_manager.cc
     codegen_wrapper.cc

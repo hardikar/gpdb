@@ -27,6 +27,7 @@ static void* ActiveCodeGeneratorManager = nullptr;
 
 extern bool codegen;  // defined from guc
 extern bool init_codegen;  // defined from guc
+extern bool codegen_dump_modules;  // defined from guc
 
 // Perform global set-up tasks for code generation. Returns 0 on
 // success, nonzero on error.
@@ -45,6 +46,7 @@ unsigned int CodeGeneratorManagerGenerateCode(void* manager) {
   if (!codegen) {
     return 0;
   }
+  // Before we generate the code, let's print it out
   return static_cast<CodegenManager*>(manager)->GenerateCode();
 }
 
@@ -52,6 +54,7 @@ unsigned int CodeGeneratorManagerPrepareGeneratedFunctions(void* manager) {
   if (!codegen) {
     return 0;
   }
+  CodeGeneratorManagerPrint(manager);
   return static_cast<CodegenManager*>(manager)->PrepareGeneratedFunctions();
 }
 
@@ -59,6 +62,12 @@ unsigned int CodeGeneratorManagerNotifyParameterChange(void* manager) {
   // parameter change notification is not supported yet
   assert(false);
   return 0;
+}
+
+void CodeGeneratorManagerPrint(void* manager) {
+  if (codegen) {
+    static_cast<CodegenManager*>(manager)->Print();
+  }
 }
 
 void CodeGeneratorManagerDestroy(void* manager) {
