@@ -29,6 +29,8 @@ extern bool codegen;  // defined from guc
 extern bool init_codegen;  // defined from guc
 extern bool codegen_dump_modules;  // defined from guc
 
+extern int Gp_segment;
+
 // Perform global set-up tasks for code generation. Returns 0 on
 // success, nonzero on error.
 unsigned int InitCodegen() {
@@ -54,6 +56,7 @@ unsigned int CodeGeneratorManagerPrepareGeneratedFunctions(void* manager) {
   if (!codegen) {
     return 0;
   }
+  // This is that time we can print any of these
   CodeGeneratorManagerPrint(manager);
   return static_cast<CodegenManager*>(manager)->PrepareGeneratedFunctions();
 }
@@ -65,7 +68,8 @@ unsigned int CodeGeneratorManagerNotifyParameterChange(void* manager) {
 }
 
 void CodeGeneratorManagerPrint(void* manager) {
-  if (codegen) {
+  if (codegen && codegen_dump_modules && Gp_segment == -1) {
+    // Only dump modules on the MASTER else we'll get 3 versions of the same thing!
     static_cast<CodegenManager*>(manager)->Print();
   }
 }
