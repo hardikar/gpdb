@@ -68,10 +68,10 @@ unsigned int CodeGeneratorManagerNotifyParameterChange(void* manager) {
 }
 
 void CodeGeneratorManagerPrint(void* manager) {
-  if (codegen && codegen_dump_modules && Gp_segment == -1) {
-    // Only dump modules on the MASTER else we'll get 3 versions of the same thing!
-    static_cast<CodegenManager*>(manager)->Print();
+  if (!codegen) {
+    return;
   }
+  static_cast<CodegenManager*>(manager)->Print();
 }
 
 void CodeGeneratorManagerDestroy(void* manager) {

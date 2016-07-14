@@ -1895,6 +1895,13 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 */
 	planstate = ExecInitNode(plannedstmt->planTree, estate, eflags);
 
+	if (codegen && codegen_dump_modules && Gp_segment == 1) {
+    // Only dump modules on the MASTER else we'll get 3 versions of the same thing!
+	  ExecPrintGeneratedFunctions(planstate)
+	}
+
+	ExecPrepareGeneratedFunctions(planstate);
+
 	queryDesc->planstate = planstate;
 
 	Assert(queryDesc->planstate);

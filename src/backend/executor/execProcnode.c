@@ -761,13 +761,45 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 		SAVE_EXECUTOR_MEMORY_ACCOUNT(result, curMemoryAccount);
 		result->CodegenManager = CodegenManager;
 		CodeGeneratorManagerGenerateCode(CodegenManager);
-		CodeGeneratorManagerPrepareGeneratedFunctions(CodegenManager);
 	}
 	}
 	END_CODE_GENERATOR_MANAGER();
 
 	return result;
 }
+
+void
+ExecPrepareGeneratedFunctions(PlanState* planstate)
+{
+  START_CODE_GENERATOR_MANAGER(planstate->CodegenManager)
+  {
+		CodeGeneratorManagerPrepareGeneratedFunctions(planstate->CodegenManager);
+
+		if (NULL != planstate->lefttree) {
+		  ExecPrepareGeneratedFunctions(planstate->lefttree);
+		} if (NULL != planstate->righttree) {
+		  ExecPrepareGeneratedFunctions(planstate->righttree);
+		}
+  }
+  END_CODE_GENERATOR_MANAGER();
+}
+
+void
+ExecPrintGeneratedFunctions(PlanState* planstate)
+{
+  START_CODE_GENERATOR_MANAGER(planstate->CodegenManager)
+  {
+		CodeGeneratorManagerPrint(planstate->CodegenManager);
+
+		if (NULL != planstate->lefttree) {
+		  ExecPrintGeneratedFunctions(planstate->lefttree);
+		} if (NULL != planstate->righttree) {
+		  ExecPrintGeneratedFunctions(planstate->righttree);
+		}
+  }
+  END_CODE_GENERATOR_MANAGER();
+}
+
 
 /* ----------------------------------------------------------------
  *    EnrollQualList

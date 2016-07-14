@@ -262,6 +262,8 @@ extern Node *MultiExecProcNode(PlanState *node);
 extern int	ExecCountSlotsNode(Plan *node);
 extern void ExecEndNode(PlanState *node);
 
+extern void ExecPrepareGeneratedFunctions(PlanState *planstate);
+
 void ExecSquelchNode(PlanState *node);
 void ExecUpdateTransportState(PlanState *node, struct ChunkTransportState *state);
 
