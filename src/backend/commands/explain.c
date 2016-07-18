@@ -89,7 +89,7 @@ static void ExplainDXL(Query *query, ExplainStmt *stmt,
 #ifdef USE_CODEGEN
 static void ExplainCodegen(PlanState *planstate, TupOutputState *tstate);
 #endif
-static double elapsed_time(instr_time *starttime);
+static double elapsed_time(const instr_time *starttime);
 static ErrorData *explain_defer_error(ExplainState *es);
 static void explain_outNode(StringInfo str,
 				Plan *plan, PlanState *planstate,
@@ -365,6 +365,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	QueryDesc  *queryDesc;
 	instr_time	starttime;
 	double		totaltime = 0;
+	double		executorStartTotaltime = 0;
 	ExplainState *es;
     StringInfoData buf;
     EState     *estate = NULL;
@@ -437,6 +438,8 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 
 	/* call ExecutorStart to prepare the plan for execution */
 	ExecutorStart(queryDesc, eflags);
+
+	executorStartTotaltime = elapsed_time(&starttime);
 
 #ifdef USE_CODEGEN
 	if (stmt->codegen && codegen && Gp_segment == -1) {
@@ -677,9 +680,12 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
     /*
      * Display final elapsed time.
      */
-	if (stmt->analyze)
+	if (stmt->analyze) {
+		appendStringInfo(&buf, "Total ExecutorStart runtime: %.3f ms\n",
+						 1000.0 * executorStartTotaltime);
 		appendStringInfo(&buf, "Total runtime: %.3f ms\n",
 						 1000.0 * totaltime);
+	}
 
     /*
      * Send EXPLAIN report to client.  Some might have been sent already
@@ -782,7 +788,7 @@ report_triggers(ResultRelInfo *rInfo, bool show_relname, StringInfo buf)
 
 /* Compute elapsed time in seconds since given timestamp */
 static double
-elapsed_time(instr_time *starttime)
+elapsed_time(const instr_time *starttime)
 {
 	instr_time	endtime;
 
