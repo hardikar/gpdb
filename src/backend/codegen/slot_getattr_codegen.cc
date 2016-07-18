@@ -100,6 +100,9 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   llvm::BasicBlock* slot_check_block = codegen_utils->CreateBasicBlock(
       "slot_check", slot_getattr_func);
   // BasicBlock for checking tuple type.
+  llvm::BasicBlock* virtual_tuple_check_block = codegen_utils->CreateBasicBlock(
+      "virtual_tuple_check", slot_getattr_func);
+  // BasicBlock for checking tuple type.
   llvm::BasicBlock* tuple_type_check_block = codegen_utils->CreateBasicBlock(
       "tuple_type_check", slot_getattr_func);
   // BasicBlock for heap tuple check.
@@ -111,6 +114,9 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   // BasicBlock for final computations.
   llvm::BasicBlock* final_block = codegen_utils->CreateBasicBlock(
       "final", slot_getattr_func);
+  // BasicBlock for return
+  llvm::BasicBlock* return_block = codegen_utils->CreateBasicBlock(
+      "return", slot_getattr_func);
   // BasicBlock for fall back.
   llvm::BasicBlock* fallback_block = codegen_utils->CreateBasicBlock(
       "fallback", slot_getattr_func);
@@ -140,6 +146,17 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
       DEBUG1,
       "Codegen'ed slot_getattr called!");
 #endif
+  // Retrieve slot's PRIVATE variables
+  llvm::Value* llvm_slot_PRIVATE_tts_isnull /* bool* */ =
+      irb->CreateLoad(codegen_utils->GetPointerToMember(
+          llvm_slot, &TupleTableSlot::PRIVATE_tts_isnull));
+  llvm::Value* llvm_slot_PRIVATE_tts_values /* Datum* */ =
+      irb->CreateLoad(codegen_utils->GetPointerToMember(
+          llvm_slot, &TupleTableSlot::PRIVATE_tts_values));
+  llvm::Value* llvm_slot_PRIVATE_tts_nvalid_ptr /* int* */ =
+      codegen_utils->GetPointerToMember(
+          llvm_slot, &TupleTableSlot::PRIVATE_tts_nvalid);
+
   // We start a sequence of checks to ensure that everything is fine and
   // we do not need to fall back.
   irb->CreateBr(slot_check_block);
@@ -152,8 +169,26 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   // in as an argument to slot_getattr
   irb->CreateCondBr(
       irb->CreateICmpEQ(llvm_slot, llvm_slot_arg),
-      tuple_type_check_block /* true */,
+      virtual_tuple_check_block /* true */,
       fallback_block /* false */);
+
+  // Virtual tuple check block
+  // -------------------------
+
+  irb->SetInsertPoint(virtual_tuple_check_block);
+  // (slot->PRIVATE_tts_flags & TTS_VIRTUAL) != 0
+  llvm::Value* llvm_slot_PRIVATE_tts_flags_ptr =
+      codegen_utils->GetPointerToMember(
+          llvm_slot, &TupleTableSlot::PRIVATE_tts_flags);
+  llvm::Value* llvm_tuple_is_virtual = irb->CreateICmpNE(
+      irb->CreateAnd(
+          irb->CreateLoad(llvm_slot_PRIVATE_tts_flags_ptr),
+          codegen_utils->GetConstant(TTS_VIRTUAL)),
+          codegen_utils->GetConstant(0));
+
+  irb->CreateCondBr(llvm_tuple_is_virtual,
+		  return_block /* true */,
+		  tuple_type_check_block /* false */);
 
 
   // Tuple type check block
@@ -162,19 +197,9 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   // but it's possible to partially handle those cases also
 
   irb->SetInsertPoint(tuple_type_check_block);
-  llvm::Value* llvm_slot_PRIVATE_tts_flags_ptr =
-      codegen_utils->GetPointerToMember(
-          llvm_slot, &TupleTableSlot::PRIVATE_tts_flags);
   llvm::Value* llvm_slot_PRIVATE_tts_memtuple =
       irb->CreateLoad(codegen_utils->GetPointerToMember(
           llvm_slot, &TupleTableSlot::PRIVATE_tts_memtuple));
-
-  // (slot->PRIVATE_tts_flags & TTS_VIRTUAL) != 0
-  llvm::Value* llvm_tuple_is_virtual = irb->CreateICmpNE(
-      irb->CreateAnd(
-          irb->CreateLoad(llvm_slot_PRIVATE_tts_flags_ptr),
-          codegen_utils->GetConstant(TTS_VIRTUAL)),
-          codegen_utils->GetConstant(0));
 
   // slot->PRIVATE_tts_memtuple != NULL
   llvm::Value* llvm_tuple_has_memtuple = irb->CreateICmpNE(
@@ -183,7 +208,7 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
 
   // Fall back if tuple is virtual or memtuple is null
   irb->CreateCondBr(
-      irb->CreateOr(llvm_tuple_is_virtual, llvm_tuple_has_memtuple),
+      llvm_tuple_has_memtuple,
       fallback_block /*true*/, heap_tuple_check_block /*false*/);
 
   // HeapTuple check block
@@ -237,17 +262,6 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
           llvm_attno_t0,
           llvm_max_attr);
   // }}}
-
-  // Retrieve slot's PRIVATE variables
-  llvm::Value* llvm_slot_PRIVATE_tts_isnull /* bool* */ =
-      irb->CreateLoad(codegen_utils->GetPointerToMember(
-          llvm_slot, &TupleTableSlot::PRIVATE_tts_isnull));
-  llvm::Value* llvm_slot_PRIVATE_tts_values /* Datum* */ =
-      irb->CreateLoad(codegen_utils->GetPointerToMember(
-          llvm_slot, &TupleTableSlot::PRIVATE_tts_values));
-  llvm::Value* llvm_slot_PRIVATE_tts_nvalid_ptr /* int* */ =
-      codegen_utils->GetPointerToMember(
-          llvm_slot, &TupleTableSlot::PRIVATE_tts_nvalid);
 
   llvm::Value* llvm_heaptuple_t_data_t_hoff = irb->CreateLoad(
       codegen_utils->GetPointerToMember(llvm_heaptuple_t_data,
@@ -541,11 +555,13 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
           llvm_slot_PRIVATE_tts_flags_ptr);
 
   // }}}
+  irb->CreateBr(return_block);
 
+  // Return block
+  // ------------
   // slot_getattr() after calling _slot_getsomeattrs() {{{
-  //
-  // TODO(hardikar): We can optimize this further by getting rid of
-  // the follow computation and changing the signature of this function
+
+  irb->SetInsertPoint(return_block);
 
   // *isnull = slot->PRIVATE_tts_isnull[attnum-1];
   llvm::Value* llvm_isnull_from_slot_val =
