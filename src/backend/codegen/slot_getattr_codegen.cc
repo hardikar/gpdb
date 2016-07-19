@@ -141,12 +141,14 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   // BasicBlock for checking correct slot
   llvm::BasicBlock* slot_check_block = codegen_utils->CreateBasicBlock(
       "slot_check", slot_getattr_func);
-  // BasicBlock for checking tuple type.
+  // BasicBlock for checking virtual tuple type.
   llvm::BasicBlock* virtual_tuple_check_block = codegen_utils->CreateBasicBlock(
       "virtual_tuple_check", slot_getattr_func);
-  // BasicBlock for checking tuple type.
-  llvm::BasicBlock* tuple_type_check_block = codegen_utils->CreateBasicBlock(
-      "tuple_type_check", slot_getattr_func);
+  // BasicBlock for checking memtuple type.
+  llvm::BasicBlock* memtuple_check_block = codegen_utils->CreateBasicBlock(
+      "memtuple_check", slot_getattr_func);
+  llvm::BasicBlock* memtuple_block = codegen_utils->CreateBasicBlock(
+      "memtuple", slot_getattr_func);
   // BasicBlock for heap tuple check.
   llvm::BasicBlock* heap_tuple_check_block = codegen_utils->CreateBasicBlock(
       "heap_tuple_check", slot_getattr_func);
@@ -166,6 +168,9 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   // External functions
   llvm::Function* llvm_memset =
       codegen_utils->GetOrRegisterExternalFunction(memset, "memset");
+  llvm::Function* llvm_memtuple_getattr =
+      codegen_utils->GetOrRegisterExternalFunction(memtuple_getattr,
+                                                   "memtuple_getattr");
   llvm::Function* llvm_slot_deform_tuple =
       codegen_utils->GetOrRegisterExternalFunction(slot_deform_tuple,
                                                    "slot_deform_tuple");
@@ -198,6 +203,9 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   llvm::Value* llvm_slot_PRIVATE_tts_nvalid_ptr /* int* */ =
       codegen_utils->GetPointerToMember(
           llvm_slot, &TupleTableSlot::PRIVATE_tts_nvalid);
+  llvm::Value* llvm_slot_tts_mt_bind /* MemTupleBinding* */ =
+      irb->CreateLoad(codegen_utils->GetPointerToMember(
+          llvm_slot, &TupleTableSlot::tts_mt_bind));
 
   // We start a sequence of checks to ensure that everything is fine and
   // we do not need to fall back.
@@ -231,15 +239,13 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   irb->CreateCondBr(
 		  llvm_tuple_is_virtual,
 		  return_block /* true */,
-		  tuple_type_check_block /* false */);
+		  memtuple_check_block /* false */);
 
 
-  // Tuple type check block
+  // Memtuple type check block
   // ----------------------
-  // We fall back if we see a virtual tuple or mem tuple,
-  // but it's possible to partially handle those cases also
 
-  irb->SetInsertPoint(tuple_type_check_block);
+  irb->SetInsertPoint(memtuple_check_block);
   llvm::Value* llvm_slot_PRIVATE_tts_memtuple =
       irb->CreateLoad(codegen_utils->GetPointerToMember(
           llvm_slot, &TupleTableSlot::PRIVATE_tts_memtuple));
@@ -252,7 +258,19 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   // Fall back if tuple is virtual or memtuple is null
   irb->CreateCondBr(
       llvm_tuple_has_memtuple,
-      fallback_block /*true*/, heap_tuple_check_block /*false*/);
+      memtuple_block /*true*/, heap_tuple_check_block /*false*/);
+
+  // Memtuple Block
+  // --------------
+  // memtuple_getattr(slot->PRIVATE_tts_memtuple, slot->tts_mt_bind, attnum, isnull);
+
+  irb->SetInsertPoint(memtuple_block);
+  llvm::Value* llvm_memtuple_ret = irb->CreateCall(llvm_memtuple_getattr, {
+      llvm_slot_PRIVATE_tts_memtuple,
+      llvm_slot_tts_mt_bind,
+      llvm_attnum_arg,
+      llvm_isnull_ptr_arg});
+  irb->CreateRet(llvm_memtuple_ret);
 
   // HeapTuple check block
   // ---------------------
@@ -629,8 +647,6 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   llvm_error->addIncoming(codegen_utils->GetConstant(0),
       slot_check_block);
   llvm_error->addIncoming(codegen_utils->GetConstant(1),
-      tuple_type_check_block);
-  llvm_error->addIncoming(codegen_utils->GetConstant(2),
       heap_tuple_check_block);
 
   codegen_utils->CreateElog(
