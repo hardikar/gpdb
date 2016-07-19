@@ -54,42 +54,84 @@ using gpcodegen::SlotGetAttrCodegen;
 // attributes is varlen.
 extern const int codegen_varlen_tolerance;
 
+/*
+ * Cache TupleTableSlot* -> max_attr; llvm::Function*
+ */
+static std::unordered_map<uint64_t, std::pair<int, llvm::Function*> > function_cache;
+
 // TODO(shardikar, krajaraman) Remove this wrapper after implementing an
 // interface to share code generation logic.
-bool SlotGetAttrCodegen::GenerateSlotGetAttr(
+bool SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
     gpcodegen::GpCodegenUtils* codegen_utils,
-    const std::string& function_name,
     TupleTableSlot *slot,
     int max_attr,
     llvm::Function** out_func) {
 
-  *out_func = nullptr;
-
-  bool ret = GenerateSlotGetAttrInternal(
-      codegen_utils, function_name, slot, max_attr, out_func);
-
-  assert(nullptr != *out_func);
-
-  if (!ret ||
-      (codegen_validate_functions && llvm::verifyFunction(**out_func))) {
-    (*out_func)->eraseFromParent();
-    *out_func = nullptr;
-    return false;
+  auto it = function_cache.find(reinterpret_cast<uint64_t>(slot));
+  llvm::Function* function;
+  if (it == function_cache.end()) {
+    // New slot
+    function = codegen_utils->CreateFunction<SlotGetAttrFn>("slot_getattr_incompl");
+    function_cache.insert(std::make_pair(reinterpret_cast<uint64_t>(slot),
+                                         std::make_pair(max_attr, function)));
+  } else {
+    // A slot we've seen before
+    std::pair<int, llvm::Function*>& entry = it->second;
+    entry.first = std::max(entry.first, max_attr);
+    function = entry.second;
   }
 
-  return ret;
+  assert(nullptr != function);
+  *out_func = function;
+
+  // TODO(shardikar) no need to return true
+  return true;
+}
+
+bool SlotGetAttrCodegen::GenerateSlotGetAttr(
+		gpcodegen::GpCodegenUtils* codegen_utils) {
+
+  // Iterate over each unique slot and generate the function for that slot
+  for (auto it = function_cache.begin(); it != function_cache.end(); ++it) {
+    TupleTableSlot* slot = reinterpret_cast<TupleTableSlot*>(it->first);
+    int max_attr = it->second.first;
+    llvm::Function* function = it->second.second;
+
+    bool ret = GenerateSlotGetAttrInternal(codegen_utils, slot, max_attr, function);
+
+    if (!ret ||
+        (codegen_validate_functions && llvm::verifyFunction(*function))) {
+      // Generation failed, so we create a fallback
+      elog(WARNING, "SlotGetAttr generation failed!");
+      function->deleteBody();
+      llvm::BasicBlock* fallback_block =
+          codegen_utils->CreateBasicBlock("fallback", function);
+      codegen_utils->ir_builder()->SetInsertPoint(fallback_block);
+      codegen_utils->CreateFallback<SlotGetAttrFn>(
+          codegen_utils->GetOrRegisterExternalFunction(slot_getattr), function);
+    }
+
+    // Give it a human readable name
+    std::string function_name = "slot_getattr_" +
+        std::to_string(reinterpret_cast<uint64_t>(slot)) + "_" +
+        std::to_string(max_attr);
+    function->setName(function_name);
+  }
+
+  // Clean up
+  function_cache.clear();
+
+  return true;
 }
 
 bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
     gpcodegen::GpCodegenUtils* codegen_utils,
-    const std::string& function_name,
     TupleTableSlot *slot,
     int max_attr,
-    llvm::Function** out_func) {
+    llvm::Function* function) {
 
   // So looks like we're going to generate code
-  *out_func = codegen_utils->CreateFunction<SlotGetAttrFn>(function_name);
-  llvm::Function* slot_getattr_func = *out_func;
+  llvm::Function* slot_getattr_func = function;
 
   auto irb = codegen_utils->ir_builder();
 
@@ -186,7 +228,8 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
           codegen_utils->GetConstant(TTS_VIRTUAL)),
           codegen_utils->GetConstant(0));
 
-  irb->CreateCondBr(llvm_tuple_is_virtual,
+  irb->CreateCondBr(
+		  llvm_tuple_is_virtual,
 		  return_block /* true */,
 		  tuple_type_check_block /* false */);
 

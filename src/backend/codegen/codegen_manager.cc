@@ -21,6 +21,7 @@ extern "C" {
 #include "codegen/utils/utility.h"
 #include "codegen/utils/instance_method_wrappers.h"
 #include "codegen/utils/gp_codegen_utils.h"
+#include "codegen/slot_getattr_codegen.h"
 #include "codegen/codegen_interface.h"
 
 #include "codegen/codegen_manager.h"
@@ -41,6 +42,7 @@ extern "C" {
 #include "llvm/Support/Casting.h"
 
 using gpcodegen::CodegenManager;
+using gpcodegen::SlotGetAttrCodegen;
 
 CodegenManager::CodegenManager(const std::string& module_name) {
   module_name_ = module_name;
@@ -62,6 +64,8 @@ unsigned int CodegenManager::GenerateCode() {
       enrolled_code_generators_) {
     success_count += generator->GenerateCode(codegen_utils_.get());
   }
+  // Generate code for shared modules
+  SlotGetAttrCodegen::GenerateSlotGetAttr(codegen_utils_.get());
   return success_count;
 }
 

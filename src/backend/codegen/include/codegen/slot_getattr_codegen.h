@@ -40,12 +40,14 @@ class SlotGetAttrCodegen {
    * removing it from the module.
    **/
  public:
-  static bool GenerateSlotGetAttr(
+  static bool RequestSlotGetAttrGeneration(
       gpcodegen::GpCodegenUtils* codegen_utils,
-      const std::string& function_name,
       TupleTableSlot* slot,
       int max_attr,
       llvm::Function** out_func);
+
+  static bool GenerateSlotGetAttr(
+		  gpcodegen::GpCodegenUtils* codegen_utils);
 
  private:
   /**
@@ -77,10 +79,9 @@ class SlotGetAttrCodegen {
    **/
   static bool GenerateSlotGetAttrInternal(
       gpcodegen::GpCodegenUtils* codegen_utils,
-      const std::string& function_name,
       TupleTableSlot* slot,
       int max_attr,
-      llvm::Function** out_func);
+      llvm::Function* out_func);
 };
 
 /** @} */
