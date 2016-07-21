@@ -14,6 +14,7 @@
 #define GPCODEGEN_SLOT_GETATTR_CODEGEN_H_
 
 #include <string>
+#include <utility>
 
 #include "codegen/codegen_wrapper.h"
 #include "codegen/utils/gp_codegen_utils.h"
@@ -65,8 +66,7 @@ class SlotGetAttrCodegen {
    * TODO(shardikar, krajaraman) Remove this wrapper after a shared code
    * generation framework implementation is complete.
    */
-  static void GenerateSlotGetAttr(
-		  gpcodegen::GpCodegenUtils* codegen_utils);
+  static void GenerateSlotGetAttr(gpcodegen::GpCodegenUtils* codegen_utils);
 
  private:
   /**

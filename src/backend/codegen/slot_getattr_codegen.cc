@@ -69,7 +69,8 @@ void SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
   if (it == function_cache.end()) {
     // For a slot we haven't seen before, add an entry to the map, saving
     // the max_attr value
-    function = codegen_utils->CreateFunction<SlotGetAttrFn>("slot_getattr_incompl");
+    function = codegen_utils->CreateFunction<SlotGetAttrFn>(
+        "slot_getattr_incompl");
     function_cache.insert(std::make_pair(reinterpret_cast<uint64_t>(slot),
                                          std::make_pair(max_attr, function)));
   } else {
@@ -85,15 +86,17 @@ void SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
 }
 
 void SlotGetAttrCodegen::GenerateSlotGetAttr(
-		gpcodegen::GpCodegenUtils* codegen_utils) {
-
+    gpcodegen::GpCodegenUtils* codegen_utils) {
   // Iterate over each unique slot and generate the function body for that slot
   for (auto it = function_cache.begin(); it != function_cache.end(); ++it) {
     TupleTableSlot* slot = reinterpret_cast<TupleTableSlot*>(it->first);
     int max_attr = it->second.first;
     llvm::Function* function = it->second.second;
 
-    bool ret = GenerateSlotGetAttrInternal(codegen_utils, slot, max_attr, function);
+    bool ret = GenerateSlotGetAttrInternal(codegen_utils,
+                                           slot,
+                                           max_attr,
+                                           function);
 
     if (!ret ||
         (codegen_validate_functions && llvm::verifyFunction(*function))) {
@@ -242,9 +245,9 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   // If it is indeed a virtual tuple, we must have already deformed this tuple,
   // so go straight to returning the contained values
   irb->CreateCondBr(
-		  llvm_tuple_is_virtual,
-		  return_block /* true */,
-		  memtuple_check_block /* false */);
+      llvm_tuple_is_virtual,
+      return_block /* true */,
+      memtuple_check_block /* false */);
 
 
   // Memtuple type check block
