@@ -65,26 +65,29 @@ void SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
 
   auto it = function_cache.find(reinterpret_cast<uint64_t>(slot));
   llvm::Function* function;
+
   if (it == function_cache.end()) {
-    // New slot
+    // For a slot we haven't seen before, add an entry to the map, saving
+    // the max_attr value
     function = codegen_utils->CreateFunction<SlotGetAttrFn>("slot_getattr_incompl");
     function_cache.insert(std::make_pair(reinterpret_cast<uint64_t>(slot),
                                          std::make_pair(max_attr, function)));
   } else {
-    // A slot we've seen before
+    // For a slot already seen before, update max_attr value only
     std::pair<int, llvm::Function*>& entry = it->second;
     entry.first = std::max(entry.first, max_attr);
     function = entry.second;
   }
 
   assert(nullptr != function);
+  // Return either the newly created llvm::Function or a previously created one
   *out_func = function;
 }
 
-bool SlotGetAttrCodegen::GenerateSlotGetAttr(
+void SlotGetAttrCodegen::GenerateSlotGetAttr(
 		gpcodegen::GpCodegenUtils* codegen_utils) {
 
-  // Iterate over each unique slot and generate the function for that slot
+  // Iterate over each unique slot and generate the function body for that slot
   for (auto it = function_cache.begin(); it != function_cache.end(); ++it) {
     TupleTableSlot* slot = reinterpret_cast<TupleTableSlot*>(it->first);
     int max_attr = it->second.first;
@@ -94,7 +97,13 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
 
     if (!ret ||
         (codegen_validate_functions && llvm::verifyFunction(*function))) {
-      // Generation failed, so we create a fallback
+      // By this point, there may be a number of call instructions created
+      // already to call this function. In case the generation fails now, we
+      // would have to invalidate all those calls. Instead, we simple fall back
+      // to the regular slot_getattr().
+      // TODO(shardikar, karajaman) Move this logic into a framework for shared
+      // code generators.
+
       elog(WARNING, "SlotGetAttr generation failed!");
       function->deleteBody();
       llvm::BasicBlock* fallback_block =
@@ -104,17 +113,17 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
           codegen_utils->GetOrRegisterExternalFunction(slot_getattr), function);
     }
 
-    // Give it a human readable name
+    // Give the function a human readable name
     std::string function_name = "slot_getattr_" +
         std::to_string(reinterpret_cast<uint64_t>(slot)) + "_" +
         std::to_string(max_attr);
     function->setName(function_name);
   }
 
-  // Clean up
+  // Clear the cache for the next operator.
+  // TODO(shardikar, karajaman) Move this logic into a framework for shared
+  // code generators. That way these functions need not be static.
   function_cache.clear();
-
-  return true;
 }
 
 bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
@@ -140,6 +149,7 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   // BasicBlock for checking memtuple type.
   llvm::BasicBlock* memtuple_check_block = codegen_utils->CreateBasicBlock(
       "memtuple_check", slot_getattr_func);
+  // BasicBlock for handling memtuple.
   llvm::BasicBlock* memtuple_block = codegen_utils->CreateBasicBlock(
       "memtuple", slot_getattr_func);
   // BasicBlock for heap tuple check.
@@ -229,6 +239,8 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
           codegen_utils->GetConstant(TTS_VIRTUAL)),
           codegen_utils->GetConstant(0));
 
+  // If it is indeed a virtual tuple, we must have already deformed this tuple,
+  // so go straight to returning the contained values
   irb->CreateCondBr(
 		  llvm_tuple_is_virtual,
 		  return_block /* true */,
@@ -239,31 +251,32 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
   // ----------------------
 
   irb->SetInsertPoint(memtuple_check_block);
+
+  // slot->PRIVATE_tts_memtuple != NULL
   llvm::Value* llvm_slot_PRIVATE_tts_memtuple =
       irb->CreateLoad(codegen_utils->GetPointerToMember(
           llvm_slot, &TupleTableSlot::PRIVATE_tts_memtuple));
-
-  // slot->PRIVATE_tts_memtuple != NULL
   llvm::Value* llvm_tuple_has_memtuple = irb->CreateICmpNE(
       llvm_slot_PRIVATE_tts_memtuple,
       codegen_utils->GetConstant((MemTuple) NULL));
 
-  // Fall back if tuple is virtual or memtuple is null
   irb->CreateCondBr(
       llvm_tuple_has_memtuple,
       memtuple_block /*true*/, heap_tuple_check_block /*false*/);
 
   // Memtuple Block
   // --------------
-  // memtuple_getattr(slot->PRIVATE_tts_memtuple, slot->tts_mt_bind, attnum, isnull);
 
   irb->SetInsertPoint(memtuple_block);
+  // return memtuple_getattr(slot->PRIVATE_tts_memtuple,
+  //    slot->tts_mt_bind, attnum, isnull);
   llvm::Value* llvm_memtuple_ret = irb->CreateCall(llvm_memtuple_getattr, {
       llvm_slot_PRIVATE_tts_memtuple,
       llvm_slot_tts_mt_bind,
       llvm_attnum_arg,
       llvm_isnull_ptr_arg});
   irb->CreateRet(llvm_memtuple_ret);
+
 
   // HeapTuple check block
   // ---------------------

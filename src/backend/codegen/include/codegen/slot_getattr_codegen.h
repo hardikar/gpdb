@@ -54,8 +54,6 @@ class SlotGetAttrCodegen {
    *
    * @param codegen_utils Utilities for easy code generation
    *
-   * @return true on success generation; false otherwise
-   *
    * Based on parameters given to RequestSlotGetAttrGeneration(), the maximum
    * max_attr is tracked for each slot. Then for each slot, we generate code for
    * slot_getattr() that deforms tuples in that slot up to the maximum max_attr.
@@ -67,7 +65,7 @@ class SlotGetAttrCodegen {
    * TODO(shardikar, krajaraman) Remove this wrapper after a shared code
    * generation framework implementation is complete.
    */
-  static bool GenerateSlotGetAttr(
+  static void GenerateSlotGetAttr(
 		  gpcodegen::GpCodegenUtils* codegen_utils);
 
  private:
