@@ -76,14 +76,11 @@ void ExecEvalExprCodegen::PrepareSlotGetAttr(
         std::string slot_getattr_func_name = "slot_getattr_"
             + std::to_string(reinterpret_cast<uint64_t>(slot)) + "_"
             + std::to_string(gen_info->max_attr);
-        bool ok = SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
+        SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
             codegen_utils,
             slot,
             gen_info->max_attr,
             &gen_info->llvm_slot_getattr_func);
-        if (!ok) {
-          elog(DEBUG1, "slot_getattr generation for ExecEvalExpr failed!");
-        }
       }
       break;
     case T_AggState:
@@ -143,7 +140,7 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
   // Prepare dependent slot_getattr() generation
   PrepareSlotGetAttr(codegen_utils, &gen_info);
 
-  // In case the generation above failed either or it was not needed,
+  // In case the generation above either failed or was not needed,
   // we revert to use the external slot_getattr()
   if (nullptr == gen_info.llvm_slot_getattr_func) {
     gen_info.llvm_slot_getattr_func =

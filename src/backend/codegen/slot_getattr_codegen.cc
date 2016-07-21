@@ -54,14 +54,10 @@ using gpcodegen::SlotGetAttrCodegen;
 // attributes is varlen.
 extern const int codegen_varlen_tolerance;
 
-/*
- * Cache TupleTableSlot* -> max_attr; llvm::Function*
- */
-static std::unordered_map<uint64_t, std::pair<int, llvm::Function*> > function_cache;
+std::unordered_map<uint64_t, std::pair<int, llvm::Function*> >
+    SlotGetAttrCodegen::function_cache;
 
-// TODO(shardikar, krajaraman) Remove this wrapper after implementing an
-// interface to share code generation logic.
-bool SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
+void SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
     gpcodegen::GpCodegenUtils* codegen_utils,
     TupleTableSlot *slot,
     int max_attr,
@@ -83,9 +79,6 @@ bool SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
 
   assert(nullptr != function);
   *out_func = function;
-
-  // TODO(shardikar) no need to return true
-  return true;
 }
 
 bool SlotGetAttrCodegen::GenerateSlotGetAttr(
