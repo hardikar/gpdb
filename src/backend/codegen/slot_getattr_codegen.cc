@@ -64,7 +64,7 @@ void SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
     llvm::Function** out_func) {
 
   auto it = function_cache.find(reinterpret_cast<uint64_t>(slot));
-  llvm::Function* function;
+  llvm::Function* function = nullptr;
 
   if (it == function_cache.end()) {
     // For a slot we haven't seen before, add an entry to the map, saving
@@ -133,11 +133,9 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
     gpcodegen::GpCodegenUtils* codegen_utils,
     TupleTableSlot *slot,
     int max_attr,
-    llvm::Function* function) {
+    llvm::Function* slot_getattr_func) {
 
   // So looks like we're going to generate code
-  llvm::Function* slot_getattr_func = function;
-
   auto irb = codegen_utils->ir_builder();
 
   // BasicBlock of function entry.
