@@ -53,11 +53,11 @@ class SlotGetAttrCodegen : public CodegenInterface {
    * slot.
    *
    **/
-  void RequestGeneration(
+  static SlotGetAttrCodegen* RequestGeneration(
+      gpcodegen::CodegenManager* manager,
       gpcodegen::GpCodegenUtils* codegen_utils,
       TupleTableSlot* slot,
-      int max_attr,
-      llvm::Function** out_func);
+      int max_attr);
 
   /**
    * @brief Generate code for the codepath slot_getattr > _slot_getsomeattr >
@@ -93,12 +93,19 @@ class SlotGetAttrCodegen : public CodegenInterface {
     return is_generated_;
   }
 
+  llvm::Function* function() {
+    return function_;
+  }
+
  private:
   // WARNING : Same as BASECODEGEN
-  SlotGetAttrCodegen()
+  SlotGetAttrCodegen(TupleTableSlot* slot, int max_attr, llvm::Function* function)
   : orig_func_name_(kSlotGetAttrPrefix),
     unique_func_name_(CodegenInterface::GenerateUniqueName(orig_func_name_)),
-    is_generated_(false) {
+    is_generated_(false),
+    slot_(slot),
+    max_attr_(max_attr),
+    function_(function) {
   }
 
   /**
@@ -130,6 +137,11 @@ class SlotGetAttrCodegen : public CodegenInterface {
       llvm::Function* out_func);
 
 
+  std::string orig_func_name_;
+  std::string unique_func_name_;
+  bool is_generated_;
+
+
   /**
    * Map of slot and the information required for its code generation,
    * which contains max_attr (attributes to deform up to), and the llvm::Function
@@ -137,14 +149,11 @@ class SlotGetAttrCodegen : public CodegenInterface {
    *
    * i.e slot -> { max_attr, function }
    */
-  std::unordered_map<uint64_t, std::pair<int, llvm::Function*> >
-      function_cache;
+  TupleTableSlot* slot_;
+  int max_attr_;
+  llvm::Function* function_;
 
-  std::string orig_func_name_;
-  std::string unique_func_name_;
-  bool is_generated_;
-
-  static constexpr char kSlotGetAttrPrefix[] = "slot_getattr";
+  static constexpr char kSlotGetAttrPrefix[] = "slot_getattr_";
 
   CODEGEN_DISABLE_POINTER_SWAPPING()
 };

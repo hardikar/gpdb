@@ -48,77 +48,76 @@ extern void slot_deform_tuple(TupleTableSlot* slot, int nattr);
 
 using gpcodegen::SlotGetAttrCodegen;
 
+constexpr char SlotGetAttrCodegen::kSlotGetAttrPrefix[];
+
 // TODO(shardikar): Retire this GUC after performing experiments to find the
 // tradeoff of codegen-ing slot_getattr() (potentially by measuring the
 // difference in the number of instructions) when one of the first few
 // attributes is varlen.
 extern const int codegen_varlen_tolerance;
 
-void SlotGetAttrCodegen::RequestGeneration(
+SlotGetAttrCodegen* SlotGetAttrCodegen::RequestGeneration(
+    gpcodegen::CodegenManager* manager,
     gpcodegen::GpCodegenUtils* codegen_utils,
     TupleTableSlot *slot,
-    int max_attr,
-    llvm::Function** out_func) {
+    int max_attr) {
 
-  auto it = function_cache.find(reinterpret_cast<uint64_t>(slot));
-  llvm::Function* function = nullptr;
-
-  if (it == function_cache.end()) {
-    // For a slot we haven't seen before, add an entry to the map, saving
-    // the max_attr value
-    function = codegen_utils->CreateFunction<SlotGetAttrFn>(
-        "slot_getattr_incompl");
-    function_cache.insert(std::make_pair(reinterpret_cast<uint64_t>(slot),
-                                         std::make_pair(max_attr, function)));
-  } else {
-    // For a slot already seen before, update max_attr value only
-    std::pair<int, llvm::Function*>& entry = it->second;
-    entry.first = std::max(entry.first, max_attr);
-    function = entry.second;
+  SlotGetAttrCodegen* generator = nullptr;
+  for (const std::unique_ptr<CodegenInterface>& g: manager->shared_code_generators()){
+    if (0 != g->GetUniqueFuncName().find(kSlotGetAttrPrefix) &&
+        slot != reinterpret_cast<SlotGetAttrCodegen*>(g.get())->slot_) {
+      continue;
+    }
+    generator = reinterpret_cast<SlotGetAttrCodegen*>(g.get());
+    assert(nullptr != generator && slot == generator->slot_);
   }
 
-  assert(nullptr != function);
-  // Return either the newly created llvm::Function or a previously created one
-  *out_func = function;
+  if (generator) {
+    // For a slot already seen before, update max_attr value only
+    generator->max_attr_ = std::max(generator->max_attr_, max_attr);
+  }
+  else {
+    // For a slot we haven't seen before,
+    llvm::Function* function = codegen_utils->CreateFunction<SlotGetAttrFn>(
+        "slot_getattr_incompl");
+    generator = new SlotGetAttrCodegen(slot, max_attr, function);
+
+    manager->EnrollCodeGenerator(CodegenFuncLifespan_Parameter_Invariant,
+                                 generator,
+                                 true /* is_shared */);
+  }
+
+  assert(nullptr != generator && nullptr != generator->function());
+  return generator;
 }
 
 bool SlotGetAttrCodegen::GenerateCode(
     gpcodegen::GpCodegenUtils* codegen_utils) {
-  // Iterate over each unique slot and generate the function body for that slot
-  for (auto it = function_cache.begin(); it != function_cache.end(); ++it) {
-    TupleTableSlot* slot = reinterpret_cast<TupleTableSlot*>(it->first);
-    int max_attr = it->second.first;
-    llvm::Function* function = it->second.second;
+  bool ret = GenerateSlotGetAttr(codegen_utils, slot_, max_attr_, function_);
 
-    bool ret = GenerateSlotGetAttr(codegen_utils,
-                                           slot,
-                                           max_attr,
-                                           function);
+  if (!ret ||
+      (codegen_validate_functions && llvm::verifyFunction(*function_))) {
+    // By this point, there may be a number of call instructions created
+    // already to call this function. In case the generation fails now, we
+    // would have to invalidate all those calls. Instead, we simple fall back
+    // to the regular slot_getattr().
+    // TODO(shardikar, karajaman) Move this logic into a framework for shared
+    // code generators.
 
-    if (!ret ||
-        (codegen_validate_functions && llvm::verifyFunction(*function))) {
-      // By this point, there may be a number of call instructions created
-      // already to call this function. In case the generation fails now, we
-      // would have to invalidate all those calls. Instead, we simple fall back
-      // to the regular slot_getattr().
-      // TODO(shardikar, karajaman) Move this logic into a framework for shared
-      // code generators.
-
-      elog(WARNING, "SlotGetAttr generation failed!");
-      function->deleteBody();
-      llvm::BasicBlock* fallback_block =
-          codegen_utils->CreateBasicBlock("fallback", function);
-      codegen_utils->ir_builder()->SetInsertPoint(fallback_block);
-      codegen_utils->CreateFallback<SlotGetAttrFn>(
-          codegen_utils->GetOrRegisterExternalFunction(slot_getattr), function);
-    }
-
-    // Give the function a human readable name
-    std::string function_name = "slot_getattr_" +
-        std::to_string(reinterpret_cast<uint64_t>(slot)) + "_" +
-        std::to_string(max_attr);
-    function->setName(function_name);
+    elog(WARNING, "SlotGetAttr generation failed!");
+    function_->deleteBody();
+    llvm::BasicBlock* fallback_block =
+        codegen_utils->CreateBasicBlock("fallback", function_);
+    codegen_utils->ir_builder()->SetInsertPoint(fallback_block);
+    codegen_utils->CreateFallback<SlotGetAttrFn>(
+        codegen_utils->GetOrRegisterExternalFunction(slot_getattr), function_);
   }
+
+  // Give the function a human readable name
+  std::string function_name = kSlotGetAttrPrefix +
+      std::to_string(reinterpret_cast<uint64_t>(slot_)) + "_" +
+      std::to_string(max_attr_);
+  function_->setName(function_name);
 
   return true;
 }

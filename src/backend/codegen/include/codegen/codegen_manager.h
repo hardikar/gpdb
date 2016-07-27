@@ -58,7 +58,7 @@ class CodegenManager {
    **/
   bool EnrollCodeGenerator(CodegenFuncLifespan funcLifespan,
                            CodegenInterface* generator,
-                           bool is_shared = true);
+                           bool is_shared = false);
 
   /**
    * @brief Request all enrolled generators to generate code.

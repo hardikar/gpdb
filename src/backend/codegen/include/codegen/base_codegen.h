@@ -157,7 +157,7 @@ class BaseCodegen: public CodegenInterface {
    * 			corresponding regular version.
    *
    **/
-  explicit BaseCodegen(const CodegenManager* manager,
+  explicit BaseCodegen(CodegenManager* manager,
                        const std::string& orig_func_name,
                        FuncPtrType regular_func_ptr,
                        FuncPtrType* ptr_to_chosen_func_ptr)
@@ -185,6 +185,10 @@ class BaseCodegen: public CodegenInterface {
    **/
   virtual bool GenerateCodeInternal(
       gpcodegen::GpCodegenUtils* codegen_utils) = 0;
+
+  CodegenManager* manager() {
+    return manager_;
+  }
 
   /**
    * @brief Create llvm Function for given type and store the function pointer
@@ -217,7 +221,7 @@ class BaseCodegen: public CodegenInterface {
   FuncPtrType regular_func_ptr_;
   FuncPtrType* ptr_to_chosen_func_ptr_;
   bool is_generated_;
-  const CodegenManager* manager_;
+  CodegenManager* manager_;
   // To track uncompiled llvm functions it creates and erase from
   // llvm module on failed generations.
   std::vector<llvm::Function*> uncompiled_generated_functions_;

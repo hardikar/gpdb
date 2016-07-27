@@ -74,14 +74,9 @@ void ExecEvalExprCodegen::PrepareSlotGetAttr(
         TupleTableSlot* slot = reinterpret_cast<ScanState*>(plan_state_)
             ->ss_ScanTupleSlot;
         assert(nullptr != slot);
-        std::string slot_getattr_func_name = "slot_getattr_"
-            + std::to_string(reinterpret_cast<uint64_t>(slot)) + "_"
-            + std::to_string(gen_info->max_attr);
-        //SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
-        //    codegen_utils,
-        //    slot,
-        //    gen_info->max_attr,
-        //    &gen_info->llvm_slot_getattr_func);
+        gen_info->llvm_slot_getattr_func =
+            SlotGetAttrCodegen::RequestGeneration(
+                manager(), codegen_utils, slot, gen_info->max_attr)->function();
       }
       break;
     case T_AggState:
