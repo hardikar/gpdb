@@ -19,6 +19,7 @@ extern "C" {
 #include <string>
 #include <vector>
 #include "codegen/utils/gp_codegen_utils.h"
+#include "codegen/codegen_manager.h"
 #include "codegen/codegen_interface.h"
 
 #include "llvm/IR/Function.h"
@@ -156,23 +157,18 @@ class BaseCodegen: public CodegenInterface {
    * 			corresponding regular version.
    *
    **/
-  explicit BaseCodegen(const std::string& orig_func_name,
+  explicit BaseCodegen(const CodegenManager* manager,
+                       const std::string& orig_func_name,
                        FuncPtrType regular_func_ptr,
                        FuncPtrType* ptr_to_chosen_func_ptr)
   : orig_func_name_(orig_func_name),
     unique_func_name_(CodegenInterface::GenerateUniqueName(orig_func_name)),
     regular_func_ptr_(regular_func_ptr),
     ptr_to_chosen_func_ptr_(ptr_to_chosen_func_ptr),
-    is_generated_(false) {
+    is_generated_(false),
+    manager_(manager) {
     // Initialize the caller to use regular version of target function.
     SetToRegular(regular_func_ptr, ptr_to_chosen_func_ptr);
-  }
-
-  // Short-circuit pointer swapping
-  explicit BaseCodegen(const std::string& orig_func_name,
-                       FuncPtrType regular_func_ptr)
-  : BaseCodegen(orig_func_name, regular_func_ptr, &regular_func_ptr_) {
-
   }
 
   /**
@@ -221,6 +217,7 @@ class BaseCodegen: public CodegenInterface {
   FuncPtrType regular_func_ptr_;
   FuncPtrType* ptr_to_chosen_func_ptr_;
   bool is_generated_;
+  const CodegenManager* manager_;
   // To track uncompiled llvm functions it creates and erase from
   // llvm module on failed generations.
   std::vector<llvm::Function*> uncompiled_generated_functions_;
