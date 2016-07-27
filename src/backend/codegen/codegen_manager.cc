@@ -50,22 +50,30 @@ CodegenManager::CodegenManager(const std::string& module_name) {
 }
 
 bool CodegenManager::EnrollCodeGenerator(
-    CodegenFuncLifespan funcLifespan, CodegenInterface* generator) {
+    CodegenFuncLifespan funcLifespan, CodegenInterface* generator, bool is_shared) {
   // Only CodegenFuncLifespan_Parameter_Invariant is supported as of now
   assert(funcLifespan == CodegenFuncLifespan_Parameter_Invariant);
   assert(nullptr != generator);
-  enrolled_code_generators_.emplace_back(generator);
+  if (is_shared) {
+    shared_code_generators_.emplace_back(generator);
+  } else {
+    primary_code_generators_.emplace_back(generator);
+  }
   return true;
 }
 
 unsigned int CodegenManager::GenerateCode() {
   unsigned int success_count = 0;
+  // First generate code for primary generators
   for (std::unique_ptr<CodegenInterface>& generator :
-      enrolled_code_generators_) {
+      primary_code_generators_) {
     success_count += generator->GenerateCode(codegen_utils_.get());
   }
-  // Generate code for shared modules
-  //SlotGetAttrCodegen::GenerateSlotGetAttr(codegen_utils_.get());
+  // Then for any shared generators that were added
+  for (std::unique_ptr<CodegenInterface>& generator :
+      shared_code_generators_) {
+    success_count += generator->GenerateCode(codegen_utils_.get());
+  }
   return success_count;
 }
 
@@ -73,7 +81,7 @@ unsigned int CodegenManager::PrepareGeneratedFunctions() {
   unsigned int success_count = 0;
 
   // If no generator registered, just return with success count as 0
-  if (enrolled_code_generators_.empty()) {
+  if (primary_code_generators_.empty()) {
     return success_count;
   }
 
@@ -90,7 +98,7 @@ unsigned int CodegenManager::PrepareGeneratedFunctions() {
   // the pointer so compiled function get called
   gpcodegen::GpCodegenUtils* codegen_utils = codegen_utils_.get();
   for (std::unique_ptr<CodegenInterface>& generator :
-      enrolled_code_generators_) {
+      primary_code_generators_) {
     success_count += generator->SetToGenerated(codegen_utils);
   }
   return success_count;
