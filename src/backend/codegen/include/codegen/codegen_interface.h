@@ -15,6 +15,10 @@
 #include <string>
 #include <vector>
 
+#define CODEGEN_DISABLE_POINTER_SWAPPING() \
+  virtual bool SetToRegular() final { return true; } \
+  virtual bool SetToGenerated(gpcodegen::GpCodegenUtils* codegen_utils) final { return true; } \
+  virtual void Reset() final {} \
 
 namespace gpcodegen {
 

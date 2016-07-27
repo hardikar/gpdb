@@ -54,10 +54,7 @@ using gpcodegen::SlotGetAttrCodegen;
 // attributes is varlen.
 extern const int codegen_varlen_tolerance;
 
-std::unordered_map<uint64_t, std::pair<int, llvm::Function*> >
-    SlotGetAttrCodegen::function_cache;
-
-void SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
+void SlotGetAttrCodegen::RequestGeneration(
     gpcodegen::GpCodegenUtils* codegen_utils,
     TupleTableSlot *slot,
     int max_attr,
@@ -85,7 +82,7 @@ void SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
   *out_func = function;
 }
 
-void SlotGetAttrCodegen::GenerateSlotGetAttr(
+bool SlotGetAttrCodegen::GenerateCode(
     gpcodegen::GpCodegenUtils* codegen_utils) {
   // Iterate over each unique slot and generate the function body for that slot
   for (auto it = function_cache.begin(); it != function_cache.end(); ++it) {
@@ -93,7 +90,7 @@ void SlotGetAttrCodegen::GenerateSlotGetAttr(
     int max_attr = it->second.first;
     llvm::Function* function = it->second.second;
 
-    bool ret = GenerateSlotGetAttrInternal(codegen_utils,
+    bool ret = GenerateSlotGetAttr(codegen_utils,
                                            slot,
                                            max_attr,
                                            function);
@@ -123,13 +120,10 @@ void SlotGetAttrCodegen::GenerateSlotGetAttr(
     function->setName(function_name);
   }
 
-  // Clear the cache for the next operator.
-  // TODO(shardikar, karajaman) Move this logic into a framework for shared
-  // code generators. That way these functions need not be static.
-  function_cache.clear();
+  return true;
 }
 
-bool SlotGetAttrCodegen::GenerateSlotGetAttrInternal(
+bool SlotGetAttrCodegen::GenerateSlotGetAttr(
     gpcodegen::GpCodegenUtils* codegen_utils,
     TupleTableSlot *slot,
     int max_attr,

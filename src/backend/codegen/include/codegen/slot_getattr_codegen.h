@@ -17,7 +17,17 @@
 #include <utility>
 
 #include "codegen/codegen_wrapper.h"
+#include "codegen/base_codegen.h"
 #include "codegen/utils/gp_codegen_utils.h"
+
+extern "C" {
+#include "postgres.h"  // NOLINT(build/include)
+#include "utils/elog.h"
+#include "access/htup.h"
+#include "nodes/execnodes.h"
+#include "executor/tuptable.h"
+
+}
 
 namespace gpcodegen {
 
@@ -25,7 +35,7 @@ namespace gpcodegen {
  *  @{
  */
 
-class SlotGetAttrCodegen {
+class SlotGetAttrCodegen : public CodegenInterface {
  public:
   /**
    * @brief Request code generation for the codepath slot_getattr >
@@ -43,7 +53,7 @@ class SlotGetAttrCodegen {
    * slot.
    *
    **/
-  static void RequestSlotGetAttrGeneration(
+  void RequestGeneration(
       gpcodegen::GpCodegenUtils* codegen_utils,
       TupleTableSlot* slot,
       int max_attr,
@@ -66,9 +76,31 @@ class SlotGetAttrCodegen {
    * TODO(shardikar, krajaraman) Remove this wrapper after a shared code
    * generation framework implementation is complete.
    */
-  static void GenerateSlotGetAttr(gpcodegen::GpCodegenUtils* codegen_utils);
+  virtual bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils);
+
+  // WARNING : Same as BASECODEGEN
+  const std::string& GetOrigFuncName() const final {
+    return orig_func_name_;
+  }
+
+  // WARNING : Same as BASECODEGEN
+  const std::string& GetUniqueFuncName() const final {
+    return unique_func_name_;
+  }
+
+  // WARNING : Same as BASECODEGEN
+  bool IsGenerated() const final {
+    return is_generated_;
+  }
 
  private:
+  // WARNING : Same as BASECODEGEN
+  SlotGetAttrCodegen()
+  : orig_func_name_(kSlotGetAttrPrefix),
+    unique_func_name_(CodegenInterface::GenerateUniqueName(orig_func_name_)),
+    is_generated_(false) {
+  }
+
   /**
    * @brief Generate code for the codepath slot_getattr > _slot_getsomeattr >
    * slot_deform_tuple
@@ -91,7 +123,7 @@ class SlotGetAttrCodegen {
    * If at execution time, we see any of the above types of attributes,
    * we fall backs to the regular function.
    **/
-  static bool GenerateSlotGetAttrInternal(
+  bool GenerateSlotGetAttr(
       gpcodegen::GpCodegenUtils* codegen_utils,
       TupleTableSlot* slot,
       int max_attr,
@@ -105,8 +137,16 @@ class SlotGetAttrCodegen {
    *
    * i.e slot -> { max_attr, function }
    */
-  static std::unordered_map<uint64_t, std::pair<int, llvm::Function*> >
+  std::unordered_map<uint64_t, std::pair<int, llvm::Function*> >
       function_cache;
+
+  std::string orig_func_name_;
+  std::string unique_func_name_;
+  bool is_generated_;
+
+  static constexpr char kSlotGetAttrPrefix[] = "slot_getattr";
+
+  CODEGEN_DISABLE_POINTER_SWAPPING()
 };
 
 /** @} */

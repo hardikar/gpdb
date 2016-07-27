@@ -76,11 +76,11 @@ void ExecEvalExprCodegen::PrepareSlotGetAttr(
         std::string slot_getattr_func_name = "slot_getattr_"
             + std::to_string(reinterpret_cast<uint64_t>(slot)) + "_"
             + std::to_string(gen_info->max_attr);
-        SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
-            codegen_utils,
-            slot,
-            gen_info->max_attr,
-            &gen_info->llvm_slot_getattr_func);
+        //SlotGetAttrCodegen::RequestSlotGetAttrGeneration(
+        //    codegen_utils,
+        //    slot,
+        //    gen_info->max_attr,
+        //    &gen_info->llvm_slot_getattr_func);
       }
       break;
     case T_AggState:

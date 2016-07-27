@@ -168,6 +168,13 @@ class BaseCodegen: public CodegenInterface {
     SetToRegular(regular_func_ptr, ptr_to_chosen_func_ptr);
   }
 
+  // Short-circuit pointer swapping
+  explicit BaseCodegen(const std::string& orig_func_name,
+                       FuncPtrType regular_func_ptr)
+  : BaseCodegen(orig_func_name, regular_func_ptr, &regular_func_ptr_) {
+
+  }
+
   /**
    * @brief Generates specialized code at run time.
    *

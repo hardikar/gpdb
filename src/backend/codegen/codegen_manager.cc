@@ -65,7 +65,7 @@ unsigned int CodegenManager::GenerateCode() {
     success_count += generator->GenerateCode(codegen_utils_.get());
   }
   // Generate code for shared modules
-  SlotGetAttrCodegen::GenerateSlotGetAttr(codegen_utils_.get());
+  //SlotGetAttrCodegen::GenerateSlotGetAttr(codegen_utils_.get());
   return success_count;
 }
 
