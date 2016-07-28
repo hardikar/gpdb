@@ -57,8 +57,7 @@ class CodegenManager {
    * @return true on successful enrollment.
    **/
   bool EnrollCodeGenerator(CodegenFuncLifespan funcLifespan,
-                           CodegenInterface* generator,
-                           bool is_shared = false);
+                           CodegenInterface* generator);
 
   /**
    * @brief Request all enrolled generators to generate code.
@@ -97,17 +96,7 @@ class CodegenManager {
    * @return Number of enrolled generators.
    **/
   size_t GetEnrollmentCount() {
-    return primary_code_generators_.size() +
-        shared_code_generators_.size();
-  }
-
-
-  const std::vector<std::unique_ptr<CodegenInterface>>& primary_code_generators() {
-    return primary_code_generators_;
-  }
-
-  const std::vector<std::unique_ptr<CodegenInterface>>& shared_code_generators() {
-    return shared_code_generators_;
+    return enrolled_code_generators_.size();
   }
 
   /*
@@ -127,10 +116,8 @@ class CodegenManager {
 
   std::string module_name_;
 
-  // List of all enrolled primary code generators.
-  std::vector<std::unique_ptr<CodegenInterface>> primary_code_generators_;
-  // List of all enrolled shared code generators
-  std::vector<std::unique_ptr<CodegenInterface>> shared_code_generators_;
+  // List of all enrolled code generators.
+  std::vector<std::unique_ptr<CodegenInterface>> enrolled_code_generators_;
 
   // Holds the dumped IR of all underlying modules for EXPLAIN CODEGEN queries
   std::string explain_string_;
