@@ -48,6 +48,8 @@ class ExecEvalExprCodegen: public BaseCodegen<ExecEvalExprFn> {
 
   virtual ~ExecEvalExprCodegen() = default;
 
+  bool InitDependencies() override;
+
  protected:
   /**
    * @brief Generate code for expression evaluation.
@@ -71,14 +73,12 @@ class ExecEvalExprCodegen: public BaseCodegen<ExecEvalExprFn> {
 
  private:
   ExprState *exprstate_;
-  ExprContext *econtext_;
   PlanState* plan_state_;
 
+  ExprTreeGeneratorInfo gen_info_;
   // May be nullptr if not needed
   SlotGetAttrCodegen* slot_getattr_codegen_;
-  ExprTreeGeneratorInfo gen_info_;
   std::unique_ptr<ExprTreeGenerator> expr_tree_generator_;
-  bool can_generate_;
 
   static constexpr char kExecEvalExprPrefix[] = "ExecEvalExpr";
 

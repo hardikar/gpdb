@@ -62,15 +62,22 @@ ExecVariableListCodegen::ExecVariableListCodegen(
                   regular_func_ptr,
                   ptr_to_regular_func_ptr),
       proj_info_(proj_info),
-      slot_(slot) {
+      slot_(slot),
+      max_attr_(0),
+      slot_getattr_codegen_(nullptr) {
+}
+
+bool ExecVariableListCodegen::InitDependencies() {
+  assert(proj_info_ != nullptr);
+
   // Find the largest attribute index in projInfo->pi_targetlist
   max_attr_ = *std::max_element(
       proj_info_->pi_varNumbers,
       proj_info_->pi_varNumbers + list_length(proj_info_->pi_targetlist));
   slot_getattr_codegen_ = SlotGetAttrCodegen::RequestGeneration(
-      manager, slot_, max_attr_);
+      manager(), slot_, max_attr_);
+  return true;
 }
-
 
 bool ExecVariableListCodegen::GenerateExecVariableList(
     gpcodegen::GpCodegenUtils* codegen_utils) {

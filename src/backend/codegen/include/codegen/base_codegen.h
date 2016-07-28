@@ -51,6 +51,10 @@ class BaseCodegen: public CodegenInterface {
     SetToRegular(regular_func_ptr_, ptr_to_chosen_func_ptr_);
   }
 
+  bool InitDependencies() override {
+    return true;
+  }
+
   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils) final {
     bool valid_generated_functions = true;
     valid_generated_functions &= GenerateCodeInternal(codegen_utils);

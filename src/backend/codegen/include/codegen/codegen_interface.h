@@ -36,6 +36,8 @@ class CodegenInterface {
  public:
   virtual ~CodegenInterface() = default;
 
+  virtual bool InitDependencies() = 0;
+
   /**
    * @brief Generates specialized code at run time.
    *

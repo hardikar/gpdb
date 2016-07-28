@@ -37,8 +37,6 @@ namespace gpcodegen {
 
 class SlotGetAttrCodegen : public CodegenInterface {
  public:
-  virtual ~SlotGetAttrCodegen() = default;
-
   /**
    * @brief Request code generation for the codepath slot_getattr >
    * _slot_getsomeattr > slot_deform_tuple for the given slot and max_attr
@@ -60,6 +58,13 @@ class SlotGetAttrCodegen : public CodegenInterface {
       TupleTableSlot* slot,
       int max_attr);
 
+  virtual ~SlotGetAttrCodegen();
+
+  // WARNING : Same as BASECODEGEN
+  bool InitDependencies() override {
+    return true;
+  }
+
   /**
    * @brief Generate code for the codepath slot_getattr > _slot_getsomeattr >
    * slot_deform_tuple for the given slot and max_attr
@@ -77,7 +82,7 @@ class SlotGetAttrCodegen : public CodegenInterface {
    * TODO(shardikar, krajaraman) Remove this wrapper after a shared code
    * generation framework implementation is complete.
    */
-  virtual bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils);
+   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils) override;
 
   // WARNING : Same as BASECODEGEN
   const std::string& GetOrigFuncName() const final {

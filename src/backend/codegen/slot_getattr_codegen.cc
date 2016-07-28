@@ -64,6 +64,8 @@ SlotGetAttrCodegen* SlotGetAttrCodegen::RequestGeneration(
     TupleTableSlot *slot,
     int max_attr) {
 
+  elog(INFO, "megamap.size() = %d", megamap.size());
+
   // Create an cache entry for this manager if it doesn't already exist
   auto it = megamap[manager].find(slot);
 
@@ -82,6 +84,9 @@ SlotGetAttrCodegen* SlotGetAttrCodegen::RequestGeneration(
 
   assert(nullptr != generator);
   return generator;
+}
+
+SlotGetAttrCodegen::~SlotGetAttrCodegen() {
 }
 
 bool SlotGetAttrCodegen::GenerateCode(

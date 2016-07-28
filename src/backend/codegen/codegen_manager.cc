@@ -59,13 +59,15 @@ bool CodegenManager::EnrollCodeGenerator(
 }
 
 unsigned int CodegenManager::GenerateCode() {
+  // This list can change...
+  for (size_t i = 0; i < enrolled_code_generators_.size(); ++i) {
+    enrolled_code_generators_[i]->InitDependencies();
+  }
   unsigned int success_count = 0;
   for (std::unique_ptr<CodegenInterface>& generator :
       enrolled_code_generators_) {
     success_count += generator->GenerateCode(codegen_utils_.get());
   }
-  // Generate code for shared modules
-  //SlotGetAttrCodegen::GenerateSlotGetAttr(codegen_utils_.get());
   return success_count;
 }
 

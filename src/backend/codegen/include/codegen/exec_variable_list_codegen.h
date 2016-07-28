@@ -44,6 +44,8 @@ class ExecVariableListCodegen: public BaseCodegen<ExecVariableListFn> {
 
   virtual ~ExecVariableListCodegen() = default;
 
+  bool InitDependencies() override;
+
  protected:
   /**
    * @brief Generate code for the code path ExecVariableList > slot_getattr >
