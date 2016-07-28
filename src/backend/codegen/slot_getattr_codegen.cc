@@ -56,43 +56,48 @@ constexpr char SlotGetAttrCodegen::kSlotGetAttrPrefix[];
 // attributes is varlen.
 extern const int codegen_varlen_tolerance;
 
+std::unordered_map<gpcodegen::CodegenManager*,
+    SlotGetAttrCodegen::SlotGetAttrCodegenCache> SlotGetAttrCodegen::megamap;
+
 SlotGetAttrCodegen* SlotGetAttrCodegen::RequestGeneration(
     gpcodegen::CodegenManager* manager,
-    gpcodegen::GpCodegenUtils* codegen_utils,
     TupleTableSlot *slot,
     int max_attr) {
 
+  // Create an cache entry for this manager if it doesn't already exist
+  auto it = megamap[manager].find(slot);
+
   SlotGetAttrCodegen* generator = nullptr;
-  for (const std::unique_ptr<CodegenInterface>& g: manager->shared_code_generators()){
-    if (0 != g->GetUniqueFuncName().find(kSlotGetAttrPrefix) &&
-        slot != reinterpret_cast<SlotGetAttrCodegen*>(g.get())->slot_) {
-      continue;
-    }
-    generator = reinterpret_cast<SlotGetAttrCodegen*>(g.get());
-    assert(nullptr != generator && slot == generator->slot_);
-  }
-
-  if (generator) {
+  if (it != megamap[manager].end()) {
     // For a slot already seen before, update max_attr value only
+    generator = it->second;
     generator->max_attr_ = std::max(generator->max_attr_, max_attr);
-  }
-  else {
-    // For a slot we haven't seen before,
-    llvm::Function* function = codegen_utils->CreateFunction<SlotGetAttrFn>(
-        "slot_getattr_incompl");
-    generator = new SlotGetAttrCodegen(slot, max_attr, function);
-
+  } else {
+    // Not found
+    generator = new SlotGetAttrCodegen(slot, max_attr);
+    megamap[manager].insert(std::make_pair(slot, generator));
     manager->EnrollCodeGenerator(CodegenFuncLifespan_Parameter_Invariant,
-                                 generator,
-                                 true /* is_shared */);
+                                 generator);
   }
 
-  assert(nullptr != generator && nullptr != generator->function());
+  assert(nullptr != generator);
   return generator;
 }
 
 bool SlotGetAttrCodegen::GenerateCode(
     gpcodegen::GpCodegenUtils* codegen_utils) {
+
+  // This function may be called multiple times - we should generate only once
+  if (IsGenerated()) {
+    return true;
+  }
+
+  // Give the function a human readable name
+  std::string function_name = kSlotGetAttrPrefix +
+      std::to_string(reinterpret_cast<uint64_t>(slot_)) + "_" +
+      std::to_string(max_attr_);
+  function_ = codegen_utils->CreateFunction<SlotGetAttrFn>(function_name);
+
   bool ret = GenerateSlotGetAttr(codegen_utils, slot_, max_attr_, function_);
 
   if (!ret ||
@@ -113,12 +118,7 @@ bool SlotGetAttrCodegen::GenerateCode(
         codegen_utils->GetOrRegisterExternalFunction(slot_getattr), function_);
   }
 
-  // Give the function a human readable name
-  std::string function_name = kSlotGetAttrPrefix +
-      std::to_string(reinterpret_cast<uint64_t>(slot_)) + "_" +
-      std::to_string(max_attr_);
-  function_->setName(function_name);
-
+  is_generated_ = true;
   return true;
 }
 

@@ -60,23 +60,33 @@ ExecEvalExprCodegen::ExecEvalExprCodegen(
                   regular_func_ptr, ptr_to_regular_func_ptr),
       exprstate_(exprstate),
       econtext_(econtext),
-      plan_state_(plan_state) {
+      plan_state_(plan_state),
+      slot_getattr_codegen_(nullptr),
+      gen_info_(econtext, nullptr, nullptr, nullptr, 0),
+      expr_tree_generator_(nullptr) {
+
+  // TODO(krajaraman): move to better place
+  OpExprTreeGenerator::InitializeSupportedFunction();
+
+  can_generate_ = ExprTreeGenerator::VerifyAndCreateExprTree(
+        exprstate_, &gen_info_, &expr_tree_generator_);
+  // Prepare dependent slot_getattr() generation
+  PrepareSlotGetAttr();
 }
 
-void ExecEvalExprCodegen::PrepareSlotGetAttr(
-    gpcodegen::GpCodegenUtils* codegen_utils, ExprTreeGeneratorInfo* gen_info) {
+
+void ExecEvalExprCodegen::PrepareSlotGetAttr() {
   assert(nullptr != plan_state_);
   switch (nodeTag(plan_state_)) {
     case T_SeqScanState:
     case T_TableScanState:
       // Generate dependent slot_getattr() implementation for the given slot
-      if (gen_info->max_attr > 0) {
+      if (gen_info_.max_attr > 0) {
         TupleTableSlot* slot = reinterpret_cast<ScanState*>(plan_state_)
             ->ss_ScanTupleSlot;
         assert(nullptr != slot);
-        gen_info->llvm_slot_getattr_func =
-            SlotGetAttrCodegen::RequestGeneration(
-                manager(), codegen_utils, slot, gen_info->max_attr)->function();
+        slot_getattr_codegen_ = SlotGetAttrCodegen::RequestGeneration(
+            manager(), slot, gen_info_.max_attr);
       }
       break;
     case T_AggState:
@@ -84,7 +94,7 @@ void ExecEvalExprCodegen::PrepareSlotGetAttr(
       // deformed in which case, we can avoid generating and calling the
       // generated slot_getattr(). This may not be true always, but calling the
       // regular slot_getattr() will still preserve correctness.
-      gen_info->llvm_slot_getattr_func = nullptr;
+      slot_getattr_codegen_ = nullptr;
       break;
     default:
       elog(DEBUG1,
@@ -101,8 +111,6 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
       nullptr == econtext_) {
     return false;
   }
-  // TODO(krajaraman): move to better place
-  OpExprTreeGenerator::InitializeSupportedFunction();
 
   llvm::Function* exec_eval_expr_func = CreateFunction<ExecEvalExprFn>(
       codegen_utils, GetUniqueFuncName());
@@ -118,30 +126,19 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
 
   auto irb = codegen_utils->ir_builder();
 
-  // Check if we can codegen. If so create ExprTreeGenerator
-  ExprTreeGeneratorInfo gen_info(econtext_,
-                                 exec_eval_expr_func,
-                                 llvm_error_block,
-                                 nullptr,
-                                 0);
-
-  std::unique_ptr<ExprTreeGenerator> expr_tree_generator(nullptr);
-  bool can_generate = ExprTreeGenerator::VerifyAndCreateExprTree(
-      exprstate_, &gen_info, &expr_tree_generator);
-  if (!can_generate ||
-      expr_tree_generator.get() == nullptr) {
+  if (!can_generate_ || expr_tree_generator_.get() == nullptr) {
     return false;
   }
 
-  // Prepare dependent slot_getattr() generation
-  PrepareSlotGetAttr(codegen_utils, &gen_info);
-
   // In case the generation above either failed or was not needed,
   // we revert to use the external slot_getattr()
-  if (nullptr == gen_info.llvm_slot_getattr_func) {
-    gen_info.llvm_slot_getattr_func =
+  if (nullptr == slot_getattr_codegen_) {
+    gen_info_.llvm_slot_getattr_func =
         codegen_utils->GetOrRegisterExternalFunction(slot_getattr,
                                                      "slot_getattr");
+  } else {
+    slot_getattr_codegen_->GenerateCode(codegen_utils);
+    gen_info_.llvm_slot_getattr_func = slot_getattr_codegen_->function();
   }
 
   irb->SetInsertPoint(llvm_entry_block);
@@ -155,8 +152,8 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
 
   // Generate code from expression tree generator
   llvm::Value* value = nullptr;
-  bool is_generated = expr_tree_generator->GenerateCode(codegen_utils,
-                                                        gen_info,
+  bool is_generated = expr_tree_generator_->GenerateCode(codegen_utils,
+                                                        gen_info_,
                                                         llvm_isnull_arg,
                                                         &value);
   if (!is_generated ||

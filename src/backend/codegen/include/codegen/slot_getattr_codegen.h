@@ -37,6 +37,8 @@ namespace gpcodegen {
 
 class SlotGetAttrCodegen : public CodegenInterface {
  public:
+  virtual ~SlotGetAttrCodegen() = default;
+
   /**
    * @brief Request code generation for the codepath slot_getattr >
    * _slot_getsomeattr > slot_deform_tuple for the given slot and max_attr
@@ -55,7 +57,6 @@ class SlotGetAttrCodegen : public CodegenInterface {
    **/
   static SlotGetAttrCodegen* RequestGeneration(
       gpcodegen::CodegenManager* manager,
-      gpcodegen::GpCodegenUtils* codegen_utils,
       TupleTableSlot* slot,
       int max_attr);
 
@@ -99,13 +100,13 @@ class SlotGetAttrCodegen : public CodegenInterface {
 
  private:
   // WARNING : Same as BASECODEGEN
-  SlotGetAttrCodegen(TupleTableSlot* slot, int max_attr, llvm::Function* function)
+  SlotGetAttrCodegen(TupleTableSlot* slot, int max_attr)
   : orig_func_name_(kSlotGetAttrPrefix),
     unique_func_name_(CodegenInterface::GenerateUniqueName(orig_func_name_)),
     is_generated_(false),
     slot_(slot),
     max_attr_(max_attr),
-    function_(function) {
+    function_(nullptr) {
   }
 
   /**
@@ -137,6 +138,7 @@ class SlotGetAttrCodegen : public CodegenInterface {
       llvm::Function* out_func);
 
 
+  // WARNING : Same as BASECODEGEN
   std::string orig_func_name_;
   std::string unique_func_name_;
   bool is_generated_;
@@ -151,9 +153,15 @@ class SlotGetAttrCodegen : public CodegenInterface {
    */
   TupleTableSlot* slot_;
   int max_attr_;
+
+  // Populated after GenerateCode() is called, nullptr otherwise
   llvm::Function* function_;
 
   static constexpr char kSlotGetAttrPrefix[] = "slot_getattr_";
+
+  typedef std::unordered_map<TupleTableSlot*, SlotGetAttrCodegen*> SlotGetAttrCodegenCache;
+
+  static std::unordered_map<gpcodegen::CodegenManager*, SlotGetAttrCodegenCache> megamap;
 
   CODEGEN_DISABLE_POINTER_SWAPPING()
 };

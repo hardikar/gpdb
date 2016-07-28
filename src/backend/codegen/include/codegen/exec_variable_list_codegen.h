@@ -14,6 +14,7 @@
 #define GPCODEGEN_EXECVARIABLELIST_CODEGEN_H_
 
 #include "codegen/codegen_wrapper.h"
+#include "codegen/slot_getattr_codegen.h"
 #include "codegen/base_codegen.h"
 
 namespace gpcodegen {
@@ -82,6 +83,9 @@ class ExecVariableListCodegen: public BaseCodegen<ExecVariableListFn> {
  private:
   ProjectionInfo* proj_info_;
   TupleTableSlot* slot_;
+
+  int max_attr_;
+  SlotGetAttrCodegen* slot_getattr_codegen_;
 
 
   static constexpr char kExecVariableListPrefix[] = "ExecVariableList";

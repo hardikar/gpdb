@@ -74,6 +74,12 @@ class ExecEvalExprCodegen: public BaseCodegen<ExecEvalExprFn> {
   ExprContext *econtext_;
   PlanState* plan_state_;
 
+  // May be nullptr if not needed
+  SlotGetAttrCodegen* slot_getattr_codegen_;
+  ExprTreeGeneratorInfo gen_info_;
+  std::unique_ptr<ExprTreeGenerator> expr_tree_generator_;
+  bool can_generate_;
+
   static constexpr char kExecEvalExprPrefix[] = "ExecEvalExpr";
 
   /**
@@ -88,8 +94,7 @@ class ExecEvalExprCodegen: public BaseCodegen<ExecEvalExprFn> {
    * @brief Prepare generation of dependent slot_getattr() if necessary
    * @return true on successful generation.
    **/
-  void PrepareSlotGetAttr(gpcodegen::GpCodegenUtils* codegen_utils,
-                          ExprTreeGeneratorInfo* gen_info);
+  void PrepareSlotGetAttr();
 };
 
 /** @} */
