@@ -100,7 +100,7 @@ bool SlotGetAttrCodegen::GenerateCodeInternal(
   }
 
   // Give the function a human readable name
-  std::string function_name = kSlotGetAttrPrefix +
+  std::string function_name = GetUniqueFuncName() +
       std::to_string(reinterpret_cast<uint64_t>(slot_)) + "_" +
       std::to_string(max_attr_);
   function_ = codegen_utils->CreateFunction<SlotGetAttrFn>(function_name);
