@@ -77,10 +77,10 @@ class SlotGetAttrCodegen : public BaseCodegen<SlotGetAttrFn> {
    * TODO(shardikar, krajaraman) Remove this wrapper after a shared code
    * generation framework implementation is complete.
    */
-   bool GenerateCodeInternal(gpcodegen::GpCodegenUtils* codegen_utils) override;
+  bool GenerateCodeInternal(gpcodegen::GpCodegenUtils* codegen_utils) override;
 
-  llvm::Function* function() {
-    return function_;
+  llvm::Function* GetGeneratedFunction() {
+    return llvm_function_;
   }
 
  private:
@@ -90,7 +90,7 @@ class SlotGetAttrCodegen : public BaseCodegen<SlotGetAttrFn> {
   : BaseCodegen(manager, kSlotGetAttrPrefix, slot_getattr, &dummy_func_),
     slot_(slot),
     max_attr_(max_attr),
-    function_(nullptr) {
+    llvm_function_(nullptr) {
   }
 
   /**
@@ -125,7 +125,7 @@ class SlotGetAttrCodegen : public BaseCodegen<SlotGetAttrFn> {
   TupleTableSlot* slot_;
   int max_attr_;
   // Populated after GenerateCode() is called, nullptr otherwise
-  llvm::Function* function_;
+  llvm::Function* llvm_function_;
 
   static constexpr char kSlotGetAttrPrefix[] = "slot_getattr_";
   static SlotGetAttrFn dummy_func_;

@@ -116,9 +116,9 @@ bool SlotGetAttrCodegen::GenerateCodeInternal(
   std::string function_name = GetUniqueFuncName() +
       std::to_string(reinterpret_cast<uint64_t>(slot_)) + "_" +
       std::to_string(max_attr_);
-  function_ = codegen_utils->CreateFunction<SlotGetAttrFn>(function_name);
+  llvm_function_ = codegen_utils->CreateFunction<SlotGetAttrFn>(function_name);
 
-  bool isGenerated = GenerateSlotGetAttr(codegen_utils, slot_, max_attr_, function_);
+  bool isGenerated = GenerateSlotGetAttr(codegen_utils, slot_, max_attr_, llvm_function_);
 
   if (isGenerated) {
     elog(DEBUG1, "slot_getattr was generated successfully!");
