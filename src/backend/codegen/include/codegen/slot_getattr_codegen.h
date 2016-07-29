@@ -35,7 +35,7 @@ namespace gpcodegen {
  *  @{
  */
 
-class SlotGetAttrCodegen : public CodegenInterface {
+class SlotGetAttrCodegen : public BaseCodegen<SlotGetAttrFn> {
  public:
   /**
    * @brief Request code generation for the codepath slot_getattr >
@@ -60,11 +60,6 @@ class SlotGetAttrCodegen : public CodegenInterface {
 
   virtual ~SlotGetAttrCodegen();
 
-  // WARNING : Same as BASECODEGEN
-  bool InitDependencies() override {
-    return true;
-  }
-
   /**
    * @brief Generate code for the codepath slot_getattr > _slot_getsomeattr >
    * slot_deform_tuple for the given slot and max_attr
@@ -82,33 +77,17 @@ class SlotGetAttrCodegen : public CodegenInterface {
    * TODO(shardikar, krajaraman) Remove this wrapper after a shared code
    * generation framework implementation is complete.
    */
-   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils) override;
-
-  // WARNING : Same as BASECODEGEN
-  const std::string& GetOrigFuncName() const final {
-    return orig_func_name_;
-  }
-
-  // WARNING : Same as BASECODEGEN
-  const std::string& GetUniqueFuncName() const final {
-    return unique_func_name_;
-  }
-
-  // WARNING : Same as BASECODEGEN
-  bool IsGenerated() const final {
-    return is_generated_;
-  }
+   bool GenerateCodeInternal(gpcodegen::GpCodegenUtils* codegen_utils) override;
 
   llvm::Function* function() {
     return function_;
   }
 
  private:
-  // WARNING : Same as BASECODEGEN
-  SlotGetAttrCodegen(TupleTableSlot* slot, int max_attr)
-  : orig_func_name_(kSlotGetAttrPrefix),
-    unique_func_name_(CodegenInterface::GenerateUniqueName(orig_func_name_)),
-    is_generated_(false),
+  SlotGetAttrCodegen(gpcodegen::CodegenManager* manager,
+                     TupleTableSlot* slot,
+                     int max_attr)
+  : BaseCodegen(manager, kSlotGetAttrPrefix, slot_getattr, &dummy_func_),
     slot_(slot),
     max_attr_(max_attr),
     function_(nullptr) {
@@ -143,11 +122,13 @@ class SlotGetAttrCodegen : public CodegenInterface {
       llvm::Function* out_func);
 
 
-  // WARNING : Same as BASECODEGEN
-  std::string orig_func_name_;
-  std::string unique_func_name_;
-  bool is_generated_;
+  TupleTableSlot* slot_;
+  int max_attr_;
+  // Populated after GenerateCode() is called, nullptr otherwise
+  llvm::Function* function_;
 
+  static constexpr char kSlotGetAttrPrefix[] = "slot_getattr_";
+  static SlotGetAttrFn dummy_func_;
 
   /**
    * Map of slot and the information required for its code generation,
@@ -156,19 +137,9 @@ class SlotGetAttrCodegen : public CodegenInterface {
    *
    * i.e slot -> { max_attr, function }
    */
-  TupleTableSlot* slot_;
-  int max_attr_;
-
-  // Populated after GenerateCode() is called, nullptr otherwise
-  llvm::Function* function_;
-
-  static constexpr char kSlotGetAttrPrefix[] = "slot_getattr_";
-
   typedef std::unordered_map<TupleTableSlot*, SlotGetAttrCodegen*> SlotGetAttrCodegenCache;
-
   static std::unordered_map<gpcodegen::CodegenManager*, SlotGetAttrCodegenCache> megamap;
 
-  CODEGEN_DISABLE_POINTER_SWAPPING()
 };
 
 /** @} */

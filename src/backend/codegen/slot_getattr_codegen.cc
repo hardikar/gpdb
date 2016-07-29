@@ -56,6 +56,8 @@ constexpr char SlotGetAttrCodegen::kSlotGetAttrPrefix[];
 // attributes is varlen.
 extern const int codegen_varlen_tolerance;
 
+SlotGetAttrFn SlotGetAttrCodegen::dummy_func_ = slot_getattr;
+
 std::unordered_map<gpcodegen::CodegenManager*,
     SlotGetAttrCodegen::SlotGetAttrCodegenCache> SlotGetAttrCodegen::megamap;
 
@@ -76,7 +78,7 @@ SlotGetAttrCodegen* SlotGetAttrCodegen::RequestGeneration(
     generator->max_attr_ = std::max(generator->max_attr_, max_attr);
   } else {
     // Not found
-    generator = new SlotGetAttrCodegen(slot, max_attr);
+    generator = new SlotGetAttrCodegen(manager, slot, max_attr);
     megamap[manager].insert(std::make_pair(slot, generator));
     manager->EnrollCodeGenerator(CodegenFuncLifespan_Parameter_Invariant,
                                  generator);
@@ -89,7 +91,7 @@ SlotGetAttrCodegen* SlotGetAttrCodegen::RequestGeneration(
 SlotGetAttrCodegen::~SlotGetAttrCodegen() {
 }
 
-bool SlotGetAttrCodegen::GenerateCode(
+bool SlotGetAttrCodegen::GenerateCodeInternal(
     gpcodegen::GpCodegenUtils* codegen_utils) {
 
   // This function may be called multiple times - we should generate only once
@@ -103,28 +105,15 @@ bool SlotGetAttrCodegen::GenerateCode(
       std::to_string(max_attr_);
   function_ = codegen_utils->CreateFunction<SlotGetAttrFn>(function_name);
 
-  bool ret = GenerateSlotGetAttr(codegen_utils, slot_, max_attr_, function_);
+  bool isGenerated = GenerateSlotGetAttr(codegen_utils, slot_, max_attr_, function_);
 
-  if (!ret ||
-      (codegen_validate_functions && llvm::verifyFunction(*function_))) {
-    // By this point, there may be a number of call instructions created
-    // already to call this function. In case the generation fails now, we
-    // would have to invalidate all those calls. Instead, we simple fall back
-    // to the regular slot_getattr().
-    // TODO(shardikar, karajaman) Move this logic into a framework for shared
-    // code generators.
-
-    elog(WARNING, "SlotGetAttr generation failed!");
-    function_->deleteBody();
-    llvm::BasicBlock* fallback_block =
-        codegen_utils->CreateBasicBlock("fallback", function_);
-    codegen_utils->ir_builder()->SetInsertPoint(fallback_block);
-    codegen_utils->CreateFallback<SlotGetAttrFn>(
-        codegen_utils->GetOrRegisterExternalFunction(slot_getattr), function_);
+  if (isGenerated) {
+    elog(DEBUG1, "slot_getattr was generated successfully!");
+    return true;
+  } else {
+    elog(DEBUG1, "slot_getattr generation failed!");
+    return false;
   }
-
-  is_generated_ = true;
-  return true;
 }
 
 bool SlotGetAttrCodegen::GenerateSlotGetAttr(
