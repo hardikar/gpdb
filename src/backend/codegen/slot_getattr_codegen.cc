@@ -89,6 +89,19 @@ SlotGetAttrCodegen* SlotGetAttrCodegen::RequestGeneration(
 }
 
 SlotGetAttrCodegen::~SlotGetAttrCodegen() {
+  CodegenManager* manager = this->manager();
+
+  assert(manager != nullptr && megamap.find(manager) != megamap.end());
+  auto it = megamap[manager].find(slot_);
+
+  assert(it != megamap[manager].end() && it->second == this);
+  // Delete this SlotGetAttr from it's manager
+  megamap[manager].erase(it);
+
+  // Clean up manager data out of the map if this was the last instance
+  if (megamap[manager].empty()) {
+    megamap.erase(manager);
+  }
 }
 
 bool SlotGetAttrCodegen::GenerateCodeInternal(
