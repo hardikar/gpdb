@@ -130,6 +130,24 @@ endif()
 find_package(Clang REQUIRED)
 include_directories(${CLANG_INCLUDE_DIRS})
 
+function(prepend var prefix)
+   SET(listVar "")
+   FOREACH(f ${ARGN})
+      LIST(APPEND listVar "${prefix}${f}")
+   ENDFOREACH(f)
+   SET(${var} "${listVar}" PARENT_SCOPE)
+endfunction(prepend)
+
+# Compile to bytecode
+get_filename_component(full_install_name_dir "${CMAKE_INSTALL_PREFIX}/lib" ABSOLUTE)
+
+get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+prepend(include_dirs "-I" "${include_dirs}")
+
+message(WARNING ${include_dirs})
+add_custom_target(int.bc ALL COMMAND ${CMAKE_C_COMPILER} ${include_dirs} -c -emit-llvm bc/int.c)
+
+
 # Core codegen library.
 add_library(gpcodegen SHARED
             utils/clang_compiler.cc
@@ -161,7 +179,6 @@ else()
   target_link_libraries(gpcodegen ${WL_START_GROUP} ${codegen_llvm_libs} ${WL_END_GROUP})
 endif()
 
-get_filename_component(full_install_name_dir "${CMAKE_INSTALL_PREFIX}/lib" ABSOLUTE)
 set_target_properties(
     gpcodegen PROPERTIES
     INSTALL_NAME_DIR ${full_install_name_dir}
@@ -213,14 +230,6 @@ SET (TEST_LIB_INC_DIRECTORIES
 ${TOP_SRC_DIR}/src/test/unit/cmockery
 ${GTEST_DIR}/include)
 			
-function(prepend_path var prefix)
-   SET(listVar "")
-   FOREACH(f ${ARGN})
-      LIST(APPEND listVar "${prefix}/${f}")
-   ENDFOREACH(f)
-   SET(${var} "${listVar}" PARENT_SCOPE)
-endfunction(prepend_path)
-
 function(add_simple_gtest TEST_NAME TEST_SRC)
     add_executable(${TEST_NAME} EXCLUDE_FROM_ALL ${TEST_SRC})
 	target_include_directories(${TEST_NAME} PUBLIC ${TEST_LIB_INC_DIRECTORIES})
@@ -291,7 +300,7 @@ if(EXISTS ${TXT_OBJFILE})
     foreach(OBJ ${EXCL_OBJS})
         list(REMOVE_ITEM OBJFILES ${OBJ})
     endforeach()
-    prepend_path(OBJFILES ${TOP_SRC_DIR} ${OBJFILES})
+    prepend(OBJFILES "${TOP_SRC_DIR}/" ${OBJFILES})
 
 
     set(MOCK_OBJS "")

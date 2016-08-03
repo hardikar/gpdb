@@ -27,6 +27,8 @@
 #include "codegen/pg_date_func_generator.h"
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/SourceMgr.h"
 
 extern "C" {
 #include "postgres.h"  // NOLINT(build/include)
@@ -53,6 +55,36 @@ using llvm::IRBuilder;
 CodeGenFuncMap
 OpExprTreeGenerator::supported_function_;
 
+static bool Foo(gpcodegen::GpCodegenUtils* codegen_utils,
+               llvm::Function* llvm_main_func,
+               llvm::BasicBlock* llvm_error_block,
+               const std::vector<llvm::Value*>& llvm_args,
+               llvm::Value** llvm_out_value) {
+
+  llvm::SMDiagnostic error;
+  std::unique_ptr<llvm::Module> m = llvm::parseIRFile(
+      "/Users/shardikar/workspace/codegen/gpdb/src/backend/codegen/int.bc",
+      error, *codegen_utils->context());
+
+  if (m) {
+    elog(INFO, "List size = %d", m->getFunctionList().size());
+  } else {
+    elog(WARNING, "Module loading failed");
+  }
+
+  llvm::Function* function = m->getFunction("int4mul");
+  assert(nullptr != function);
+
+  auto irb = codegen_utils->ir_builder();
+  llvm::Value* arg0 = codegen_utils->CreateCast<int32_t, Datum>(llvm_args[0]);
+  llvm::Value* arg1 = codegen_utils->CreateCast<int32_t, Datum>(llvm_args[1]);
+  llvm::CallInst* inst = irb->CreateCall(function, {arg0, arg1});
+  *llvm_out_value = codegen_utils->CreateCast<Datum, int32_t>(inst);
+
+  codegen_utils->InlineFunction(inst);
+  return true;
+}
+
 void OpExprTreeGenerator::InitializeSupportedFunction() {
   if (!supported_function_.empty()) { return; }
 
@@ -60,7 +92,7 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
       new PGGenericFuncGenerator<int32_t, int32_t>(
           141,
           "int4mul",
-          &PGArithFuncGenerator<int32_t, int32_t, int32_t>::MulWithOverflow));
+          Foo));
 
   supported_function_[149] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGIRBuilderFuncGenerator<decltype(&IRBuilder<>::CreateICmpSLE),

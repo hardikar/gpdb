@@ -229,6 +229,8 @@ bool CodegenUtils::PrepareForExecution(const OptimizationLevel cpu_opt_level,
     engine_->addModule(std::move(auxiliary_module));
   }
 
+  loaded_module_ = nullptr;
+
   // Map global variables (i.e. pointer constants) and registered external
   // functions to their actual locations in memory.
   //
