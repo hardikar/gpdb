@@ -141,11 +141,66 @@ endfunction(prepend)
 # Compile to bytecode
 get_filename_component(full_install_name_dir "${CMAKE_INSTALL_PREFIX}/lib" ABSOLUTE)
 
-get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-prepend(include_dirs "-I" "${include_dirs}")
+function(COMPILE_TO_IR SRC_FILE)
+  get_filename_component(BASE_NAME ${SRC_FILE} NAME_WE)
+  get_filename_component(EXTENSION ${SRC_FILE} EXT)
+  set(OUTPUT_FILE "${SRC_FILE}.bc")
+  set(TARGET "${BASE_NAME}.bc")
 
-message(WARNING ${include_dirs})
-add_custom_target(int.bc ALL COMMAND ${CMAKE_C_COMPILER} ${include_dirs} -c -emit-llvm bc/int.c)
+  if (EXTENSION STREQUAL ".c")
+    get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+    prepend(include_dirs "-I" "${include_dirs}")
+
+    add_custom_command(
+      OUTPUT ${OUTPUT_FILE}
+      COMMAND ${CMAKE_C_COMPILER} -emit-llvm -c ${include_dirs} ${SRC_FILE} -o ${OUTPUT_FILE}
+      DEPENDS ${SRC_FILE})
+  elseif (EXTENSION STREQUAL ".ll")
+    add_custom_command(
+      OUTPUT ${OUTPUT_FILE}
+      COMMAND llvm-as ${SRC_FILE} -o ${OUTPUT_FILE}
+	  DEPENDS ${SRC_FILE})
+  else()
+	message(WARNING "Only support *.c and *.ll files.")
+  endif()
+  add_custom_target(${TARGET} ALL DEPENDS ${OUTPUT_FILE})
+endfunction(COMPILE_TO_IR)
+
+
+function(add_ir_library LIBRARY_NAME)
+  set(BITCODE_FILES)
+  set(TARGETS)
+  set(OUTPUT_FILE ${LIBRARY_NAME}.c)
+  set(OUTPUT_BC_FILE ${LIBRARY_NAME}.bc)
+
+  add_custom_target(${LIBRARY_NAME} ALL DEPENDS ${OUTPUT_FILE})
+
+  FOREACH(SRC_FILE ${ARGN})
+    get_filename_component(BASE_NAME ${SRC_FILE} NAME_WE)
+    set(BC_FILE "${SRC_FILE}.bc")
+	set(TARGET "${BASE_NAME}.bc")
+
+    compile_to_ir(${SRC_FILE})
+
+    set(BITCODE_FILES "${BITCODE_FILES};${BC_FILE}")
+	add_dependencies(${LIBRARY_NAME} ${TARGET})
+    set(TARGETS "${TARGETS};${TARGET}")
+  ENDFOREACH(SRC_FILE)
+
+  add_custom_command(
+    OUTPUT ${OUTPUT_BC_FILE}
+    COMMAND llvm-link ${BITCODE_FILES} -o ${OUTPUT_BC_FILE}
+    DEPENDS ${TARGETS})
+
+  add_custom_command(
+	OUTPUT ${OUTPUT_FILE}
+	COMMAND xxd -i ${OUTPUT_BC_FILE} > ${OUTPUT_FILE}
+	DEPENDS ${OUTPUT_BC_FILE})
+endfunction(add_ir_library)
+
+add_ir_library(builtins
+               bc/float.c
+               bc/int.ll)
 
 
 # Core codegen library.
