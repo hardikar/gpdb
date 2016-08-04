@@ -46,6 +46,9 @@ class Value;
 using gpcodegen::ExecEvalExprCodegen;
 using gpcodegen::SlotGetAttrCodegen;
 
+
+std::vector<llvm::CallInst*> llvm_calls_to_inline;
+
 constexpr char ExecEvalExprCodegen::kExecEvalExprPrefix[];
 
 ExecEvalExprCodegen::ExecEvalExprCodegen(
@@ -171,6 +174,13 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
 
   irb->SetInsertPoint(llvm_error_block);
   irb->CreateRet(codegen_utils->GetConstant<int64_t>(0));
+
+  // All done! Now let's inline things
+  for (llvm::CallInst* inst : llvm_calls_to_inline) {
+    codegen_utils->InlineFunction(inst);
+  }
+
+
   return true;
 }
 

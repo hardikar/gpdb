@@ -153,12 +153,14 @@ function(COMPILE_TO_IR SRC_FILE)
 
     add_custom_command(
       OUTPUT ${OUTPUT_FILE}
-      COMMAND ${CMAKE_C_COMPILER} -emit-llvm -c ${include_dirs} ${SRC_FILE} -o ${OUTPUT_FILE}
+      COMMAND ${CMAKE_C_COMPILER} -O3 -emit-llvm -c ${include_dirs} ${SRC_FILE} -o ${OUTPUT_FILE}
       DEPENDS ${SRC_FILE})
   elseif (EXTENSION STREQUAL ".ll")
     add_custom_command(
       OUTPUT ${OUTPUT_FILE}
-      COMMAND llvm-as ${SRC_FILE} -o ${OUTPUT_FILE}
+      COMMAND llvm-as ${SRC_FILE} -o t
+      COMMAND opt -O3 t -o ${OUTPUT_FILE}
+      COMMAND rm t
 	  DEPENDS ${SRC_FILE})
   else()
 	message(WARNING "Only support *.c and *.ll files.")

@@ -40,6 +40,7 @@ struct PGFuncGeneratorInfo {
   // This can be updated while generating the code.
   std::vector<llvm::Value*> llvm_args;
 
+
   PGFuncGeneratorInfo(
     llvm::Function* llvm_main_func,
     llvm::BasicBlock* llvm_error_block,

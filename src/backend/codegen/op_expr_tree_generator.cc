@@ -59,7 +59,7 @@ extern unsigned int builtins_bc_len;
 }
 
 std::unique_ptr<llvm::Module> builtins_module;
-
+extern std::vector<llvm::CallInst*> llvm_calls_to_inline;
 
 CodeGenFuncMap
 OpExprTreeGenerator::supported_function_;
@@ -90,6 +90,8 @@ static bool Foo(gpcodegen::GpCodegenUtils* codegen_utils,
   llvm::Value* arg1 = codegen_utils->CreateCast<int32_t, Datum>(pg_func_info.llvm_args[1]);
   llvm::CallInst* inst = irb->CreateCall(function, {arg0, arg1});
   *llvm_out_value = codegen_utils->CreateCast<Datum, int32_t>(inst);
+
+  llvm_calls_to_inline.push_back(inst);
 
   return true;
 }
