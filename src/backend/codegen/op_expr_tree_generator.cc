@@ -29,6 +29,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 extern "C" {
 #include "postgres.h"  // NOLINT(build/include)
@@ -52,6 +53,14 @@ using gpcodegen::PGFuncGenerator;
 using gpcodegen::CodeGenFuncMap;
 using llvm::IRBuilder;
 
+extern "C" {
+extern char builtins_bc[];
+extern unsigned int builtins_bc_len;
+}
+
+std::unique_ptr<llvm::Module> builtins_module;
+
+
 CodeGenFuncMap
 OpExprTreeGenerator::supported_function_;
 
@@ -59,28 +68,29 @@ static bool Foo(gpcodegen::GpCodegenUtils* codegen_utils,
                 const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
                 llvm::Value** llvm_out_value) {
 
+  if (!builtins_module) {
+    llvm::SMDiagnostic error;
+    llvm::StringRef strref = { (const char*) builtins_bc, builtins_bc_len };
+    llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
+    builtins_module = std::move(llvm::parseIR(bufref, error, *codegen_utils->context()));
+  }
 
-  llvm::SMDiagnostic error;
-  std::unique_ptr<llvm::Module> m = llvm::parseIRFile(
-      "/Users/shardikar/workspace/codegen/gpdb/src/backend/codegen/int.bc",
-      error, *codegen_utils->context());
-
-  if (m) {
-    elog(INFO, "List size = %d", m->getFunctionList().size());
+  if (builtins_module) {
+    elog(INFO, "Module loading succeeded. List size = %d", builtins_module->getFunctionList().size());
   } else {
     elog(WARNING, "Module loading failed");
   }
 
-  llvm::Function* function = m->getFunction("int8pl");
+  llvm::Function* function = builtins_module->getFunction("int4pl");
   assert(nullptr != function);
 
   auto irb = codegen_utils->ir_builder();
+
   llvm::Value* arg0 = codegen_utils->CreateCast<int32_t, Datum>(pg_func_info.llvm_args[0]);
   llvm::Value* arg1 = codegen_utils->CreateCast<int32_t, Datum>(pg_func_info.llvm_args[1]);
   llvm::CallInst* inst = irb->CreateCall(function, {arg0, arg1});
   *llvm_out_value = codegen_utils->CreateCast<Datum, int32_t>(inst);
 
-  codegen_utils->InlineFunction(inst);
   return true;
 }
 
@@ -91,7 +101,7 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
       new PGGenericFuncGenerator<int32_t, int32_t>(
           141,
           "int4mul",
-          Foo));
+          &PGArithFuncGenerator<int32_t, int32_t, int32_t>::MulWithOverflow));
 
   supported_function_[149] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGIRBuilderFuncGenerator<decltype(&IRBuilder<>::CreateICmpSLE),
@@ -101,7 +111,7 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
       new PGGenericFuncGenerator<int32_t, int32_t>(
           177,
           "int4pl",
-          &PGArithFuncGenerator<int32_t, int32_t, int32_t>::AddWithOverflow));
+          Foo));
 
   supported_function_[181] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<int32_t, int32_t>(

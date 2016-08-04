@@ -21,7 +21,10 @@
 *.la
 *.a
 *.lib
+
+# Codegen related
 *.bc
+*.buildins.c
 
 # Executables
 *.exe
