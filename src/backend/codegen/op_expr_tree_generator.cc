@@ -56,10 +56,9 @@ CodeGenFuncMap
 OpExprTreeGenerator::supported_function_;
 
 static bool Foo(gpcodegen::GpCodegenUtils* codegen_utils,
-               llvm::Function* llvm_main_func,
-               llvm::BasicBlock* llvm_error_block,
-               const std::vector<llvm::Value*>& llvm_args,
-               llvm::Value** llvm_out_value) {
+                const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
+                llvm::Value** llvm_out_value) {
+
 
   llvm::SMDiagnostic error;
   std::unique_ptr<llvm::Module> m = llvm::parseIRFile(
@@ -72,12 +71,12 @@ static bool Foo(gpcodegen::GpCodegenUtils* codegen_utils,
     elog(WARNING, "Module loading failed");
   }
 
-  llvm::Function* function = m->getFunction("int4mul");
+  llvm::Function* function = m->getFunction("int8pl");
   assert(nullptr != function);
 
   auto irb = codegen_utils->ir_builder();
-  llvm::Value* arg0 = codegen_utils->CreateCast<int32_t, Datum>(llvm_args[0]);
-  llvm::Value* arg1 = codegen_utils->CreateCast<int32_t, Datum>(llvm_args[1]);
+  llvm::Value* arg0 = codegen_utils->CreateCast<int32_t, Datum>(pg_func_info.llvm_args[0]);
+  llvm::Value* arg1 = codegen_utils->CreateCast<int32_t, Datum>(pg_func_info.llvm_args[1]);
   llvm::CallInst* inst = irb->CreateCall(function, {arg0, arg1});
   *llvm_out_value = codegen_utils->CreateCast<Datum, int32_t>(inst);
 

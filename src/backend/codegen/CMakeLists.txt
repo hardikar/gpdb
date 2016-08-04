@@ -163,7 +163,7 @@ function(COMPILE_TO_IR SRC_FILE)
   else()
 	message(WARNING "Only support *.c and *.ll files.")
   endif()
-  add_custom_target(${TARGET} ALL DEPENDS ${OUTPUT_FILE})
+  add_custom_target(${TARGET} DEPENDS ${OUTPUT_FILE})
 endfunction(COMPILE_TO_IR)
 
 
@@ -173,7 +173,7 @@ function(add_ir_library LIBRARY_NAME)
   set(OUTPUT_FILE ${LIBRARY_NAME}.c)
   set(OUTPUT_BC_FILE ${LIBRARY_NAME}.bc)
 
-  add_custom_target(${LIBRARY_NAME} ALL DEPENDS ${OUTPUT_FILE})
+  add_custom_target(${LIBRARY_NAME} DEPENDS ${OUTPUT_FILE})
 
   FOREACH(SRC_FILE ${ARGN})
     get_filename_component(BASE_NAME ${SRC_FILE} NAME_WE)
@@ -258,13 +258,14 @@ set(GPCODEGEN_SRC
 # with the gpcodegen shared library to create a binary SUBSYS.o as expected by
 # GPDB make system. We invoke the linker with -nostdlib since we don't really
 # want to create a full executable.
-add_executable(SUBSYS.o ${GPCODEGEN_SRC})
+add_executable(SUBSYS.o ${GPCODEGEN_SRC} builtins.c)
 set_target_properties(SUBSYS.o
     PROPERTIES
     LINK_FLAGS "-Wl,-r -nostdlib")
 target_link_libraries(
     gpcodegen
 )
+add_dependencies(SUBSYS.o builtins)
 
 # Integrate with GPDB build system
 # GPDB unit tests use unittest-check instead of test, so we add an alias target
