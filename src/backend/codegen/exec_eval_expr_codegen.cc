@@ -191,30 +191,40 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
   irb->CreateRet(codegen_utils->GetConstant<int64_t>(0));
 
   // All done! Now let's inline things
-  for (llvm::CallInst* inst : llvm_calls_to_inline) {
-    codegen_utils->InlineFunction(inst);
-  }
-  llvm::inst_iterator i = inst_begin(exec_eval_expr_func),
-                      e = inst_end(exec_eval_expr_func);
-  for ( ; i != e; ++i) {
-    if (llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(&*i)) {
-      llvm::Function* called_func = call->getCalledFunction();
+  bool done = false;
+  while (!done) {
+    for (llvm::CallInst* inst : llvm_calls_to_inline) {
+      codegen_utils->InlineFunction(inst);
+    }
+    llvm_calls_to_inline.clear();
 
-      if (called_func->getParent() == builtins_module &&
-          called_func->empty() && called_func->isIntrinsic()) {
-        elog(WARNING, "Found function that is still in old module and is empty and is intrinsic: %s", called_func->getName());
-        llvm::Function* new_func =
-            llvm::Function::Create(called_func->getFunctionType(),
-                                   called_func->getLinkage(),
-                                   called_func->getName().str(),
-                                   codegen_utils->module());
+    llvm::inst_iterator i = inst_begin(exec_eval_expr_func),
+                        e = inst_end(exec_eval_expr_func);
+    for ( ; i != e; ++i) {
+      if (llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(&*i)) {
+        llvm::Function* called_func = call->getCalledFunction();
 
-        call->setCalledFunction(new_func->getFunctionType(), new_func);
+        if (called_func->getParent() == builtins_module) {
+          if (called_func->empty()) {
+            elog(WARNING, "Found function that is still in old module and is empty: %s", called_func->getName());
+            llvm::Function* new_func =
+                llvm::Function::Create(called_func->getFunctionType(),
+                                       called_func->getLinkage(),
+                                       called_func->getName().str(),
+                                       codegen_utils->module());
+
+            call->setCalledFunction(new_func->getFunctionType(), new_func);
+          } else {
+            elog(WARNING, "Found function that is still in old module and is not empty: %s", called_func->getName());
+            llvm_calls_to_inline.push_back(call);
+          }
+        }
       }
     }
+
+    done = (llvm_calls_to_inline.size() == 0);
   }
 
-  llvm_calls_to_inline.clear();
   return true;
 }
 
