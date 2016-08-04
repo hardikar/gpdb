@@ -53,12 +53,7 @@ using gpcodegen::PGFuncGenerator;
 using gpcodegen::CodeGenFuncMap;
 using llvm::IRBuilder;
 
-extern "C" {
-extern char builtins_bc[];
-extern unsigned int builtins_bc_len;
-}
-
-std::unique_ptr<llvm::Module> builtins_module;
+extern std::unique_ptr<llvm::Module> builtins_module;
 extern std::vector<llvm::CallInst*> llvm_calls_to_inline;
 
 CodeGenFuncMap
@@ -67,14 +62,6 @@ OpExprTreeGenerator::supported_function_;
 static bool Foo(gpcodegen::GpCodegenUtils* codegen_utils,
                 const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
                 llvm::Value** llvm_out_value) {
-
-  if (!builtins_module) {
-    llvm::SMDiagnostic error;
-    llvm::StringRef strref = { (const char*) builtins_bc, builtins_bc_len };
-    llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
-    builtins_module = std::move(llvm::parseIR(bufref, error, *codegen_utils->context()));
-  }
-
   if (builtins_module) {
     elog(INFO, "Module loading succeeded. List size = %d", builtins_module->getFunctionList().size());
   } else {

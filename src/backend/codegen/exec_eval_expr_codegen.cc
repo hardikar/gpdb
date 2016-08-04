@@ -27,6 +27,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 
 
 extern "C" {
@@ -46,8 +47,6 @@ class Value;
 using gpcodegen::ExecEvalExprCodegen;
 using gpcodegen::SlotGetAttrCodegen;
 
-
-std::vector<llvm::CallInst*> llvm_calls_to_inline;
 
 constexpr char ExecEvalExprCodegen::kExecEvalExprPrefix[];
 
@@ -107,6 +106,14 @@ void ExecEvalExprCodegen::PrepareSlotGetAttr() {
   }
 }
 
+extern "C" {
+extern char builtins_bc[];
+extern unsigned int builtins_bc_len;
+}
+
+llvm::Module* builtins_module;
+std::vector<llvm::CallInst*> llvm_calls_to_inline;
+
 bool ExecEvalExprCodegen::GenerateExecEvalExpr(
     gpcodegen::GpCodegenUtils* codegen_utils) {
 
@@ -132,6 +139,14 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
     gen_info_.llvm_slot_getattr_func =
       slot_getattr_codegen_->GetGeneratedFunction();
   }
+
+  //if (!builtins_module) {
+    llvm::SMDiagnostic error;
+    llvm::StringRef strref = { (const char*) builtins_bc, builtins_bc_len };
+    llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
+    builtins_module = llvm::parseIR(bufref, error, *codegen_utils->context()).release();
+
+  //}
 
   llvm::Function* exec_eval_expr_func = CreateFunction<ExecEvalExprFn>(
       codegen_utils, GetUniqueFuncName());
@@ -179,8 +194,27 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
   for (llvm::CallInst* inst : llvm_calls_to_inline) {
     codegen_utils->InlineFunction(inst);
   }
+  llvm::inst_iterator i = inst_begin(exec_eval_expr_func),
+                      e = inst_end(exec_eval_expr_func);
+  for ( ; i != e; ++i) {
+    if (llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(&*i)) {
+      llvm::Function* called_func = call->getCalledFunction();
 
+      if (called_func->getParent() == builtins_module &&
+          called_func->empty() && called_func->isIntrinsic()) {
+        elog(WARNING, "Found function that is still in old module and is empty and is intrinsic: %s", called_func->getName());
+        llvm::Function* new_func =
+            llvm::Function::Create(called_func->getFunctionType(),
+                                   called_func->getLinkage(),
+                                   called_func->getName().str(),
+                                   codegen_utils->module());
 
+        call->setCalledFunction(new_func->getFunctionType(), new_func);
+      }
+    }
+  }
+
+  llvm_calls_to_inline.clear();
   return true;
 }
 
