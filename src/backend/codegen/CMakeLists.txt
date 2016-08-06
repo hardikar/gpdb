@@ -314,6 +314,8 @@ endfunction(add_simple_gtest)
 add_simple_gtest(clang_compiler_unittest.t tests/clang_compiler_unittest.cc)
 add_simple_gtest(codegen_utils_unittest.t tests/codegen_utils_unittest.cc)
 add_simple_gtest(instance_method_wrappers_unittest.t tests/instance_method_wrappers_unittest.cc)
+add_simple_gtest(codegen_load_module_unittest.t tests/codegen_load_module_unittest.cc)
+target_link_ir_libraries(codegen_load_module_unittest.t builtins)
 
 # Usage add_cmock_gtest ${TEST_NAME} ${TEST_SOURCES} ${MOCK_DIR}/hello_mock.o ${MOCK_DIR}/world_mock.o)
 function(add_cmockery_gtest TEST_NAME TEST_SOURCES)
