@@ -141,64 +141,79 @@ endfunction(prepend)
 # Compile to bytecode
 get_filename_component(full_install_name_dir "${CMAKE_INSTALL_PREFIX}/lib" ABSOLUTE)
 
-function(COMPILE_TO_IR SRC_FILE)
-  get_filename_component(BASE_NAME ${SRC_FILE} NAME_WE)
-  get_filename_component(EXTENSION ${SRC_FILE} EXT)
-  set(OUTPUT_FILE "${SRC_FILE}.bc")
-  set(TARGET "${BASE_NAME}.bc")
 
-  if (EXTENSION STREQUAL ".c")
+# TODO: Add checks and then set these variables
+set(LLVM_LINK_COMMAND "llvm-link")
+set(LLVM_AS_COMMAND "llvm-as")
+set(LLVM_OPT_COMMAND "opt")
+set(XXD_COMMAND "xxd")
+set(COMPILER_EMIT_LLVM_FLAG "-emit-llvm;-c")
+
+function(COMPILE_TO_IR SRC_FILE OUTPUT_FILE)
+  get_filename_component(SRC_FILE_EXT ${SRC_FILE} EXT)
+
+  if (SRC_FILE_EXT STREQUAL ".c")
     get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
     prepend(include_dirs "-I" "${include_dirs}")
 
+    # TODO: Include C++/C flags in this command
     add_custom_command(
       OUTPUT ${OUTPUT_FILE}
-      COMMAND ${CMAKE_C_COMPILER} -O3 -emit-llvm -c ${include_dirs} ${SRC_FILE} -o ${OUTPUT_FILE}
+      COMMAND ${CMAKE_C_COMPILER} -O3 ${COMPILER_EMIT_LLVM_FLAG} ${include_dirs} ${SRC_FILE} -o ${OUTPUT_FILE}
       DEPENDS ${SRC_FILE})
-  elseif (EXTENSION STREQUAL ".ll")
+  elseif (SRC_FILE_EXT STREQUAL ".ll")
     add_custom_command(
       OUTPUT ${OUTPUT_FILE}
-      COMMAND llvm-as ${SRC_FILE} -o t
-      COMMAND opt -O3 t -o ${OUTPUT_FILE}
+      COMMAND ${LLVM_AS_COMMAND} ${SRC_FILE} -o t
+      COMMAND ${LLVM_OPT_COMMAND} -O3 t -o ${OUTPUT_FILE}
       COMMAND rm t
 	  DEPENDS ${SRC_FILE})
   else()
 	message(WARNING "Only support *.c and *.ll files.")
   endif()
-  add_custom_target(${TARGET} DEPENDS ${OUTPUT_FILE})
 endfunction(COMPILE_TO_IR)
 
 
-function(add_ir_library LIBRARY_NAME)
-  set(BITCODE_FILES)
-  set(TARGETS)
-  set(OUTPUT_FILE ${LIBRARY_NAME}.c)
-  set(OUTPUT_BC_FILE ${LIBRARY_NAME}.bc)
-
-  add_custom_target(${LIBRARY_NAME} DEPENDS ${OUTPUT_FILE})
+# Usage add_ir_libary(lib-name x.c x.ll ...)
+function(ADD_IR_LIBRARY LIBRARY_NAME)
+  set(TARGET ${LIBRARY_NAME})
+  set(OUTPUT_DIRECTORY "CMakeFiles/${TARGET}.dir")
+  set(OUTPUT_C_FILE_NAME "${LIBRARY_NAME}.c")
+  set(OUTPUT_C_FILE "${OUTPUT_DIRECTORY}/${OUTPUT_C_FILE_NAME}")
+  set(OUTPUT_BITCODE_FILE_NAME "${LIBRARY_NAME}.bc")
+  set(OUTPUT_BITCODE_FILE "${OUTPUT_DIRECTORY}/${OUTPUT_BITCODE_FILE_NAME}")
 
   FOREACH(SRC_FILE ${ARGN})
-    get_filename_component(BASE_NAME ${SRC_FILE} NAME_WE)
-    set(BC_FILE "${SRC_FILE}.bc")
-	set(TARGET "${BASE_NAME}.bc")
+    get_filename_component(SRC_FILE_NAME ${SRC_FILE} NAME)
+    get_filename_component(SRC_FILE_EXT ${SRC_FILE} EXT)
 
-    compile_to_ir(${SRC_FILE})
-
-    set(BITCODE_FILES "${BITCODE_FILES};${BC_FILE}")
-	add_dependencies(${LIBRARY_NAME} ${TARGET})
-    set(TARGETS "${TARGETS};${TARGET}")
+    set(BITCODE_FILE "${OUTPUT_DIRECTORY}/${SRC_FILE_NAME}.bc")
+    COMPILE_TO_IR(${SRC_FILE} ${BITCODE_FILE})
+    set(BITCODE_FILES "${BITCODE_FILES};${BITCODE_FILE}")
   ENDFOREACH(SRC_FILE)
 
   add_custom_command(
-    OUTPUT ${OUTPUT_BC_FILE}
-    COMMAND llvm-link ${BITCODE_FILES} -o ${OUTPUT_BC_FILE}
-    DEPENDS ${TARGETS})
-
+    OUTPUT ${OUTPUT_BITCODE_FILE}
+    COMMAND ${LLVM_LINK_COMMAND} ${BITCODE_FILES} -o ${OUTPUT_BITCODE_FILE}
+    DEPENDS ${BITCODE_FILES})
   add_custom_command(
-	OUTPUT ${OUTPUT_FILE}
-	COMMAND xxd -i ${OUTPUT_BC_FILE} > ${OUTPUT_FILE}
-	DEPENDS ${OUTPUT_BC_FILE})
-endfunction(add_ir_library)
+    OUTPUT ${OUTPUT_C_FILE_NAME}
+    COMMAND ${XXD_COMMAND} -i ${OUTPUT_BITCODE_FILE_NAME} > ${OUTPUT_C_FILE_NAME}
+    WORKING_DIRECTORY ${OUTPUT_DIRECTORY}
+    DEPENDS ${OUTPUT_BITCODE_FILE})
+
+  add_custom_target(${TARGET} SOURCES ${OUTPUT_C_FILE})
+endfunction(ADD_IR_LIBRARY)
+
+function(TARGET_LINK_IR_LIBRARIES TARGET)
+  FOREACH(IR_LIBRARY ${ARGN})
+    add_dependencies(${TARGET} ${IR_LIBRARY})
+    set(IR_LIBRARY_DIRECTORY "CMakeFiles/${IR_LIBRARY}.dir/")
+    set(IR_LIBRARY_C_FILE "${IR_LIBRARY_DIRECTORY}/${IR_LIBRARY}.c")
+  ENDFOREACH(IR_LIBRARY)
+
+  target_sources(${TARGET} PRIVATE ${IR_LIBRARY_C_FILE})
+endfunction(TARGET_LINK_IR_LIBRARIES)
 
 add_ir_library(builtins
                bc/float.c
@@ -235,6 +250,7 @@ else()
                                   option passes support target)
   target_link_libraries(gpcodegen ${WL_START_GROUP} ${codegen_llvm_libs} ${WL_END_GROUP})
 endif()
+target_link_ir_libraries(gpcodegen builtins)
 
 set_target_properties(
     gpcodegen PROPERTIES
@@ -260,14 +276,13 @@ set(GPCODEGEN_SRC
 # with the gpcodegen shared library to create a binary SUBSYS.o as expected by
 # GPDB make system. We invoke the linker with -nostdlib since we don't really
 # want to create a full executable.
-add_executable(SUBSYS.o ${GPCODEGEN_SRC} builtins.c)
+add_executable(SUBSYS.o ${GPCODEGEN_SRC})
 set_target_properties(SUBSYS.o
     PROPERTIES
     LINK_FLAGS "-Wl,-r -nostdlib")
 target_link_libraries(
     gpcodegen
 )
-add_dependencies(SUBSYS.o builtins)
 
 # Integrate with GPDB build system
 # GPDB unit tests use unittest-check instead of test, so we add an alias target
