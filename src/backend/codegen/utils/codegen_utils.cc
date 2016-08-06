@@ -48,6 +48,11 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/IR/InstIterator.h"
 
 namespace llvm { class FunctionType; }
 
@@ -294,6 +299,23 @@ llvm::GlobalVariable* CodegenUtils::AddExternalGlobalVariable(
                                   llvm::GlobalValue::ExternalLinkage,
                                   nullptr,
                                   external_global_variables_.back().first);
+}
+
+llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function, bool recursive) {
+  llvm::ValueToValueMapTy vmap;
+  for (llvm::const_inst_iterator
+       I = llvm::inst_begin(function), E = llvm::inst_end(function); I != E; ++I) {
+    llvm::ImmutableCallSite call_site(&*I);
+    if (call_site) {
+      const llvm::Function* called_func = call_site.getCalledFunction();
+
+      if (called_func->getParent() != module()) {
+        llvm::Function* called_func_clone = InsertAlienFunction(called_func, recursive);
+        vmap.insert(std::make_pair(called_func, called_func_clone));
+      }
+    }
+  }
+  return llvm::CloneFunction(function, vmap, false);
 }
 
 void CodegenUtils::CheckFunctionType(

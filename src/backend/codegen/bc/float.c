@@ -11,16 +11,23 @@ do {															\
 		("value out of range: underflow");				\
 } while(0)
 
-typedef long int Datum;
-typedef float float8;
+typedef double float8;
+
+#define Datum float8
 
 #define PG_RETURN_FLOAT8(result) return (Datum) result
 #define PG_RETURN_BOOL(result) return (Datum) result
 #define PG_RETURN_INT32(result) return (Datum) result
 
-#define PG_FUNCTION_ARGS Datum in_arg_0, Datum in_arg_1
+#define PG_FUNCTION_ARGS float8 in_arg_0, float8 in_arg_1
 #define PG_GETARG_FLOAT8(i) ((float8) in_arg_##i)
 
+
+//#define INFO    17
+//#define elog  elog_start(__FILE__, __LINE__, __func__), elog_finish
+//
+//extern void elog_start(const char *filename, int lineno, const char *funcname);
+//extern void elog_finish(int elevel, const char *fmt,...);
 
 Datum
 float8pl(PG_FUNCTION_ARGS)

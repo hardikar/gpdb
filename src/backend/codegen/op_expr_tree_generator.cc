@@ -59,6 +59,7 @@ extern std::vector<llvm::CallInst*> llvm_calls_to_inline;
 CodeGenFuncMap
 OpExprTreeGenerator::supported_function_;
 
+
 static bool Foo(gpcodegen::GpCodegenUtils* codegen_utils,
                 const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
                 llvm::Value** llvm_out_value) {
@@ -68,15 +69,14 @@ static bool Foo(gpcodegen::GpCodegenUtils* codegen_utils,
     elog(WARNING, "Module loading failed");
   }
 
-  llvm::Function* function = builtins_module->getFunction("int4pl");
+  llvm::Function* function = codegen_utils->InsertAlienFunction(builtins_module->getFunction("int4pl"), true);
   assert(nullptr != function);
 
   auto irb = codegen_utils->ir_builder();
 
-  llvm::Value* arg0 = codegen_utils->CreateCast<int32_t, Datum>(pg_func_info.llvm_args[0]);
-  llvm::Value* arg1 = codegen_utils->CreateCast<int32_t, Datum>(pg_func_info.llvm_args[1]);
-  llvm::CallInst* inst = irb->CreateCall(function, {arg0, arg1});
-  *llvm_out_value = codegen_utils->CreateCast<Datum, int32_t>(inst);
+  llvm::CallInst* inst = irb->CreateCall(function, {
+      pg_func_info.llvm_args[0], pg_func_info.llvm_args[1]});
+  *llvm_out_value = inst;
 
   llvm_calls_to_inline.push_back(inst);
 
@@ -100,7 +100,7 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
       new PGGenericFuncGenerator<int32_t, int32_t>(
           177,
           "int4pl",
-          Foo));
+          &PGArithFuncGenerator<int32_t, int32_t, int32_t>::AddWithOverflow));
 
   supported_function_[181] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<int32_t, int32_t>(
@@ -112,7 +112,7 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
       new PGGenericFuncGenerator<float8, float8>(
           216,
           "float8mul",
-          &PGArithFuncGenerator<float8, float8, float8>::MulWithOverflow));
+          Foo));
 
   supported_function_[218] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<float8, float8>(
