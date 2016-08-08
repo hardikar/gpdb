@@ -7,6 +7,8 @@
 
 #include <iostream>
 #include <cstdint>
+#include <cstdio>
+#include <cstdarg>
 
 #include "codegen/utils/codegen_utils.h"
 #include "codegen/utils/utility.h"
@@ -24,11 +26,19 @@ double get_attr() {
   return attr++;
 }
 
+int extern_int = 2906;
+
+extern "C" {
 void elog_start(const char *filename, int lineno, const char *funcname) {
   std::cout<<("elog_start called") << std::endl;
 }
 void elog_finish(int elevel, const char *fmt,...) {
   std::cout<<("elog_end called") << std::endl;
+  va_list args;
+  va_start(args, fmt);
+  vprintf(fmt, args);
+  va_end(args);
+}
 }
 
 int main()
@@ -46,11 +56,15 @@ int main()
   std::unique_ptr<Module> builtins_module = llvm::parseIR(bufref, error, *codegen_utils->context());
   codegen_utils->CopyGlobalsFrom(builtins_module.get(), vmap);
 
-  codegen_utils->GetOrRegisterExternalFunction(elog_start, "_elog_start");
-  codegen_utils->GetOrRegisterExternalFunction(elog_finish, "_elog_finish");
+  // Looks like we don't need to register these at all.
+  // llvm::RuntimeDyldImpl::resolveExternalSymbols resolves all these correct to
+  // symbols defined in the current executable
+
+  //codegen_utils->GetOrRegisterExternalFunction(elog_start, "_elog_start");
+  //codegen_utils->GetOrRegisterExternalFunction(elog_finish, "_elog_finish");
 
   std::cout << "================================================================================" << std::endl;
-  builtins_module->dump();
+  //builtins_module->dump();
   std::cout << "================================================================================" << std::endl;
 
   Function* float8pl = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8pl"), vmap, true);
@@ -72,7 +86,7 @@ int main()
   irb->CreateRet(ret);
 
   std::cout << "================================================================================" << std::endl;
-  codegen_utils->module()->dump();
+  //codegen_utils->module()->dump();
   std::cout << "================================================================================" << std::endl;
 
   //codegen_utils->InlineFunction(add_one);
@@ -80,7 +94,7 @@ int main()
   codegen_utils->Optimize(gpcodegen::CodegenUtils::OptimizationLevel::kDefault, gpcodegen::CodegenUtils::SizeLevel::kNormal, false);
 
   std::cout << "================================================================================" << std::endl;
-  codegen_utils->module()->dump();
+  //codegen_utils->module()->dump();
   std::cout << "================================================================================" << std::endl;
 
   bool boo = codegen_utils->PrepareForExecution(gpcodegen::CodegenUtils::OptimizationLevel::kDefault,

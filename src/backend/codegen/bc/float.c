@@ -43,6 +43,7 @@ Datum
 
   elog(INFO, "Calling float8pl");
   foo();
+  foo();
 
   CHECKFLOATVAL(result, isinf(arg1) || isinf(arg2), true);
   PG_RETURN_FLOAT8(result);

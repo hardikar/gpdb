@@ -305,19 +305,16 @@ llvm::GlobalVariable* CodegenUtils::AddExternalGlobalVariable(
 bool CodegenUtils::CopyGlobalsFrom(const llvm::Module* ext_module, llvm::ValueToValueMapTy& vmap) {
   assert(&ext_module->getContext() == context());
   for (llvm::Module::const_global_iterator i = ext_module->global_begin(), e = ext_module->global_end(); i!=e; ++i) {
-    if (i->isConstant()) {
-      std::cout<<i->isDeclaration() << std::endl;
-      llvm::GlobalVariable *GV = new llvm::GlobalVariable(*module(),
-                               i->getValueType(),
-                               i->isConstant(), // isConstant
-                               i->getLinkage(),
-                               (llvm::Constant*) i->getInitializer(),  // TODO: Make sure this *actually* works, as in where are the Constants stores?
-                               i->getName().str());
-      GV->copyAttributesFrom(&*i);
-      vmap[&*i] = GV;
-    } else {
-      i->dump();
-    }
+    std::cout<<i->isDeclaration() << std::endl;
+    llvm::GlobalVariable *GV = new llvm::GlobalVariable(*module(),
+                             i->getValueType(),
+                             i->isConstant(), // isConstant
+                             i->getLinkage(),
+                             // TODO: Make sure this *actually* works, as in where are the Constants stores?
+                             i->hasInitializer()? (llvm::Constant*) i->getInitializer() : nullptr,
+                             i->getName().str());
+    GV->copyAttributesFrom(&*i);
+    vmap[&*i] = GV;
   }
   return true;
 }
