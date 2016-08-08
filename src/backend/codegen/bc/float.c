@@ -23,11 +23,14 @@ typedef double float8;
 #define PG_GETARG_FLOAT8(i) ((float8) in_arg_##i)
 
 
-//#define INFO    17
-//#define elog  elog_start(__FILE__, __LINE__, __func__), elog_finish
-//
-//extern void elog_start(const char *filename, int lineno, const char *funcname);
-//extern void elog_finish(int elevel, const char *fmt,...);
+#define INFO    17
+#define elog  elog_start(__FILE__, __LINE__, __func__), elog_finish
+
+extern void elog_start(const char *filename, int lineno, const char *funcname);
+extern void elog_finish(int elevel, const char *fmt, ...);
+
+
+extern void foo(void);
 
 Datum
  float8pl(PG_FUNCTION_ARGS)
@@ -37,6 +40,9 @@ Datum
   float8    result;
 
   result = arg1 + arg2;
+
+  elog(INFO, "Calling float8pl");
+  foo();
 
   CHECKFLOATVAL(result, isinf(arg1) || isinf(arg2), true);
   PG_RETURN_FLOAT8(result);

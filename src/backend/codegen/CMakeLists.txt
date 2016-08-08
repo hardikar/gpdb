@@ -217,6 +217,7 @@ endfunction(TARGET_LINK_IR_LIBRARIES)
 
 add_ir_library(builtins
                bc/float.c
+               bc/foo.c
                bc/int.ll)
 
 

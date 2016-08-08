@@ -123,7 +123,8 @@ class CodegenUtils {
     return module_.get();
   }
 
-  llvm::Function* InsertAlienFunction(const llvm::Function* function, bool recursive);
+  llvm::Function* InsertAlienFunction(const llvm::Function* function, llvm::ValueToValueMapTy& vmap, bool recursive);
+  bool CopyGlobalsFrom(const llvm::Module* module, llvm::ValueToValueMapTy& vmap);
 
   /**
    * @brief Get a C++ type's equivalent in the LLVM type system.

@@ -22,6 +22,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <iostream>
 
 #include "codegen/utils/codegen_utils.h"
 #include "llvm/ADT/StringRef.h"
@@ -301,33 +302,59 @@ llvm::GlobalVariable* CodegenUtils::AddExternalGlobalVariable(
                                   external_global_variables_.back().first);
 }
 
-llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function, bool recursive) {
+bool CodegenUtils::CopyGlobalsFrom(const llvm::Module* ext_module, llvm::ValueToValueMapTy& vmap) {
+  assert(&ext_module->getContext() == context());
+  for (llvm::Module::const_global_iterator i = ext_module->global_begin(), e = ext_module->global_end(); i!=e; ++i) {
+    if (i->isConstant()) {
+      std::cout<<i->isDeclaration() << std::endl;
+      llvm::GlobalVariable *GV = new llvm::GlobalVariable(*module(),
+                               i->getValueType(),
+                               i->isConstant(), // isConstant
+                               i->getLinkage(),
+                               (llvm::Constant*) i->getInitializer(),  // TODO: Make sure this *actually* works, as in where are the Constants stores?
+                               i->getName().str());
+      GV->copyAttributesFrom(&*i);
+      vmap[&*i] = GV;
+    } else {
+      i->dump();
+    }
+  }
+  return true;
+}
+
+llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function, llvm::ValueToValueMapTy& vmap, bool recursive) {
   assert(nullptr != function);
   llvm::Function* new_func = nullptr;
   if (function->isDeclaration()) {
-    // Fake clone this function if it's just a declaration
-    new_func = llvm::Function::Create(
-        function->getFunctionType(),
-        function->getLinkage(),
-        function->getName().str(),
-        module());
+    new_func = module()->getFunction(function->getName());
+    // If the modules already contains this func, we're good!
+    if (!new_func) {
+      // Fake clone this function if it's just a declaration
+      new_func = llvm::Function::Create(
+          function->getFunctionType(),
+          function->getLinkage(),
+          function->getName().str(),
+          module());
+    }
   } else {
-    llvm::ValueToValueMapTy vmap;
+    llvm::ValueToValueMapTy _vmap;
+    _vmap.insert(vmap.begin(), vmap.end());
     if (recursive) {
       for (llvm::const_inst_iterator
            I = llvm::inst_begin(function), E = llvm::inst_end(function); I != E; ++I) {
         llvm::ImmutableCallSite call_site(&*I);
         if (call_site) {
           const llvm::Function* called_func = call_site.getCalledFunction();
+          assert(nullptr != called_func);
           if (called_func->getParent() != module()) {
-            llvm::Function* called_func_clone = InsertAlienFunction(called_func, recursive);
-            vmap.insert(std::make_pair(called_func, called_func_clone));
+            llvm::Function* called_func_clone = InsertAlienFunction(called_func, _vmap, recursive);
+            _vmap.insert(std::make_pair(called_func, called_func_clone));
           }
         }
       }
     }
     // Finally clone this function
-    new_func = llvm::CloneFunction(function, vmap, false);
+    new_func = llvm::CloneFunction(function, _vmap, false);
     // Tell LLVM we'd like this inlined if possible
     new_func->addAttribute(llvm::AttributeSet::FunctionIndex,
                            llvm::Attribute::AttrKind::AlwaysInline);

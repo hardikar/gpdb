@@ -24,6 +24,13 @@ double get_attr() {
   return attr++;
 }
 
+void elog_start(const char *filename, int lineno, const char *funcname) {
+  std::cout<<("elog_start called") << std::endl;
+}
+void elog_finish(int elevel, const char *fmt,...) {
+  std::cout<<("elog_end called") << std::endl;
+}
+
 int main()
 {
   bool init_ok = gpcodegen::CodegenUtils::InitializeGlobal();
@@ -34,12 +41,22 @@ int main()
   SMDiagnostic error;
   llvm::StringRef strref = { (const char*) builtins_bc, builtins_bc_len };
   llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
-  std::unique_ptr<Module> builtins_module = llvm::parseIR(bufref, error, *codegen_utils->context());
+  llvm::ValueToValueMapTy vmap;
 
-  Function* float8pl = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8pl"), true);
-  Function* float8mi = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8mi"), true);
-  Function* float8mul = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8mul"), true);
-  Function* float8div = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8div"), true);
+  std::unique_ptr<Module> builtins_module = llvm::parseIR(bufref, error, *codegen_utils->context());
+  codegen_utils->CopyGlobalsFrom(builtins_module.get(), vmap);
+
+  codegen_utils->GetOrRegisterExternalFunction(elog_start, "_elog_start");
+  codegen_utils->GetOrRegisterExternalFunction(elog_finish, "_elog_finish");
+
+  std::cout << "================================================================================" << std::endl;
+  builtins_module->dump();
+  std::cout << "================================================================================" << std::endl;
+
+  Function* float8pl = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8pl"), vmap, true);
+  Function* float8mi = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8mi"), vmap, true);
+  Function* float8mul = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8mul"), vmap, true);
+  Function* float8div = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8div"), vmap, true);
 
   Function* test_fn = codegen_utils->CreateFunction<DoublesFn>("test_fn");
   llvm::Function* llvm_get_attr = codegen_utils->GetOrRegisterExternalFunction(get_attr);
