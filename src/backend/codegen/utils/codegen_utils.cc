@@ -328,6 +328,9 @@ llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function
     }
     // Finally clone this function
     new_func = llvm::CloneFunction(function, vmap, false);
+    // Tell LLVM we'd like this inlined if possible
+    new_func->addAttribute(llvm::AttributeSet::FunctionIndex,
+                           llvm::Attribute::AttrKind::AlwaysInline);
     module()->getFunctionList().push_back(new_func);
   }
   return new_func;

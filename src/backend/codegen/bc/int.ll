@@ -3,10 +3,17 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
 ; Function Attrs: nounwind ssp uwtable
+define i32 @add1(i32 %a) {
+  %1 = add i32 1, %a
+  ret i32 %1
+}
+
+; Function Attrs: nounwind ssp uwtable
 define i32 @int4pl(i32 %a, i32 %b) {
-  %1 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
-  %val = extractvalue { i32, i1 } %1, 0
-  %ofl = extractvalue { i32, i1 } %1, 1
+  %1 = call i32 @add1(i32 %a)
+  %2 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %1, i32 %b)
+  %val = extractvalue { i32, i1 } %2, 0
+  %ofl = extractvalue { i32, i1 } %2, 1
   br i1 %ofl, label %arith_overflow_block, label %arith_non_overflow_block
 
   arith_non_overflow_block:                         ; preds = %entry

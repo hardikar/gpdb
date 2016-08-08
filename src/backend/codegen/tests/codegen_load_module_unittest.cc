@@ -16,8 +16,13 @@ using namespace llvm;
 extern unsigned char builtins_bc[];
 extern unsigned int builtins_bc_len;
 
-typedef double (*AddDoubles)(double, double);
+typedef double (*DoublesFn)(double, double);
 typedef int (*AddInts)(int, int);
+
+double attr = 0;
+double get_attr() {
+  return attr++;
+}
 
 int main()
 {
@@ -31,29 +36,39 @@ int main()
   llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
   std::unique_ptr<Module> builtins_module = llvm::parseIR(bufref, error, *codegen_utils->context());
 
-  Function* add_once_fn = codegen_utils->InsertAlienFunction(builtins_module->getFunction("int4pl"), true);
+  Function* float8pl = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8pl"), true);
+  Function* float8mi = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8mi"), true);
+  Function* float8mul = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8mul"), true);
+  Function* float8div = codegen_utils->InsertAlienFunction(builtins_module->getFunction("float8div"), true);
 
-  add_once_fn->dump();
-
-  Function* add_twice = codegen_utils->CreateFunction<AddInts>("add_twice");
-  BasicBlock* main_block = codegen_utils->CreateBasicBlock("main", add_twice);
+  Function* test_fn = codegen_utils->CreateFunction<DoublesFn>("test_fn");
+  llvm::Function* llvm_get_attr = codegen_utils->GetOrRegisterExternalFunction(get_attr);
+  BasicBlock* main_block = codegen_utils->CreateBasicBlock("main", test_fn);
   irb->SetInsertPoint(main_block);
-  Value* arg0 = gpcodegen::ArgumentByPosition(add_twice, 0);
-  Value* arg1 = gpcodegen::ArgumentByPosition(add_twice, 1);
-  CallInst* add_one = irb->CreateCall(add_once_fn, {arg0, arg1});
-  irb->CreateRet(add_one);
-  //CallInst* add_two = irb->CreateCall(add_once_fn, {arg0, arg1});
-  //irb->CreateRet(irb->CreateAdd(add_one, add_two));
+  Value* arg0 = gpcodegen::ArgumentByPosition(test_fn, 0);
+  Value* arg1 = gpcodegen::ArgumentByPosition(test_fn, 1);
 
+  // arg0 + arg1 - attr0 * attr1
+  Value* _1 = irb->CreateCall(float8pl, {arg0, arg1});
+  Value* _2 = irb->CreateCall(float8mul, {irb->CreateCall(llvm_get_attr), irb->CreateCall(llvm_get_attr)});
+  Value* ret = irb->CreateCall(float8mi, {_1, _2});
+  irb->CreateRet(ret);
+
+  std::cout << "================================================================================" << std::endl;
   codegen_utils->module()->dump();
+  std::cout << "================================================================================" << std::endl;
 
   //codegen_utils->InlineFunction(add_one);
   //codegen_utils->InlineFunction(add_two);
+  codegen_utils->Optimize(gpcodegen::CodegenUtils::OptimizationLevel::kDefault, gpcodegen::CodegenUtils::SizeLevel::kNormal, false);
 
+  std::cout << "================================================================================" << std::endl;
   codegen_utils->module()->dump();
+  std::cout << "================================================================================" << std::endl;
+
   bool boo = codegen_utils->PrepareForExecution(gpcodegen::CodegenUtils::OptimizationLevel::kDefault,
                                      false);
-  AddInts fn = codegen_utils->GetFunctionPointer<AddInts>("add_twice");
+  DoublesFn fn = codegen_utils->GetFunctionPointer<DoublesFn>("test_fn");
   std::cout<<fn(12, 10)<<std::endl;
   std::cout<<"END"<<std::endl;
   return 0;
