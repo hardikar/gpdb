@@ -9,7 +9,7 @@ define i32 @int4pl(i32 %a, i32 %b) {
   %ofl = extractvalue { i32, i1 } %1, 1
   br i1 %ofl, label %arith_overflow_block, label %arith_non_overflow_block
 
- arith_non_overflow_block:                         ; preds = %entry
+  arith_non_overflow_block:                         ; preds = %entry
    ret i32 %val
 
  arith_overflow_block:                             ; preds = %entry

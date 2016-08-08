@@ -165,7 +165,7 @@ function(COMPILE_TO_IR SRC_FILE OUTPUT_FILE)
     add_custom_command(
       OUTPUT ${OUTPUT_FILE}
       COMMAND ${LLVM_AS_COMMAND} ${SRC_FILE} -o t
-      COMMAND ${LLVM_OPT_COMMAND} -O3 t -o ${OUTPUT_FILE}
+      COMMAND ${LLVM_OPT_COMMAND} t -o ${OUTPUT_FILE}
       COMMAND rm t
 	  DEPENDS ${SRC_FILE})
   else()

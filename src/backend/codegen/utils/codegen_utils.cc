@@ -302,20 +302,35 @@ llvm::GlobalVariable* CodegenUtils::AddExternalGlobalVariable(
 }
 
 llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function, bool recursive) {
-  llvm::ValueToValueMapTy vmap;
-  for (llvm::const_inst_iterator
-       I = llvm::inst_begin(function), E = llvm::inst_end(function); I != E; ++I) {
-    llvm::ImmutableCallSite call_site(&*I);
-    if (call_site) {
-      const llvm::Function* called_func = call_site.getCalledFunction();
-
-      if (called_func->getParent() != module()) {
-        llvm::Function* called_func_clone = InsertAlienFunction(called_func, recursive);
-        vmap.insert(std::make_pair(called_func, called_func_clone));
+  assert(nullptr != function);
+  llvm::Function* new_func = nullptr;
+  if (function->isDeclaration()) {
+    // Fake clone this function if it's just a declaration
+    new_func = llvm::Function::Create(
+        function->getFunctionType(),
+        function->getLinkage(),
+        function->getName().str(),
+        module());
+  } else {
+    llvm::ValueToValueMapTy vmap;
+    if (recursive) {
+      for (llvm::const_inst_iterator
+           I = llvm::inst_begin(function), E = llvm::inst_end(function); I != E; ++I) {
+        llvm::ImmutableCallSite call_site(&*I);
+        if (call_site) {
+          const llvm::Function* called_func = call_site.getCalledFunction();
+          if (called_func->getParent() != module()) {
+            llvm::Function* called_func_clone = InsertAlienFunction(called_func, recursive);
+            vmap.insert(std::make_pair(called_func, called_func_clone));
+          }
+        }
       }
     }
+    // Finally clone this function
+    new_func = llvm::CloneFunction(function, vmap, false);
+    module()->getFunctionList().push_back(new_func);
   }
-  return llvm::CloneFunction(function, vmap, false);
+  return new_func;
 }
 
 void CodegenUtils::CheckFunctionType(

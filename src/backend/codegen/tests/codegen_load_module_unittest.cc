@@ -17,7 +17,7 @@ extern unsigned char builtins_bc[];
 extern unsigned int builtins_bc_len;
 
 typedef double (*AddDoubles)(double, double);
-
+typedef int (*AddInts)(int, int);
 
 int main()
 {
@@ -31,30 +31,30 @@ int main()
   llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
   std::unique_ptr<Module> builtins_module = llvm::parseIR(bufref, error, *codegen_utils->context());
 
-  Function* add_once_fn = builtins_module->getFunction("float8pl");
+  Function* add_once_fn = codegen_utils->InsertAlienFunction(builtins_module->getFunction("int4pl"), true);
 
   add_once_fn->dump();
 
-  Function* add_twice = codegen_utils->CreateFunction<AddDoubles>("add_twice");
+  Function* add_twice = codegen_utils->CreateFunction<AddInts>("add_twice");
   BasicBlock* main_block = codegen_utils->CreateBasicBlock("main", add_twice);
   irb->SetInsertPoint(main_block);
   Value* arg0 = gpcodegen::ArgumentByPosition(add_twice, 0);
   Value* arg1 = gpcodegen::ArgumentByPosition(add_twice, 1);
   CallInst* add_one = irb->CreateCall(add_once_fn, {arg0, arg1});
-  CallInst* add_two = irb->CreateCall(add_once_fn, {arg0, arg1});
-  irb->CreateRet(irb->CreateFAdd(add_one, add_two));
+  irb->CreateRet(add_one);
+  //CallInst* add_two = irb->CreateCall(add_once_fn, {arg0, arg1});
+  //irb->CreateRet(irb->CreateAdd(add_one, add_two));
 
   codegen_utils->module()->dump();
 
-  //InlineFunctionInfo info;
-  //InlineFunction(CallSite(add_one), info);
-  //InlineFunction(CallSite(add_two), info);
+  //codegen_utils->InlineFunction(add_one);
+  //codegen_utils->InlineFunction(add_two);
 
   codegen_utils->module()->dump();
-  //bool boo = codegen_utils->PrepareForExecution(gpcodegen::CodegenUtils::OptimizationLevel::kDefault,
-  //                                   false);
-  //AddThreeFn fn = codegen_utils->GetFunctionPointer<AddThreeFn>("addThree");
-  //std::cout<<fn(12)<<std::endl;
+  bool boo = codegen_utils->PrepareForExecution(gpcodegen::CodegenUtils::OptimizationLevel::kDefault,
+                                     false);
+  AddInts fn = codegen_utils->GetFunctionPointer<AddInts>("add_twice");
+  std::cout<<fn(12, 10)<<std::endl;
   std::cout<<"END"<<std::endl;
   return 0;
 }

@@ -30,7 +30,7 @@ typedef double float8;
 //extern void elog_finish(int elevel, const char *fmt,...);
 
 Datum
-float8pl(PG_FUNCTION_ARGS)
+ float8pls(PG_FUNCTION_ARGS)
 {
   float8    arg1 = PG_GETARG_FLOAT8(0);
   float8    arg2 = PG_GETARG_FLOAT8(1);
