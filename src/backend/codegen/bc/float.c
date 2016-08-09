@@ -12,14 +12,15 @@ do {															\
 } while(0)
 
 typedef double float8;
+typedef long int int64;
 
-#define Datum float8
+#define Datum int64
 
 #define PG_RETURN_FLOAT8(result) return (Datum) result
 #define PG_RETURN_BOOL(result) return (Datum) result
 #define PG_RETURN_INT32(result) return (Datum) result
 
-#define PG_FUNCTION_ARGS float8 in_arg_0, float8 in_arg_1
+#define PG_FUNCTION_ARGS Datum in_arg_0, Datum in_arg_1
 #define PG_GETARG_FLOAT8(i) ((float8) in_arg_##i)
 
 

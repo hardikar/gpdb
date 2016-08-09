@@ -123,8 +123,8 @@ class CodegenUtils {
     return module_.get();
   }
 
-  llvm::Function* InsertAlienFunction(const llvm::Function* function, llvm::ValueToValueMapTy& vmap, bool recursive);
-  bool CopyGlobalsFrom(const llvm::Module* module, llvm::ValueToValueMapTy& vmap);
+  llvm::Function* InsertAlienFunction(const llvm::Function* function, bool recursive);
+  bool CopyGlobalsFrom(const llvm::Module* module);
 
   /**
    * @brief Get a C++ type's equivalent in the LLVM type system.
@@ -490,14 +490,6 @@ class CodegenUtils {
     return llvm::InlineFunction(llvm::CallSite(call_inst), info);
   }
 
-
-  llvm::Function* GetFunctionFromLoadedModule(const std::string& function_name) {
-    return loaded_module_->getFunction(function_name);
-  }
-
-  llvm::Module* loaded_module_ = nullptr;
-
-
   /*
    * @brief Dump the IR of all underlying LLVM modules.
    *
@@ -621,7 +613,8 @@ class CodegenUtils {
   // Primary module directly managed by this CodegenUtils.
   std::unique_ptr<llvm::Module> module_;
 
-
+  // map of { loaded_module -> vmap }
+  std::unordered_map<const llvm::Module*, llvm::ValueToValueMapTy> vmap_by_loaded_module;
 
   std::unique_ptr<llvm::ExecutionEngine> engine_;
 

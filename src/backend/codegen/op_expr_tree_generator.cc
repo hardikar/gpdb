@@ -10,6 +10,7 @@
 //
 //---------------------------------------------------------------------------
 
+#include <algorithm>
 #include <assert.h>
 #include <cstdint>
 #include <memory>
@@ -39,6 +40,7 @@ extern "C" {
 #include "nodes/nodes.h"
 #include "nodes/pg_list.h"
 #include "nodes/primnodes.h"
+#include "utils/fmgrtab.h"
 }
 
 namespace llvm {
@@ -54,34 +56,56 @@ using gpcodegen::CodeGenFuncMap;
 using llvm::IRBuilder;
 
 extern std::unique_ptr<llvm::Module> builtins_module;
-extern std::vector<llvm::CallInst*> llvm_calls_to_inline;
 
 CodeGenFuncMap
 OpExprTreeGenerator::supported_function_;
 
 
-static bool Foo(gpcodegen::GpCodegenUtils* codegen_utils,
-                const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
-                llvm::Value** llvm_out_value) {
-  if (builtins_module) {
-    elog(INFO, "Module loading succeeded. List size = %d", builtins_module->getFunctionList().size());
-  } else {
-    elog(WARNING, "Module loading failed");
+class BuiltinsFuncGenerator : public PGFuncGeneratorInterface {
+ public:
+  BuiltinsFuncGenerator(int oid, std::string name): oid_(oid), name_(name) {
   }
 
-  llvm::Function* function = codegen_utils->InsertAlienFunction(builtins_module->getFunction("int4pl"), true);
-  assert(nullptr != function);
+  std::string GetName() {
+    return name_;
+  }
+
+  size_t GetTotalArgCount(){
+    return 2;
+  }
+
+  bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
+                              const gpcodegen::PGFuncGeneratorInfo& pg_gen_info,
+                              llvm::Value** llvm_out_value);
+
+ private:
+  int oid_;
+  std::string name_;
+};
+
+bool BuiltinsFuncGenerator::GenerateCode(
+    gpcodegen::GpCodegenUtils* codegen_utils,
+    const gpcodegen::PGFuncGeneratorInfo& pg_gen_info,
+    llvm::Value** llvm_out_value) {
 
   auto irb = codegen_utils->ir_builder();
+  if (!builtins_module) {
+    elog(WARNING, "Builtins module was not initialized");
+    return false;
+  }
+  llvm::Function* function = codegen_utils->module()->getFunction(name_);
+  if (!function) {
+    function = codegen_utils->InsertAlienFunction(builtins_module->getFunction(name_), true);
+  }
+  assert(function);
 
-  llvm::CallInst* inst = irb->CreateCall(function, {
-      pg_func_info.llvm_args[0], pg_func_info.llvm_args[1]});
-  *llvm_out_value = inst;
+  *llvm_out_value = irb->CreateCall(function, pg_gen_info.llvm_args);
 
-  llvm_calls_to_inline.push_back(inst);
-
+  // No casting needed because it's a double!
   return true;
 }
+
+
 
 void OpExprTreeGenerator::InitializeSupportedFunction() {
   if (!supported_function_.empty()) { return; }
@@ -109,22 +133,13 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           &PGArithFuncGenerator<int32_t, int32_t, int32_t>::SubWithOverflow));
 
   supported_function_[216] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGGenericFuncGenerator<float8, float8>(
-          216,
-          "float8mul",
-          Foo));
+      new BuiltinsFuncGenerator(216, "float8mul"));
 
   supported_function_[218] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGGenericFuncGenerator<float8, float8>(
-          218,
-          "float8pl",
-          &PGArithFuncGenerator<float8, float8, float8>::AddWithOverflow));
+      new BuiltinsFuncGenerator(216, "float8pl"));
 
   supported_function_[219] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGGenericFuncGenerator<float8, float8>(
-          219,
-          "float8mi",
-          &PGArithFuncGenerator<float8, float8, float8>::SubWithOverflow));
+      new BuiltinsFuncGenerator(216, "float8mi"));
 
   supported_function_[1088] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGIRBuilderFuncGenerator<decltype(&IRBuilder<>::CreateICmpSLE),

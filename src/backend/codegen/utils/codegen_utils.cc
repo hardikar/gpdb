@@ -235,8 +235,6 @@ bool CodegenUtils::PrepareForExecution(const OptimizationLevel cpu_opt_level,
     engine_->addModule(std::move(auxiliary_module));
   }
 
-  loaded_module_ = nullptr;
-
   // Map global variables (i.e. pointer constants) and registered external
   // functions to their actual locations in memory.
   //
@@ -302,7 +300,10 @@ llvm::GlobalVariable* CodegenUtils::AddExternalGlobalVariable(
                                   external_global_variables_.back().first);
 }
 
-bool CodegenUtils::CopyGlobalsFrom(const llvm::Module* ext_module, llvm::ValueToValueMapTy& vmap) {
+bool CodegenUtils::CopyGlobalsFrom(const llvm::Module* ext_module) {
+  // Create an entry if it doesn't already exist
+  llvm::ValueToValueMapTy& vmap = vmap_by_loaded_module[ext_module];
+
   assert(&ext_module->getContext() == context());
   for (llvm::Module::const_global_iterator i = ext_module->global_begin(), e = ext_module->global_end(); i!=e; ++i) {
     std::cout<<i->isDeclaration() << std::endl;
@@ -319,9 +320,10 @@ bool CodegenUtils::CopyGlobalsFrom(const llvm::Module* ext_module, llvm::ValueTo
   return true;
 }
 
-llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function, llvm::ValueToValueMapTy& vmap, bool recursive) {
-  assert(nullptr != function);
+llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function, bool recursive) {
+  assert(nullptr != function && nullptr != function->getParent());
   llvm::Function* new_func = nullptr;
+  llvm::ValueToValueMapTy& vmap = vmap_by_loaded_module[function->getParent()];
   if (function->isDeclaration()) {
     new_func = module()->getFunction(function->getName());
     // If the modules already contains this func, we're good!
@@ -344,7 +346,7 @@ llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function
           const llvm::Function* called_func = call_site.getCalledFunction();
           assert(nullptr != called_func);
           if (called_func->getParent() != module()) {
-            llvm::Function* called_func_clone = InsertAlienFunction(called_func, _vmap, recursive);
+            llvm::Function* called_func_clone = InsertAlienFunction(called_func, recursive);
             _vmap.insert(std::make_pair(called_func, called_func_clone));
           }
         }

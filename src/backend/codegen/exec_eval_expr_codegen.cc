@@ -112,15 +112,7 @@ extern char builtins_bc[];
 extern unsigned int builtins_bc_len;
 }
 
-int foo_var = 0;
-
-void foo(int x) {
-  foo_var = x;
-}
-
-
-llvm::Module* builtins_module;
-std::vector<llvm::CallInst*> llvm_calls_to_inline;
+std::unique_ptr<llvm::Module> builtins_module;
 
 bool ExecEvalExprCodegen::GenerateExecEvalExpr(
     gpcodegen::GpCodegenUtils* codegen_utils) {
@@ -148,19 +140,18 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
       slot_getattr_codegen_->GetGeneratedFunction();
   }
 
-  //if (!builtins_module) {
-    llvm::SMDiagnostic error;
-    llvm::LLVMContext context;
-    llvm::StringRef strref = { (const char*) builtins_bc, builtins_bc_len };
-    llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
-    builtins_module = llvm::parseIR(bufref, error, context).release();
 
+  // Load the builtins module {
+  llvm::SMDiagnostic error;
+  llvm::StringRef strref = { (const char*) builtins_bc, builtins_bc_len };
+  llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
+
+  builtins_module = llvm::parseIR(bufref, error, *codegen_utils->context());
+  codegen_utils->CopyGlobalsFrom(builtins_module.get());
   //}
 
   llvm::Function* exec_eval_expr_func = CreateFunction<ExecEvalExprFn>(
       codegen_utils, GetUniqueFuncName());
-
-  codegen_utils->GetOrRegisterExternalFunction(foo, "foo");
 
   // Function arguments to ExecVariableList
   llvm::Value* llvm_isnull_arg = ArgumentByPosition(exec_eval_expr_func, 2);
@@ -200,57 +191,6 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
 
   irb->SetInsertPoint(llvm_error_block);
   irb->CreateRet(codegen_utils->GetConstant<int64_t>(0));
-
-//  {
-//    llvm::Module::Module::global_iterator gi = builtins_module->global_begin(),
-//                                          ge = builtins_module->global_end();
-//    for(; gi != ge; ++gi) {
-//      new llvm::GlobalVariable(*codegen_utils->module(),
-//                             gi->getType(),
-//                             gi->isConstant(),
-//                             gi->getLinkage(),
-//                             gi->getInitializer(),
-//                             gi->getName());
-//    }
-//  }
-
-  // All done! Now let's inline things
-  //bool done = false;
-  //while (!done) {
-  //  for (llvm::CallInst* inst : llvm_calls_to_inline) {
-  //    codegen_utils->InlineFunction(inst);
-  //  }
-  //  llvm_calls_to_inline.clear();
-
-  //  llvm::inst_iterator i = inst_begin(exec_eval_expr_func),
-  //                      e = inst_end(exec_eval_expr_func);
-  //  for ( ; i != e; ++i) {
-  //    if (llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(&*i)) {
-  //      llvm::Function* called_func = call->getCalledFunction();
-
-  //      if (called_func->getParent() == builtins_module) {
-  //        if (llvm::Function* existing_func = codegen_utils->module()->getFunction(called_func->getName())) {
-  //          elog(WARNING, "Found function that is still in old module and also in the new module: %s", called_func->getName());
-  //          call->setCalledFunction(existing_func->getFunctionType(), existing_func);
-  //        } else if (called_func->empty()) {
-  //          elog(WARNING, "Found function that is still in old module and is empty: %s", called_func->getName());
-  //          llvm::Function* new_func =
-  //              llvm::Function::Create(called_func->getFunctionType(),
-  //                                     called_func->getLinkage(),
-  //                                     called_func->getName().str(),
-  //                                     codegen_utils->module());
-
-  //          call->setCalledFunction(new_func->getFunctionType(), new_func);
-  //        } else {
-  //          elog(WARNING, "Found function that is still in old module and is not empty: %s", called_func->getName());
-  //          llvm_calls_to_inline.push_back(call);
-  //        }
-  //      }
-  //    }
-  //  }
-
-  //  done = (llvm_calls_to_inline.size() == 0);
-  //}
 
   return true;
 }
