@@ -41,8 +41,7 @@ void elog_finish(int elevel, const char *fmt,...) {
 }
 }
 
-int main()
-{
+int main() {
   bool init_ok = gpcodegen::CodegenUtils::InitializeGlobal();
   std::unique_ptr<gpcodegen::CodegenUtils> codegen_utils(
    new gpcodegen::CodegenUtils("codegen_load_module_unittest"));

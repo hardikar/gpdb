@@ -220,6 +220,11 @@ add_ir_library(builtins
                bc/foo.c
                bc/int.ll)
 
+add_executable(parser
+    function_parser.cc
+)
+target_link_libraries(parser gpcodegen)
+
 
 # Core codegen library.
 add_library(gpcodegen SHARED

@@ -22,7 +22,7 @@ if (MONOLITHIC_CLANG_LIBRARY)
 else()
   set(CLANG_COMPONENTS
       CodeGen Frontend Tooling AST Basic Lex Driver Edit Parse Sema
-      Serialization ASTMatchers Rewrite ToolingCore Analysis)
+      Serialization ASTMatchers Rewrite RewriteFrontend ToolingCore Analysis)
 
   foreach(CLANG_COMPONENT ${CLANG_COMPONENTS})
     find_library(CLANG_${CLANG_COMPONENT}_LIBRARY
