@@ -107,13 +107,6 @@ void ExecEvalExprCodegen::PrepareSlotGetAttr() {
   }
 }
 
-extern "C" {
-extern char builtins_bc[];
-extern unsigned int builtins_bc_len;
-}
-
-std::unique_ptr<llvm::Module> builtins_module;
-
 bool ExecEvalExprCodegen::GenerateExecEvalExpr(
     gpcodegen::GpCodegenUtils* codegen_utils) {
 
@@ -139,16 +132,6 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
     gen_info_.llvm_slot_getattr_func =
       slot_getattr_codegen_->GetGeneratedFunction();
   }
-
-
-  // Load the builtins module {
-  llvm::SMDiagnostic error;
-  llvm::StringRef strref = { (const char*) builtins_bc, builtins_bc_len };
-  llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
-
-  builtins_module = llvm::parseIR(bufref, error, *codegen_utils->context());
-  codegen_utils->CopyGlobalsFrom(builtins_module.get());
-  //}
 
   llvm::Function* exec_eval_expr_func = CreateFunction<ExecEvalExprFn>(
       codegen_utils, GetUniqueFuncName());

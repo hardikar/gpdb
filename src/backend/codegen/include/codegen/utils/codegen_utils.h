@@ -607,7 +607,7 @@ class CodegenUtils {
   template <typename ReturnType, typename... ArgumentTypes>
   void RecordNamedExternalFunction(const std::string& name);
 
-  llvm::LLVMContext context_;
+  llvm::LLVMContext& context_;
   llvm::IRBuilder<> ir_builder_;
 
   // Primary module directly managed by this CodegenUtils.

@@ -101,7 +101,6 @@ bool BuiltinsFuncGenerator::GenerateCode(
 
   *llvm_out_value = irb->CreateCall(function, pg_gen_info.llvm_args);
 
-  // No casting needed because it's a double!
   return true;
 }
 

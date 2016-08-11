@@ -215,10 +215,10 @@ function(TARGET_LINK_IR_LIBRARIES TARGET)
   target_sources(${TARGET} PRIVATE ${IR_LIBRARY_C_FILE})
 endfunction(TARGET_LINK_IR_LIBRARIES)
 
+set(builtin_sources bc/float.c bc/foo.c bc/int.ll)
 add_ir_library(builtins
-               bc/float.c
-               bc/foo.c
-               bc/int.ll)
+	${builtin_sources}
+)
 
 add_executable(parser
     function_parser.cc

@@ -12,16 +12,33 @@ do {															\
 } while(0)
 
 typedef double float8;
+typedef unsigned int uint32;
 typedef long int int64;
+typedef char bool;
 
 #define Datum int64
+typedef union Datum_U
+{
+  Datum d;
 
-#define PG_RETURN_FLOAT8(result) return (Datum) result
-#define PG_RETURN_BOOL(result) return (Datum) result
-#define PG_RETURN_INT32(result) return (Datum) result
+  float8 f8;
+
+  void *ptr;
+} Datum_U;
+
+static inline uint32 DatumGetUInt32(Datum d) { return (uint32) d; }
+static inline Datum UInt32GetDatum(uint32 ui32) { return (Datum) ui32; }
+static inline bool DatumGetBool(Datum d) { return ((bool)d) != 0; }
+static inline Datum BoolGetDatum(bool b) { return (b ? 1 : 0); }
+static inline float8 DatumGetFloat8(Datum d) { Datum_U du; du.d = d; return du.f8; }
+static inline Datum Float8GetDatum(float8 f) { Datum_U du; du.f8 = f; return du.d; }
+
+#define PG_RETURN_FLOAT8(x)  return Float8GetDatum(x)
+#define PG_RETURN_BOOL(x)  return BoolGetDatum(x)
+#define PG_RETURN_UINT32(x)  return UInt32GetDatum(x)
 
 #define PG_FUNCTION_ARGS Datum in_arg_0, Datum in_arg_1
-#define PG_GETARG_FLOAT8(i) ((float8) in_arg_##i)
+#define PG_GETARG_FLOAT8(i) (DatumGetFloat8 (in_arg_##i))
 
 
 #define INFO    17
@@ -30,8 +47,6 @@ typedef long int int64;
 extern void elog_start(const char *filename, int lineno, const char *funcname);
 extern void elog_finish(int elevel, const char *fmt, ...);
 
-
-extern void foo(void);
 
 Datum
  float8pl(PG_FUNCTION_ARGS)
@@ -43,8 +58,6 @@ Datum
   result = arg1 + arg2;
 
   elog(INFO, "Calling float8pl");
-  foo();
-  foo();
 
   CHECKFLOATVAL(result, isinf(arg1) || isinf(arg2), true);
   PG_RETURN_FLOAT8(result);

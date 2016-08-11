@@ -99,6 +99,11 @@ const std::string& CodegenManager::GetExplainString() {
 
 void CodegenManager::AccumulateExplainString() {
   explain_string_.clear();
+  // This is called only when EXPLAIN CODEGEN. Because we don't want to compile
+  // at this time, we need to call CodegenUtils::Optimize to "optimize" LLVM IR.
+  codegen_utils_->Optimize(gpcodegen::CodegenUtils::OptimizationLevel::kDefault,
+                           gpcodegen::CodegenUtils::SizeLevel::kNormal,
+                           false);
   llvm::raw_string_ostream out(explain_string_);
   codegen_utils_->PrintUnderlyingModules(out);
 }

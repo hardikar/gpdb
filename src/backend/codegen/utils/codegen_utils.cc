@@ -87,11 +87,31 @@ inline llvm::CodeGenOpt::Level OptLevelCodegenToLLVM(
 constexpr char CodegenUtils::kExternalVariableNamePrefix[];
 constexpr char CodegenUtils::kExternalFunctionNamePrefix[];
 
+
+extern "C" {
+extern char builtins_bc[];
+extern unsigned int builtins_bc_len;
+
+// TODO: Why does this need to be in extern "C" ?
+std::unique_ptr<llvm::Module> builtins_module;
+}
+
 CodegenUtils::CodegenUtils(llvm::StringRef module_name)
-    : ir_builder_(context_),
+    : context_(llvm::getGlobalContext()),
+      ir_builder_(context_),
       module_(new llvm::Module(module_name, context_)),
       external_variable_counter_(0),
       external_function_counter_(0) {
+  CopyGlobalsFrom(builtins_module.get());
+}
+
+bool LoadBuiltinsModule() {
+  llvm::SMDiagnostic error;
+  llvm::StringRef strref = { (const char*) builtins_bc, builtins_bc_len };
+  llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
+
+  builtins_module = llvm::parseIR(bufref, error, llvm::getGlobalContext());
+  return (builtins_module == nullptr);
 }
 
 bool CodegenUtils::InitializeGlobal() {
@@ -100,7 +120,8 @@ bool CodegenUtils::InitializeGlobal() {
   // false, then initialization is fine.
   return !llvm::InitializeNativeTarget()
          && !llvm::InitializeNativeTargetAsmPrinter()
-         && !llvm::InitializeNativeTargetAsmParser();
+         && !llvm::InitializeNativeTargetAsmParser()
+         && !LoadBuiltinsModule();
 }
 
 bool CodegenUtils::Optimize(const OptimizationLevel generic_opt_level,
@@ -361,6 +382,7 @@ llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function
   }
   return new_func;
 }
+
 
 void CodegenUtils::CheckFunctionType(
     const std::string& function_name,
