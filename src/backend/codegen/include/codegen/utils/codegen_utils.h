@@ -123,7 +123,7 @@ class CodegenUtils {
     return module_.get();
   }
 
-  llvm::Function* InsertAlienFunction(const llvm::Function* function, bool recursive);
+  llvm::Function* InsertAlienFunction(llvm::Function* function, bool recursive);
   bool CopyGlobalsFrom(const llvm::Module* module);
 
   /**

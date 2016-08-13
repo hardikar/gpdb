@@ -54,6 +54,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/Bitcode/ReaderWriter.h"
 
 namespace llvm { class FunctionType; }
 
@@ -105,13 +106,31 @@ CodegenUtils::CodegenUtils(llvm::StringRef module_name)
   CopyGlobalsFrom(builtins_module.get());
 }
 
+//std::unique_ptr<llvm::Module> parseLazyIRModule(const char* buffer,
+//                                                llvm::SMDiagnostic &Err,
+//                                                llvm::LLVMContext &Context) {
+//  return getLazyIRModule(std::move(buffer)), Err, Context);
+//}
+
 bool LoadBuiltinsModule() {
   llvm::SMDiagnostic error;
   llvm::StringRef strref = { (const char*) builtins_bc, builtins_bc_len };
-  llvm::MemoryBufferRef bufref = {strref, "builtins_bc"};
+  std::unique_ptr<llvm::MemoryBuffer> buffer =
+      llvm::MemoryBuffer::getMemBuffer(strref, "builtins_bc", false);
 
-  builtins_module = llvm::parseIR(bufref, error, llvm::getGlobalContext());
-  return (builtins_module == nullptr);
+  // If successful, this moves Buffer. On error, this *does not* move Buffer.
+  llvm::ErrorOr<std::unique_ptr<llvm::Module>> module_or_err =
+    llvm::getLazyBitcodeModule(std::move(buffer), llvm::getGlobalContext());
+  if (std::error_code ec = module_or_err.getError() ) {
+    // TODO: There was an err. Handle it!
+    return false;
+  }
+
+  builtins_module = std::move(module_or_err.get());
+
+  //builtins_module = llvm::getLazyIRFileModule("/Users/shardikar/workspace/codegen/gpdb/src/backend/codegen/CMakeFiles/builtins.dir/builtins.bc",
+  //                                            error, llvm::getGlobalContext());
+  return (builtins_module.get() == nullptr);
 }
 
 bool CodegenUtils::InitializeGlobal() {
@@ -327,7 +346,6 @@ bool CodegenUtils::CopyGlobalsFrom(const llvm::Module* ext_module) {
 
   assert(&ext_module->getContext() == context());
   for (llvm::Module::const_global_iterator i = ext_module->global_begin(), e = ext_module->global_end(); i!=e; ++i) {
-    std::cout<<i->isDeclaration() << std::endl;
     llvm::GlobalVariable *GV = new llvm::GlobalVariable(*module(),
                              i->getValueType(),
                              i->isConstant(), // isConstant
@@ -341,7 +359,7 @@ bool CodegenUtils::CopyGlobalsFrom(const llvm::Module* ext_module) {
   return true;
 }
 
-llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function, bool recursive) {
+llvm::Function* CodegenUtils::InsertAlienFunction(llvm::Function* function, bool recursive) {
   assert(nullptr != function && nullptr != function->getParent());
   llvm::Function* new_func = nullptr;
   llvm::ValueToValueMapTy& vmap = vmap_by_loaded_module[function->getParent()];
@@ -357,14 +375,16 @@ llvm::Function* CodegenUtils::InsertAlienFunction(const llvm::Function* function
           module());
     }
   } else {
+    // We need to do this in case we lazy load the module
+    function->materialize();
     llvm::ValueToValueMapTy _vmap;
     _vmap.insert(vmap.begin(), vmap.end());
     if (recursive) {
-      for (llvm::const_inst_iterator
+      for (llvm::inst_iterator
            I = llvm::inst_begin(function), E = llvm::inst_end(function); I != E; ++I) {
-        llvm::ImmutableCallSite call_site(&*I);
+        llvm::CallSite call_site(&*I);
         if (call_site) {
-          const llvm::Function* called_func = call_site.getCalledFunction();
+          llvm::Function* called_func = call_site.getCalledFunction();
           assert(nullptr != called_func);
           if (called_func->getParent() != module()) {
             llvm::Function* called_func_clone = InsertAlienFunction(called_func, recursive);
