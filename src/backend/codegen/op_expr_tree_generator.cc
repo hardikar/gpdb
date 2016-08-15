@@ -110,26 +110,16 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
   if (!supported_function_.empty()) { return; }
 
   supported_function_[141] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGGenericFuncGenerator<int32_t, int32_t>(
-          141,
-          "int4mul",
-          &PGArithFuncGenerator<int32_t, int32_t, int32_t>::MulWithOverflow));
+      new BuiltinsFuncGenerator(149, "int4pl"));
 
   supported_function_[149] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGIRBuilderFuncGenerator<decltype(&IRBuilder<>::CreateICmpSLE),
-      int32_t, int32_t>(149, "int4le", &IRBuilder<>::CreateICmpSLE));
+      new BuiltinsFuncGenerator(149, "int4le"));
 
   supported_function_[177] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGGenericFuncGenerator<int32_t, int32_t>(
-          177,
-          "int4pl",
-          &PGArithFuncGenerator<int32_t, int32_t, int32_t>::AddWithOverflow));
+      new BuiltinsFuncGenerator(177, "int4pl"));
 
   supported_function_[181] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGGenericFuncGenerator<int32_t, int32_t>(
-          181,
-          "int4mi",
-          &PGArithFuncGenerator<int32_t, int32_t, int32_t>::SubWithOverflow));
+      new BuiltinsFuncGenerator(181, "int4mi"));
 
   supported_function_[216] = std::unique_ptr<PGFuncGeneratorInterface>(
       new BuiltinsFuncGenerator(216, "float8mul"));
@@ -141,14 +131,10 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
       new BuiltinsFuncGenerator(216, "float8mi"));
 
   supported_function_[1088] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGIRBuilderFuncGenerator<decltype(&IRBuilder<>::CreateICmpSLE),
-      int32_t, int32_t>(1088, "date_le", &IRBuilder<>::CreateICmpSLE));
+      new BuiltinsFuncGenerator(1088, "date_le"));
 
   supported_function_[2339] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGGenericFuncGenerator<int32_t, int64_t>(
-          2339,
-          "date_le_timestamp",
-          &PGDateFuncGenerator::DateLETimestamp));
+      new BuiltinsFuncGenerator(2339, "date_le_timestamp"));
 }
 
 OpExprTreeGenerator::OpExprTreeGenerator(
