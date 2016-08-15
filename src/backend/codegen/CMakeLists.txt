@@ -144,6 +144,7 @@ get_filename_component(full_install_name_dir "${CMAKE_INSTALL_PREFIX}/lib" ABSOL
 
 # TODO: Add checks and then set these variables
 set(LLVM_LINK_COMMAND "llvm-link")
+set(LLVM_CLANG_COMMAND "clang")
 set(LLVM_AS_COMMAND "llvm-as")
 set(LLVM_OPT_COMMAND "opt")
 set(XXD_COMMAND "xxd")
@@ -159,7 +160,7 @@ function(COMPILE_TO_IR SRC_FILE OUTPUT_FILE)
     # TODO: Include C++/C flags in this command
     add_custom_command(
       OUTPUT ${OUTPUT_FILE}
-      COMMAND ${CMAKE_C_COMPILER} -O3 ${COMPILER_EMIT_LLVM_FLAG} ${include_dirs} ${SRC_FILE} -o ${OUTPUT_FILE}
+      COMMAND ${LLVM_CLANG_COMMAND} -O3 ${COMPILER_EMIT_LLVM_FLAG} ${include_dirs} ${SRC_FILE} -o ${OUTPUT_FILE}
       DEPENDS ${SRC_FILE})
   elseif (SRC_FILE_EXT STREQUAL ".ll")
     add_custom_command(
@@ -212,6 +213,7 @@ function(TARGET_LINK_IR_LIBRARIES TARGET)
     set(IR_LIBRARY_C_FILE "${IR_LIBRARY_DIRECTORY}/${IR_LIBRARY}.c")
   ENDFOREACH(IR_LIBRARY)
 
+  set_source_files_properties(${IR_LIBRARY_C_FILE} PROPERTIES GENERATED true)
   target_sources(${TARGET} PRIVATE ${IR_LIBRARY_C_FILE})
 endfunction(TARGET_LINK_IR_LIBRARIES)
 
