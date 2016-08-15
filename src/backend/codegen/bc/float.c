@@ -57,8 +57,6 @@ Datum
 
   result = arg1 + arg2;
 
-  elog(INFO, "Calling float8pl");
-
   CHECKFLOATVAL(result, isinf(arg1) || isinf(arg2), true);
   PG_RETURN_FLOAT8(result);
 }
@@ -197,11 +195,11 @@ float8ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(float8_cmp_internal(arg1, arg2) >= 0);
 }
 
-Datum
-btfloat8cmp(PG_FUNCTION_ARGS)
-{
-  float8    arg1 = PG_GETARG_FLOAT8(0);
-  float8    arg2 = PG_GETARG_FLOAT8(1);
-
-  PG_RETURN_INT32(float8_cmp_internal(arg1, arg2));
-}
+//Datum
+//btfloat8cmp(PG_FUNCTION_ARGS)
+//{
+//  float8    arg1 = PG_GETARG_FLOAT8(0);
+//  float8    arg2 = PG_GETARG_FLOAT8(1);
+//
+//  PG_RETURN_INT32(float8_cmp_internal(arg1, arg2));
+//}
