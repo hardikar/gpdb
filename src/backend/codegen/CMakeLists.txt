@@ -135,7 +135,17 @@ add_library(gpcodegen SHARED
             utils/clang_compiler.cc
             utils/codegen_utils.cc
             utils/gp_codegen_utils.cc
-            gpassert.c
+            gpassert.cc
+            codegen_interface.cc
+            codegen_manager.cc
+            const_expr_tree_generator.cc
+            exec_variable_list_codegen.cc
+            slot_getattr_codegen.cc
+            exec_eval_expr_codegen.cc
+            expr_tree_generator.cc
+            op_expr_tree_generator.cc
+            pg_date_func_generator.cc
+            var_expr_tree_generator.cc
             ${codegen_tmpfile_sources})
 if(APPLE)
   set(WL_START_GROUP "")
@@ -171,17 +181,7 @@ set_target_properties(
     MACOSX_RPATH ON)
 
 set(GPCODEGEN_SRC
-    codegen_interface.cc
-    codegen_manager.cc
     codegen_wrapper.cc
-    const_expr_tree_generator.cc
-    exec_variable_list_codegen.cc
-    slot_getattr_codegen.cc
-    exec_eval_expr_codegen.cc
-    expr_tree_generator.cc
-    op_expr_tree_generator.cc
-    pg_date_func_generator.cc
-    var_expr_tree_generator.cc
 )
 
 # Integrate with GPDB build system. 
