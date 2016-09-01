@@ -135,16 +135,19 @@ add_library(gpcodegen SHARED
             utils/clang_compiler.cc
             utils/codegen_utils.cc
             utils/gp_codegen_utils.cc
+            gpassert.c
             ${codegen_tmpfile_sources})
 if(APPLE)
   set(WL_START_GROUP "")
   set(WL_END_GROUP "")
+  set(WL_UNDEFINED_DYNLOOKUP "-Wl,-undefined -Wl,dynamic_lookup")
 else()
   set(WL_START_GROUP "-Wl,--start-group")
   set(WL_END_GROUP "-Wl,--end-group")
+  set(WL_UNDEFINED_DYNLOOKUP "")
 endif()
 
-target_link_libraries(gpcodegen ${WL_START_GROUP} ${CLANG_LIBRARIES} ${WL_END_GROUP})
+target_link_libraries(gpcodegen ${WL_START_GROUP} ${CLANG_LIBRARIES} ${WL_END_GROUP} ${WL_UNDEFINED_DYNLOOKUP})
 if (MONOLITHIC_LLVM_LIBRARY)
   target_link_libraries(gpcodegen ${LLVM_MONOLITHIC_LIBRARIES})
 else()
