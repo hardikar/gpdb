@@ -1,0 +1,11 @@
+platform: linux
+image: docker:///yolo/gpdbdev#centos6
+inputs:
+  - name: gpdb_src
+outputs:
+  - name: bin_gpdb
+run:
+  path: gpdb_src/concourse/scripts/build_gpdb.py
+  args:
+    - --mode=planner
+    - --output_dir=bin_gpdb/install
