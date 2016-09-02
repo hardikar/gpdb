@@ -3,7 +3,7 @@ import subprocess
 import sys
 from GpdbBuildBase import GpdbBuildBase
 
-class GpcodegenBuild(GpdbBuildBase):
+class GpplannerBuild(GpdbBuildBase):
     def __init__(self):
         pass
 
