@@ -29,6 +29,6 @@ class GpplannerBuild(GpdbBuildBase):
             return status
         return subprocess.call([
             "runuser gpadmin -c \"source /usr/local/gpdb/greenplum_path.sh \
-            && source gpAux/gpdemo/gpdemo-env.sh \
+            && source gpAux/gpdemo/gpdemo-env.sh && \
             make installcheck-good\""], cwd="gpdb_src", shell=True)
     
