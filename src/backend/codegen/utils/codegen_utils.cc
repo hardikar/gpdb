@@ -90,8 +90,8 @@ constexpr char CodegenUtils::kExternalFunctionNamePrefix[];
 
 
 extern "C" {
-extern char builtins_bc[];
-extern unsigned int builtins_bc_len;
+char builtins_bc[1];
+unsigned int builtins_bc_len = 1;
 
 // TODO: Why does this need to be in extern "C" ?
 std::unique_ptr<llvm::Module> builtins_module;
@@ -103,7 +103,7 @@ CodegenUtils::CodegenUtils(llvm::StringRef module_name)
       module_(new llvm::Module(module_name, context_)),
       external_variable_counter_(0),
       external_function_counter_(0) {
-  CopyGlobalsFrom(builtins_module.get());
+  //CopyGlobalsFrom(builtins_module.get());
 }
 
 //std::unique_ptr<llvm::Module> parseLazyIRModule(const char* buffer,
@@ -139,8 +139,7 @@ bool CodegenUtils::InitializeGlobal() {
   // false, then initialization is fine.
   return !llvm::InitializeNativeTarget()
          && !llvm::InitializeNativeTargetAsmPrinter()
-         && !llvm::InitializeNativeTargetAsmParser()
-         && !LoadBuiltinsModule();
+         && !llvm::InitializeNativeTargetAsmParser();
 }
 
 bool CodegenUtils::Optimize(const OptimizationLevel generic_opt_level,

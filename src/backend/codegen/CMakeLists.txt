@@ -150,6 +150,7 @@ set(LLVM_OPT_COMMAND "opt")
 set(XXD_COMMAND "xxd")
 set(COMPILER_EMIT_LLVM_FLAG "-emit-llvm;-c")
 
+
 function(COMPILE_TO_IR SRC_FILE OUTPUT_FILE)
   get_filename_component(SRC_FILE_EXT ${SRC_FILE} EXT)
 
@@ -179,7 +180,7 @@ endfunction(COMPILE_TO_IR)
 function(ADD_IR_LIBRARY LIBRARY_NAME)
   set(TARGET ${LIBRARY_NAME})
   set(OUTPUT_DIRECTORY "CMakeFiles/${TARGET}.dir")
-  set(OUTPUT_C_FILE_NAME "${LIBRARY_NAME}.c")
+  set(OUTPUT_C_FILE_NAME "${LIBRARY_NAME}.cc")
   set(OUTPUT_C_FILE "${OUTPUT_DIRECTORY}/${OUTPUT_C_FILE_NAME}")
   set(OUTPUT_BITCODE_FILE_NAME "${LIBRARY_NAME}.bc")
   set(OUTPUT_BITCODE_FILE "${OUTPUT_DIRECTORY}/${OUTPUT_BITCODE_FILE_NAME}")
@@ -199,7 +200,8 @@ function(ADD_IR_LIBRARY LIBRARY_NAME)
     DEPENDS ${BITCODE_FILES})
   add_custom_command(
     OUTPUT ${OUTPUT_C_FILE_NAME}
-    COMMAND ${XXD_COMMAND} -i ${OUTPUT_BITCODE_FILE_NAME} > ${OUTPUT_C_FILE_NAME}
+    COMMAND llc -march=cpp -o ${OUTPUT_C_FILE_NAME} ${OUTPUT_BITCODE_FILE_NAME}
+    COMMAND ${CMAKE_MODULE_PATH}/llvm2cpp_patch.sh ${OUTPUT_C_FILE_NAME}
     WORKING_DIRECTORY ${OUTPUT_DIRECTORY}
     DEPENDS ${OUTPUT_BITCODE_FILE})
 
@@ -210,14 +212,14 @@ function(TARGET_LINK_IR_LIBRARIES TARGET)
   FOREACH(IR_LIBRARY ${ARGN})
     add_dependencies(${TARGET} ${IR_LIBRARY})
     set(IR_LIBRARY_DIRECTORY "CMakeFiles/${IR_LIBRARY}.dir/")
-    set(IR_LIBRARY_C_FILE "${IR_LIBRARY_DIRECTORY}/${IR_LIBRARY}.c")
+    set(IR_LIBRARY_C_FILE "${IR_LIBRARY_DIRECTORY}/${IR_LIBRARY}.cc")
   ENDFOREACH(IR_LIBRARY)
 
   set_source_files_properties(${IR_LIBRARY_C_FILE} PROPERTIES GENERATED true)
   target_sources(${TARGET} PRIVATE ${IR_LIBRARY_C_FILE})
 endfunction(TARGET_LINK_IR_LIBRARIES)
 
-set(builtin_sources bc/float.c bc/int.c bc/date.c bc/int_ir.ll)
+set(builtin_sources bc/int.c)
 
 #file(GLOB builtin_sources ../utils/adt/*.c)
 #list(REMOVE_ITEM builtin_sources /Users/shardikar/workspace/codegen/gpdb/src/backend/codegen/../utils/adt/like_match.c)
