@@ -219,7 +219,7 @@ function(TARGET_LINK_IR_LIBRARIES TARGET)
   target_sources(${TARGET} PRIVATE ${IR_LIBRARY_C_FILE})
 endfunction(TARGET_LINK_IR_LIBRARIES)
 
-set(builtin_sources bc/int.c)
+set(builtin_sources ../../../src/backend/utils/adt/int.c)
 
 #file(GLOB builtin_sources ../utils/adt/*.c)
 #list(REMOVE_ITEM builtin_sources /Users/shardikar/workspace/codegen/gpdb/src/backend/codegen/../utils/adt/like_match.c)
@@ -330,8 +330,6 @@ endfunction(add_simple_gtest)
 add_simple_gtest(clang_compiler_unittest.t tests/clang_compiler_unittest.cc)
 add_simple_gtest(codegen_utils_unittest.t tests/codegen_utils_unittest.cc)
 add_simple_gtest(instance_method_wrappers_unittest.t tests/instance_method_wrappers_unittest.cc)
-add_simple_gtest(codegen_load_module_unittest.t tests/codegen_load_module_unittest.cc)
-target_link_ir_libraries(codegen_load_module_unittest.t builtins)
 
 # Usage add_cmock_gtest ${TEST_NAME} ${TEST_SOURCES} ${MOCK_DIR}/hello_mock.o ${MOCK_DIR}/world_mock.o)
 function(add_cmockery_gtest TEST_NAME TEST_SOURCES)
@@ -414,6 +412,11 @@ if(EXISTS ${TXT_OBJFILE})
         tests/codegen_framework_unittest.cc
         ${MOCK_DIR}/backend/postmaster/postmaster_mock.o
     )
+    add_cmockery_gtest(codegen_load_module_unittest.t
+      tests/codegen_load_module_unittest.cc
+      ${MOCK_DIR}/backend/postmaster/postmaster_mock.o
+    )
+    target_link_ir_libraries(codegen_load_module_unittest.t builtins)
 endif()
 
 

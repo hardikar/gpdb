@@ -13,51 +13,52 @@
 #include "codegen/utils/gp_codegen_utils.h"
 #include "codegen/utils/utility.h"
 
+extern "C" {
+#include "postgres.h"
+#include "fmgr.h"
+}
+
 using namespace llvm;
 
-typedef double (*DoublesFn)(double, double);
-typedef int (*AddInts)(int, int);
+using DoublesFn = double (*) (double, double);
+using AddInts = int (*) (int, int);
+
+using PGFunc = Datum (*) (PG_FUNCTION_ARGS);
+
 
 extern llvm::Module* makeLLVMModule(llvm::Module* mod);
-
-extern "C" {
-//extern std::unique_ptr<llvm::Module> builtins_module;
-//void elog_start(const char *filename, int lineno, const char *funcname) {
-//  std::cout<<("elog_start called") << std::endl;
-//}
-//void elog_finish(int elevel, const char *fmt,...) {
-//  std::cout<<("elog_end called") << std::endl;
-//  va_list args;
-//  va_start(args, fmt);
-//  vprintf(fmt, args);
-//  va_end(args);
-//}
-}
 
 int main() {
   bool init_ok = gpcodegen::CodegenUtils::InitializeGlobal();
   std::unique_ptr<gpcodegen::GpCodegenUtils> codegen_utils(
    new gpcodegen::GpCodegenUtils("codegen_load_module_unittest"));
 
-  makeLLVMModule(codegen_utils->module());
-
+  llvm::Module*  module = codegen_utils->module();
   auto irb = codegen_utils->ir_builder();
 
-  Function* test_fn = codegen_utils->CreateFunction<AddInts>("test_fn");
+  makeLLVMModule(module);
+  llvm::Type* fcinfo_type = module->getTypeByName("struct.FunctionCallInfoData");
+
+  Function* test_fn = codegen_utils->CreateFunction<PGFunc>("test_fn");
   BasicBlock* main_block = codegen_utils->CreateBasicBlock("main", test_fn);
   irb->SetInsertPoint(main_block);
-  Value* arg0 = gpcodegen::ArgumentByPosition(test_fn, 0);
-  Value* arg1 = gpcodegen::ArgumentByPosition(test_fn, 1);
+  Value* fcinfo = irb->CreateBitCast(
+      gpcodegen::ArgumentByPosition(test_fn, 0),
+      fcinfo_type->getPointerTo());
 
   // Call return a + b here
   llvm::Function* int4pl = codegen_utils->module()->getFunction("int4pl");
-  irb->CreateRet(irb->CreateCall(int4pl, {arg0, arg1}));
+  irb->CreateRet(irb->CreateCall(int4pl, {fcinfo}));
 
 
   bool boo = codegen_utils->PrepareForExecution(gpcodegen::CodegenUtils::OptimizationLevel::kDefault,
                                      false);
-  AddInts fn = codegen_utils->GetFunctionPointer<AddInts>("test_fn");
-  std::cout<<fn(12, 10)<<std::endl;
+  PGFunc fn = codegen_utils->GetFunctionPointer<PGFunc>("test_fn");
+
+  FunctionCallInfoData fcinfo_data;
+  fcinfo_data.arg[0] = Int64GetDatum(12);
+  fcinfo_data.arg[1] = Int64GetDatum(20);
+  std::cout<<DatumGetInt64(fn(&fcinfo_data))<<std::endl;
   std::cout<<"END"<<std::endl;
   return 0;
 }
