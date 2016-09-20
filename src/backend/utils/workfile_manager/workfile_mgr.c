@@ -43,6 +43,8 @@ typedef struct workset_info
 	bool can_be_reused;
 } workset_info;
 
+static int64 workfile_unaccounted_segspace;
+
 /* Forward declarations */
 static workfile_set *workfile_mgr_lookup_set(PlanState *ps);
 static bool workfile_mgr_is_reusable(PlanState *ps);
@@ -766,6 +768,7 @@ workfile_mgr_cleanup(void)
 {
 	Assert(NULL != workfile_mgr_cache);
 	Cache_SurrenderClientEntries(workfile_mgr_cache);
+	WorkfileDiskspace_Commit(0, workfile_unaccounted_segspace, false /* TODO: WTF */);
 }
 
 /*
@@ -924,6 +927,9 @@ workfile_update_in_progress_size(ExecWorkFile *workfile, int64 size)
 	{
 		workfile->work_set->in_progress_size += size;
 		Assert(workfile->work_set->in_progress_size >= 0);
+	} else {
+		workfile_unaccounted_segspace += size;
+		Assert(workfile_unaccounted_segspace >= size);
 	}
 }
 
