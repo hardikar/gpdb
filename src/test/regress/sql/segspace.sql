@@ -172,6 +172,12 @@ insert into testsisc select i, i % 1000, i % 100000, i % 75 from generate_series
 create table foo (i int, j int) WITH (appendonly=true, compresstype=zlib);
 insert into foo select i, i % 1000 from generate_series(0,199999) i;
 
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
+\! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
+--end_ignore
+
 -- LEAK in DELETE with APPEND ONLY tables
 delete from testsisc using (
   select *
