@@ -129,5 +129,67 @@ select max(bytes) from gp_toolkit.gp_workfile_mgr_used_diskspace;
 \! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
 --end_ignore
 
+
+------------ workfile_limit_per_segment leak check during ERROR -------------------
+
+drop table if exists testsisc;
+drop table if exists foo;
+
+create table testsisc (i1 int, i2 int, i3 int, i4 int);
+insert into testsisc select i, i % 1000, i % 100000, i % 75 from generate_series(0,199999) i;
+create table foo (i int, j int);
+
+set statement_mem=1024; -- 1mb for 3 segment to get leak.
+set gp_resqueue_print_operator_memory_limits=on;
+set gp_enable_mk_sort=on;
+set gp_cte_sharing=on;
+
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
+\! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
+--end_ignore
+
+-- LEAK in UPDATE: update with sisc xslice sort
+update foo set j=m.cc1 from (
+  with ctesisc as
+    (select * from testsisc order by i2)
+  select t1.i1 as cc1, t1.i2 as cc2
+  from ctesisc as t1, ctesisc as t2
+  where t1.i1 = t2.i2 ) as m;
+
+select max(bytes) from gp_toolkit.gp_workfile_mgr_used_diskspace;
+
+-- reset the segspace value
+-- start_ignore
+select count(*) > 0 from segspace_view_gp_workfile_mgr_reset_segspace;
+-- end_ignore
+
+drop table if exists testsisc;
+drop table if exists foo; 
+create table testsisc (i1 int, i2 int, i3 int, i4 int) WITH (appendonly=true, compresstype=zlib) ;
+insert into testsisc select i, i % 1000, i % 100000, i % 75 from generate_series(0,199999) i;
+create table foo (i int, j int) WITH (appendonly=true, compresstype=zlib);
+insert into foo select i, i % 1000 from generate_series(0,199999) i;
+
+-- LEAK in DELETE with APPEND ONLY tables
+delete from testsisc using (
+  select *
+  from foo
+) src  where testsisc.i1 = src.i;
+
+select max(bytes) from gp_toolkit.gp_workfile_mgr_used_diskspace;
+
+-- Disable faultinjectors
+--start_ignore
+\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
+--end_ignore
+
+reset statement_mem;
+reset gp_resqueue_print_operator_memory_limits;
+reset gp_enable_mk_sort;
+reset gp_cte_sharing;
+
+
 DROP VIEW IF EXISTS segspace_view_gp_workfile_mgr_reset_segspace;
 DROP FUNCTION IF EXISTS segspace_view_gp_workfile_mgr_reset_segspace_f();
