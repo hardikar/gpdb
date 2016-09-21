@@ -1,35 +1,11 @@
 --
 -- Tests the spill files disk space accounting mechanism
--- 
+--
 
 -- create view to read the segspace value
 
-DROP VIEW IF EXISTS segspace_view_gp_workfile_segspace;
-DROP FUNCTION IF EXISTS segspace_view_gp_workfile_segspace_f();
-
 DROP VIEW IF EXISTS segspace_view_gp_workfile_mgr_reset_segspace;
 DROP FUNCTION IF EXISTS segspace_view_gp_workfile_mgr_reset_segspace_f();
-
-
-CREATE FUNCTION segspace_view_gp_workfile_segspace_f()
-RETURNS SETOF record
-AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_used_diskspace'
-LANGUAGE C IMMUTABLE;
-
-
-CREATE VIEW segspace_view_gp_workfile_segspace AS
-SELECT C.*
-FROM gp_toolkit.__gp_localid, segspace_view_gp_workfile_segspace_f() AS C (
-segid int,
-size bigint
-)
-UNION ALL
-SELECT C.*
-FROM gp_toolkit.__gp_masterid, segspace_view_gp_workfile_segspace_f() AS C (
-segid int,
-size bigint
-);
-
 
 -- create helper UDF to reset the segpsace variable
 CREATE FUNCTION segspace_view_gp_workfile_mgr_reset_segspace_f()
@@ -41,7 +17,6 @@ CREATE VIEW segspace_view_gp_workfile_mgr_reset_segspace AS
 SELECT * FROM gp_toolkit.__gp_localid, segspace_view_gp_workfile_mgr_reset_segspace_f()
 UNION ALL
 SELECT * FROM gp_toolkit.__gp_masterid, segspace_view_gp_workfile_mgr_reset_segspace_f();
-
 
 --- create and populate the table
 
@@ -90,7 +65,7 @@ rollback;
 
 -- check used segspace after test
 reset statement_mem;
-select max(size) from segspace_view_gp_workfile_segspace;
+select max(bytes) from gp_toolkit.gp_workfile_mgr_used_diskspace;
 
 
 ------------ Interrupting INSERT INTO query that spills -------------------
@@ -118,7 +93,7 @@ rollback;
 
 -- check used segspace after test
 reset statement_mem;
-select max(size) from segspace_view_gp_workfile_segspace;
+select max(bytes) from gp_toolkit.gp_workfile_mgr_used_diskspace;
 
 --start_ignore
 drop table if exists segspace_t1_created;
@@ -147,9 +122,12 @@ rollback;
 
 -- check used segspace after test
 reset statement_mem;
-select max(size) from segspace_view_gp_workfile_segspace;
+select max(bytes) from gp_toolkit.gp_workfile_mgr_used_diskspace;
 
 -- Disable faultinjectors
 --start_ignore
 \! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
 --end_ignore
+
+DROP VIEW IF EXISTS segspace_view_gp_workfile_mgr_reset_segspace;
+DROP FUNCTION IF EXISTS segspace_view_gp_workfile_mgr_reset_segspace_f();
