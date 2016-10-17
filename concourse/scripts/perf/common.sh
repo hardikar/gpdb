@@ -26,15 +26,6 @@ remote_push() {
   rsync -v --progress -e "ssh -i ${KEYFILE}" $FROM ${SSH_USER}@${IP}:$TO
 }
 
-remote_pull() {
-  local IP=$1
-  local FROM=$2
-  local TO=$3
-  local KEYFILE="${AWS_KEYPAIR}.pem"
-
-  rsync -v --progress -e "ssh -i ${KEYFILE}" ${SSH_USER}@${IP}:$FROM $TO
-}
-
 remote_run() {
   local IP="$1"
   local KEYFILE="${AWS_KEYPAIR}.pem"
