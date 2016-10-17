@@ -73,7 +73,7 @@ jobs:
       passed: [provision]
       trigger: true
     - get: installer_rhel5_gpdb_rc
-  - task: setup_gpdb_with_installer
+  - task: setup_gpdb_remote_with_installer
     input_mapping:
       gpdb_installer: installer_rhel5_gpdb_rc
     on_failure: *unprovision
