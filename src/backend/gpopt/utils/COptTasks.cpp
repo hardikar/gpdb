@@ -1670,7 +1670,7 @@ COptTasks::PplstmtOptimize
 	octx->m_fGeneratePlStmt= true;
 	GPOS_TRY
 	{
-		Execute(&PvOptimizeTask, &octx);
+		Execute(&PvOptimizeTask, octx);
 	}
 	GPOS_CATCH_EX(ex)
 	{
