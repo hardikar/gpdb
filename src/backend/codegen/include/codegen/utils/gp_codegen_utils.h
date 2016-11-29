@@ -308,20 +308,21 @@ class GpCodegenUtils : public CodegenUtils {
     return llvm_casted_value;
   }
 
-  // TODO : Move to .c file
-  llvm::Value* CreatePalloc(Size size, const char* file, const char *func, int line) {
-    // TODO Is there something about __malloc__  in LLVM ??
-    llvm::Function* llvm_memory_context_alloc_impl =
-        GetOrRegisterExternalFunction(MemoryContextAllocImpl, "MemoryContextAllocImpl");
-    llvm::Value* llvm_current_memory_context =
-        ir_builder()->CreateLoad(GetConstant(&CurrentMemoryContext));
-    return ir_builder()->CreateCall(llvm_memory_context_alloc_impl, {
-        llvm_current_memory_context,
-        GetConstant<Size>(size),
-        GetConstant(file),
-        GetConstant(func),
-        GetConstant(line)});
-  }
+  /**
+   * @brief Create instructions to call MemoryContextAllocImpl in the
+   *        CurrentMemoryContext. Use the macro EXPAND_CREATE_PALLOC to get the
+   *        line number, function name and file name.
+   *
+   * @param size  Size to allocate in the CurrentMemoryContext
+   * @param file  File name
+   * @param func  Function name
+   * @param line  Line number
+   * @return LLVM::Value pointer to the allocated memory
+   */
+  llvm::Value* CreatePalloc(Size size,
+                            const char* file,
+                            const char *func,
+                            int line);
 
   /**
    * @brief Create a Cast instruction to convert given llvm::Value of any type
