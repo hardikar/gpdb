@@ -152,6 +152,7 @@ add_library(gpcodegen SHARED
             expr_tree_generator.cc
             op_expr_tree_generator.cc
             pg_date_func_generator.cc
+            pg_numeric_func_generator.cc
             var_expr_tree_generator.cc
             advance_aggregates_codegen.cc
 

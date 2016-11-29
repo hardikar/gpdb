@@ -173,6 +173,13 @@ slot_getattr_regular(struct TupleTableSlot *slot, int attnum, bool *isnull);
 int
 att_align_nominal_regular(int cur_offset, char attalign);
 
+
+void
+set_varsize(void* ptr, size_t len);
+
+uint32
+varsize(void* ptr);
+
 /*
  * returns the pointer to the ExecVariableList
  */

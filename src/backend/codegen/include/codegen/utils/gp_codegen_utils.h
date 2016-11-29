@@ -23,6 +23,8 @@
 
 extern "C" {
 #include "utils/elog.h"
+#include "utils/palloc.h"
+#include "nodes/memnodes.h"
 }
 
 #define EXPAND_CREATE_ELOG(codegen_utils, elevel, ...)  \
@@ -33,6 +35,9 @@ extern "C" {
   codegen_utils->CreateEreport(__FILE__, __LINE__, PG_FUNCNAME_MACRO, \
                                TEXTDOMAIN, elevel, ecode, errmsg_fmt, \
                                ##__VA_ARGS__)
+
+#define EXPAND_CREATE_PALLOC(codegen_utils, sz) \
+  codegen_utils->CreatePalloc(sz, __FILE__, PG_FUNCNAME_MACRO, __LINE__)
 
 namespace gpcodegen {
 
@@ -301,6 +306,21 @@ class GpCodegenUtils : public CodegenUtils {
     }
 
     return llvm_casted_value;
+  }
+
+  // TODO : Move to .c file
+  llvm::Value* CreatePalloc(Size size, const char* file, const char *func, int line) {
+    // TODO Is there something about __malloc__  in LLVM ??
+    llvm::Function* llvm_memory_context_alloc_impl =
+        GetOrRegisterExternalFunction(MemoryContextAllocImpl, "MemoryContextAllocImpl");
+    llvm::Value* llvm_current_memory_context =
+        ir_builder()->CreateLoad(GetConstant(&CurrentMemoryContext));
+    return ir_builder()->CreateCall(llvm_memory_context_alloc_impl, {
+        llvm_current_memory_context,
+        GetConstant<Size>(size),
+        GetConstant(file),
+        GetConstant(func),
+        GetConstant(line)});
   }
 
   /**
