@@ -192,7 +192,7 @@ bool ClangCompiler::CompileCppSource(const llvm::Twine& source_code,
         new CompileModuleAction(&(code_generator_->context_),
                                 &compiled_module),
         source_code,
-        {"-std=c++11", "-Wno-c99-extensions"});
+        {"-std=c++11", "-Wno-c99-extensions", "-I/opt/llvm-3.7.1-debug/bin/../lib/clang/3.7.1/include", "-I/Users/shardikar/workspace/codegen/gpdb/build/include/postgresql/server/"});
   }
 
   if (run_ok) {

@@ -164,6 +164,7 @@ llvm::Value* __c_to_llvm(gpcodegen::CodegenUtils* codegen_utils,
 
 
   const llvm::Twine& full_code = llvm::Twine("extern \"C\" {\n") +
+                                 "#include <postgres.h>\n" +
                                  header +
                                  "\n{\n" +
                                  source_code +
@@ -188,6 +189,8 @@ llvm::Value* __c_to_llvm(gpcodegen::CodegenUtils* codegen_utils,
   std::cout << "================" << std::endl << std::endl;
   return return_value;
 }
+#define STR_EXPAND(tok) #tok
+#define STR(tok) STR_EXPAND(tok)
 
 TEST_F(Test, TestMain) {
       llvm::Function *fn = codegen_utils_->CreateFunction<FnType>("fn");
@@ -205,7 +208,7 @@ TEST_F(Test, TestMain) {
 
       llvm::Value *ret = __c_to_llvm(
           codegen_utils_.get(),
-          "return foo + 1;",
+          "return VARSIZE(foo) ;",
           codegen_utils_->GetType<int>(),
           {{"foo", arg}});
       irb->CreateRet(ret);
