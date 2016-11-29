@@ -380,6 +380,9 @@ if(EXISTS ${TXT_OBJFILE})
     add_cmockery_gtest(codegen_utils_unittest.t
         tests/codegen_utils_unittest.cc
     )
+    add_cmockery_gtest(gp_codegen_utils_unittest.t
+        tests/gp_codegen_utils_unittest.cc
+    )
 endif()
 
 

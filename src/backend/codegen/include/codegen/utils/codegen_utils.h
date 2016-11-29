@@ -1660,7 +1660,6 @@ class CastMaker<
 };
 
 // Partial specialization for any signed integer to 64-bit float
-// TODO Write unit tests for this
 template <typename SignedIntType>
 class CastMaker<
     double,
@@ -1690,7 +1689,6 @@ class CastMaker<
 };
 
 // Partial specialization for any unsigned integer to 64-bit float
-// TODO Write unit tests for this
 template <typename UnsignedIntType>
 class CastMaker<
     double,
