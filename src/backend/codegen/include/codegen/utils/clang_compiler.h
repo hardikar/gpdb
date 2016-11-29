@@ -159,6 +159,49 @@ class ClangCompiler {
   DISALLOW_COPY_AND_ASSIGN(ClangCompiler);
 };
 
+// Map a basic scalar type from LLVM to C++.
+std::string ScalarCppTypeFromLLVMType(const llvm::Type& llvm_type) {
+  switch (llvm_type.getTypeID()) {
+    case llvm::Type::VoidTyID:
+      return "void";
+    case llvm::Type::FloatTyID:
+      return "float";
+    case llvm::Type::DoubleTyID:
+      return "double";
+    case llvm::Type::IntegerTyID: {
+      const unsigned bit_width
+          = static_cast<const llvm::IntegerType&>(llvm_type).getBitWidth();
+      switch (bit_width) {
+        case 1:
+          return "bool";
+        case 8:
+          return "char";
+        case 16:
+          return "short";
+        case 32:
+          return "int";
+        case 64:
+          return (sizeof(long) == 8)  // NOLINT(runtime/int)
+                 ? "long" : "long long";
+        default:
+          std::fprintf(
+              stderr,
+              "Unexpected bit width (=%u) for llvm::IntegerType in "
+                  "gpcodegen::ClangCompiler::CppTypeFromAnnotatedType\n",
+              bit_width);
+          std::exit(1);
+      }
+    }
+    default: {
+      std::fprintf(
+          stderr,
+          "FATAL ERROR: Unhandled llvm::Type::TypeID in "
+              "gpcodegen::ClangCompiler::CppTypeFromAnnotatedType\n");
+      std::exit(1);
+    }
+  }
+}
+
 /** @} */
 
 // ----------------------------------------------------------------------------

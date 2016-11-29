@@ -25,6 +25,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <map>
 
 #include "gtest/gtest.h"
 
@@ -65,6 +66,8 @@ extern "C" {
 #include "codegen/base_codegen.h"
 
 #include <iostream>
+#include <codegen/utils/clang_compiler.h>
+#include "llvm/Support/raw_ostream.h"
 
 using gpcodegen::GpCodegenUtils;
 namespace gpcodegen {
@@ -110,7 +113,6 @@ void print_instruction(llvm::Instruction* inst) {
       std::cout << "llvm::Value* " << name << " = ";
       std::cout << "CreateAdd(";
       for (auto o = inst->op_begin(), e = inst->op_end(); o != e; o++) {
-        o->get()
 
       }
       std::cout << ")" << std::endl;
@@ -126,6 +128,67 @@ void print_instruction(llvm::Instruction* inst) {
   //std::cout<<"llvm::Value* "
 }
 
+llvm::Value* __c_to_llvm(gpcodegen::CodegenUtils* codegen_utils,
+                         const llvm::Twine& source_code,
+                         llvm::Type* return_type,
+                         const std::map<std::string, llvm::Value*>& args) {
+  std::unique_ptr<gpcodegen::ClangCompiler> clang_compiler;
+  clang_compiler.reset(new gpcodegen::ClangCompiler(codegen_utils));
+
+  std::string function_name = "func"; // TODO: auto generate this
+  std::vector<llvm::Type*> argument_types;
+  std::vector<llvm::Value*> arguments;
+
+  std::string header;
+  header.append(ScalarCppTypeFromLLVMType(*return_type));
+  header.push_back(' ');
+  header.append(function_name);
+  header.push_back('(');
+
+  for(auto it = args.begin(), end = args.end(); it != end; ) {
+    const std::string& name = it->first;
+    llvm::Value* value = it->second;
+    const std::string& type = ScalarCppTypeFromLLVMType(*value->getType());
+    argument_types.push_back(value->getType());
+    arguments.push_back(value);
+
+    header.append(type);
+    header.push_back(' ');
+    header.append(name);
+
+    if (++it != end) {
+      header.append(", ");
+    }
+  }
+  header.push_back(')');
+
+
+  const llvm::Twine& full_code = llvm::Twine("extern \"C\" {\n") +
+                                 header +
+                                 "\n{\n" +
+                                 source_code +
+                                 "\n}\n}\n";
+  llvm::FunctionType* function_type =
+      llvm::FunctionType::get(return_type,
+                              argument_types,
+                              false /* is_var_arg */);
+
+  clang_compiler->CompileCppSource(full_code);
+  llvm::Function* function =
+      llvm::Function::Create(function_type,
+                             llvm::GlobalValue::ExternalLinkage,
+                             function_name,
+                             codegen_utils->module());
+  function->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+
+  llvm::Value* return_value =
+      codegen_utils->ir_builder()->CreateCall(function, arguments);
+
+  std::cout << full_code.str();
+  std::cout << "================" << std::endl << std::endl;
+  return return_value;
+}
+
 TEST_F(Test, TestMain) {
       llvm::Function *fn = codegen_utils_->CreateFunction<FnType>("fn");
       auto irb = codegen_utils_->ir_builder();
@@ -135,21 +198,31 @@ TEST_F(Test, TestMain) {
           "entry_block", fn);
       irb->SetInsertPoint(entry_block);
       llvm::Value *arg = ArgumentByPosition(fn, 0);
-      llvm::Value *ret = irb->CreateAdd(arg, codegen_utils_->GetConstant(1));
+
+      //for (llvm::inst_iterator I = llvm::inst_begin(fn), E = llvm::inst_end(fn); I != E; ++I) {
+      //  print_instruction(&*I);
+      //}
+
+      llvm::Value *ret = __c_to_llvm(
+          codegen_utils_.get(),
+          "return foo + 1;",
+          codegen_utils_->GetType<int>(),
+          {{"foo", arg}});
       irb->CreateRet(ret);
 
-      codegen_utils_->module()->dump();
+      std::string dump;
+      llvm::raw_string_ostream os(dump);
 
-      for (llvm::inst_iterator I = llvm::inst_begin(fn), E = llvm::inst_end(fn); I != E; ++I) {
-        print_instruction(&*I);
-      }
+      codegen_utils_->PrintUnderlyingModules(os);
+      os.flush();
+
+      std::cout << dump << std::endl;
 
 
+      EXPECT_TRUE(codegen_utils_->PrepareForExecution(
+          CodegenUtils::OptimizationLevel::kNone, true));
 
-      //EXPECT_TRUE(codegen_utils_->PrepareForExecution(
-      //    CodegenUtils::OptimizationLevel::kNone, true));
-
-      //EXPECT_EQ(5, codegen_utils_->GetFunctionPointer<FnType>("fn") (4));
+      EXPECT_EQ(5, codegen_utils_->GetFunctionPointer<FnType>("fn") (4));
       EXPECT_TRUE(true);
 }
 
