@@ -28,6 +28,41 @@
 
 # ... bunch of stuff removed here ...
 
+# PGAC_PROG_NM - find the path to a BSD-compatible name lister
+AC_DEFUN(PGAC_PROG_NM,
+[AC_MSG_CHECKING([for BSD-compatible nm])
+AC_CACHE_VAL(ac_cv_path_NM,
+[if test -n "$NM"; then
+  # Let the user override the test.
+  ac_cv_path_NM="$NM"
+else
+  IFS="${IFS=   }"; ac_save_ifs="$IFS"; IFS="${IFS}${PATH_SEPARATOR-:}"
+  for ac_dir in $PATH /usr/ccs/bin /usr/ucb /bin; do
+    test -z "$ac_dir" && ac_dir=.
+    if test -f $ac_dir/nm || test -f $ac_dir/nm$ac_exeext ; then
+      # Check to see if the nm accepts a BSD-compat flag.
+      # Adding the `sed 1q' prevents false positives on HP-UX, which says:
+      #   nm: unknown option "B" ignored
+      if ($ac_dir/nm -B /dev/null 2>&1 | sed '1q'; exit 0) | egrep /dev/null >/dev/null; then
+  ac_cv_path_NM="$ac_dir/nm -B"
+  break
+      elif ($ac_dir/nm -p /dev/null 2>&1 | sed '1q'; exit 0) | egrep /dev/null >/dev/null; then
+  ac_cv_path_NM="$ac_dir/nm -p"
+  break
+      else
+  ac_cv_path_NM=${ac_cv_path_NM="$ac_dir/nm"} # keep the first match, but
+  continue # so that we can try to find one that supports BSD flags
+      fi
+    fi
+  done
+  IFS="$ac_save_ifs"
+  test -z "$ac_cv_path_NM" && ac_cv_path_NM=nm
+fi])
+NM="$ac_cv_path_NM"
+AC_MSG_RESULT([$NM])
+])
+
+
 # PGAC_PROG_LD - find the path to the GNU or non-GNU linker
 AC_DEFUN([PGAC_PROG_LD],
 [AC_ARG_WITH(gnu-ld,

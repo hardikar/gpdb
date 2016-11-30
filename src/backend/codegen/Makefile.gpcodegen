@@ -1,0 +1,57 @@
+#-------------------------------------------------------------------------
+#
+# Makefile--
+#    Makefile for libgpcodegen shared library
+#
+#-------------------------------------------------------------------------
+
+subdir = src/backend/codegen
+top_builddir = ../../..
+include $(top_builddir)/src/Makefile.global
+
+override CXXFLAGS := -I $(top_builddir)/$(subdir)/include $(CXXFLAGS)
+override CXXFLAGS := $(CODEGEN_CXXFLAGS) $(CXXFLAGS)
+
+# Shared library parameters for libgpcodegen
+NAME=gpcodegen
+SO_MAJOR_VERSION= 1
+SO_MINOR_VERSION= 0
+
+override COMPILER := $(CXX) $(CXXFLAGS)
+override SHLIB_LINK := ${CODEGEN_LIBS} 
+#  By default, the Darwin linker throws an error if there are any undefined
+#  references in a dynamic library. Instead, it should wait till it's loaded
+#  by the postgres binary.
+ifeq ($(PORTNAME), darwin)
+override SHLIB_LINK := ${SHLIB_LINK} -Wl,-undefined -Wl,dynamic_lookup
+endif
+rpath =
+
+# Objects that go into libgpcodegen.so
+GPCODEGEN_OBJS = utils/clang_compiler.o \
+            utils/codegen_utils.o \
+            utils/gp_codegen_utils.o \
+            utils/gp_assert.o \
+            codegen_interface.o \
+            codegen_manager.o \
+            const_expr_tree_generator.o \
+            exec_variable_list_codegen.o \
+            slot_getattr_codegen.o \
+            exec_eval_expr_codegen.o \
+            expr_tree_generator.o \
+            op_expr_tree_generator.o \
+            pg_date_func_generator.o \
+            pg_numeric_func_generator.o \
+            var_expr_tree_generator.o \
+            advance_aggregates_codegen.o
+
+OBJS = ${GPCODEGEN_OBJS}
+
+all: all-shared-lib
+include $(top_builddir)/src/Makefile.shlib
+
+install: install-lib
+
+clean: clean-lib
+	rm -rf ${GPCODEGEN_OBJS}
+

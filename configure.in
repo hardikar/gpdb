@@ -319,6 +319,7 @@ elif test "$enable_coverage" = yes; then
   : # no optimization by default
 elif test "$GCC" = yes; then
   CFLAGS="-O3"
+  CXXFLAGS="-O3"
 else
   # if the user selected debug mode, don't use -O
   if test "$enable_debug" != yes; then
@@ -626,24 +627,131 @@ PGAC_ARG_BOOL(enable, codegen, no, [  --enable-codegen        enable code genera
 AC_MSG_RESULT([checking whether to build with codegen... $enable_codegen])
 AC_SUBST(enable_codegen)
 
-PGAC_ARG_REQ(with, codegen-prefix,
-             [  --with-codegen-prefix="PATH;PATH"  semicolon separated prefix search path for LLVM and Clang],
+PGAC_ARG_REQ(with, llvm-prefix,
+             [  --with-llvm-prefix=PATH  Path to directory containing the LLVM installation.],
              [AS_IF([test "${enable_codegen}" = no],
-					[AC_MSG_WARN([--with-codegen-prefix used without --enable-codegen])])])
+					[AC_MSG_WARN([--with-llvm-prefix used without --enable-codegen])])])
 
 AS_IF([test "$enable_codegen" = yes],
 [ # then
-   GPAC_PATH_CMAKE
+  AC_LANG_PUSH([C++])
 
-   cd src/backend/codegen
-   AS_IF([test "${prefix}" = NONE], [prefix=${ac_default_prefix}])
-   AS_IF([test "${enable_debug}" = yes], [build_type="Debug"], [build_type="Release"])
+  # Look for flags to enable C++11 support.
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-std=c++11])
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-Wall])
+  # Suppress warnings about C99 extensions that should be supported in C++11 mode.
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-Wno-c99-extensions])
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-Wno-conversion-null])
 
-   CMAKE_CMD="${CMAKE} -DCMAKE_PREFIX_PATH="${with_codegen_prefix}" -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
-   echo "Executing cmake command : ${CMAKE_CMD}"
-   AS_IF([${CMAKE_CMD}], [], [AC_MSG_ERROR(['error while configuring codegen.'])])
-   cd -
+  # Suppress warnings about deprecated keyword register 
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-Wno-deprecated-register])
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-Wno-zero-length-array])
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-Wno-gnu-zero-variadic-macro-arguments])
+
+  # Check for POSIX I/O syscalls needed by TemporaryFile.
+  AC_CHECK_DECLS(mkstemp, [], [], [#include <stdlib.h>])
+  AC_CHECK_DECLS(write, [], [], [#include <unistd.h>])
+  AC_CHECK_DECLS(fsync, [], [], [#include <unistd.h>])
+  if test "x$ac_cv_have_decl_mkstemp" != xyes || 
+     test "x$ac_cv_have_decl_write" != xyes || 
+     test "x$ac_cv_have_decl_fsync" != xyes; then
+    AC_MSG_WARN("Missing required POSIX I/O syscalls for temporary files. Line-by-line DEBUG information for generated code will not be available.")
+  fi
+
+  if test "x$enable_debug" = xyes; then
+    AC_DEFINE([CODEGEN_DEBUG])
+  fi
+
+  # Check that LLVM is present
+  if test "x${with_llvm_prefix}" != x; then
+    AC_PATH_TOOL(LLVM_CONFIG, [llvm-config], [no], [${with_llvm_prefix}:${with_llvm_prefix}/bin])
+  else
+    AC_PATH_TOOL(LLVM_CONFIG, [llvm-config], [no])
+  fi
+  if test "x${LLVM_CONFIG}" = xno; then
+    AC_MSG_ERROR([Required binary llvm-config not found! Set --with-llvm-config=$LLVM_CONFIG_PATH in configure.])
+  fi
+
+  # Print the LLVM version
+  LLVM_VERSION=$(${LLVM_CONFIG} --version)
+  AC_MSG_NOTICE([checking for llvm version... found $LLVM_VERSION])
+
+
+  # TODO: Check for monolithic Clang
+  # TODO: Use .a libraries to bundle in clang
+  CLANG_LIBS="-lclangCodeGen \
+              -lclangFrontend \
+              -lclangTooling \
+              -lclangAST \
+              -lclangBasic \
+              -lclangLex \
+              -lclangDriver \
+              -lclangEdit \
+              -lclangParse \
+              -lclangSema \
+              -lclangSerialization \
+              -lclangASTMatchers \
+              -lclangRewrite \
+              -lclangToolingCore \
+              -lclangAnalysis"
+  LLVM_LIBS="$(${LLVM_CONFIG} --libs all) "
+
+  # Set up CODEGEN flags and library path
+  CODEGEN_CXXFLAGS+="$(${LLVM_CONFIG} --cxxflags) "
+  CODEGEN_LIBS="-L$(${LLVM_CONFIG} --libdir) "
+
+  # TODO : This is a GCC thing...
+  if test "x${template}" != "xdarwin"; then
+    CODEGEN_LIBS+="-Wl,--start-group ${CLANG_LIBS} -Wl,--end-group "
+    CODEGEN_LIBS+="-Wl,--start-group ${LLVM_LIBS} -Wl,--end-group "
+  else
+    CODEGEN_LIBS+="${CLANG_LIBS} "
+    CODEGEN_LIBS+="${LLVM_LIBS} "
+  fi
+  CODEGEN_LIBS+="$(llvm-config --system-libs)"
+
+  # Override assert() functionality in DEBUG builds
+  if test "x${enable_debug}" = "xyes"; then
+    # Since we want to override assert handling in GPDB, we need to make sure
+    # that LLVM and Clang libraries we depend on haven't done that already
+    # If they do, we simply report a WARNING, and skip assert overriding in GPDB.
+    PGAC_PROG_NM
+
+    if test "x${template}" = "xdarwin"; then
+      ASSERT_FUNCTION_TO_OVERRIDE="___assert_rtn"
+    elif test "x${template}" = "xlinux"; then
+      ASSERT_FUNCTION_TO_OVERRIDE="___assert_fail"
+    fi
+
+    if test x"${ASSERT_FUNCTION_TO_OVERRIDE}" != x; then
+      AC_MSG_CHECKING([checking if ${ASSERT_FUNCTION_TO_OVERRIDE} is redefined by LLVM])
+      if $NM -U $(${LLVM_CONFIG} --libfiles support) | grep "${ASSERT_FUNCTION_TO_OVERRIDE}" > /dev/null ; then 
+        LLVM_ASSERT_REDEFINED=yes
+      else
+        LLVM_ASSERT_REDEFINED=no
+      fi
+      AC_MSG_RESULT([${LLVM_ASSERT_REDEFINED}])
+      if test x"${LLVM_ASSERT_REDEFINED}" == "xyes"; then
+        AC_MSG_NOTICE([Found ${ASSERT_FUNCTION_TO_OVERRIDE} redefined in LLVM libraries. Disabling GPDB codegen assert handling! To enable this, rebuild LLVM libraries with -DLLVM_ENABLE_CRASH_OVERRIDES=off.])
+      fi
+    fi
+  fi
+
+  # Sanity check for certain LLVM headers
+  old_flags=$CPPFLAGS
+  CPPFLAGS=${CODEGEN_CXXFLAGS}
+  AC_CHECK_HEADERS(llvm/IR/Instruction.h,  [], [AC_MSG_ERROR([llvm/Instruction.h header file is required for codegen build.])])
+  AC_CHECK_HEADERS(llvm/IR/Value.h,  [], [AC_MSG_ERROR([llvm/Instruction.h header file is required for codegen build.])])
+  CPPFLAGS=$old_flags 
+
+  AC_LANG_POP([C++])
+
+  # Notice out the configuration
+  AC_MSG_NOTICE([using CODEGEN_CXXFLAGS=${CODEGEN_CXXFLAGS}])
+  AC_MSG_NOTICE([using CODEGEN_LIBS=${CODEGEN_LIBS}])
 ]) # fi
+AC_SUBST(CODEGEN_CXXFLAGS)
+AC_SUBST(CODEGEN_LIBS)
 
 #
 # --enable-snmp enables snmp mib and trap/inform

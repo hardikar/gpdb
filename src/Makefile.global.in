@@ -217,6 +217,8 @@ have_docbook	= @have_docbook@
 DOCBOOKSTYLE	= @DOCBOOKSTYLE@
 COLLATEINDEX	= @COLLATEINDEX@
 
+CODEGEN_CXXFLAGS = @CODEGEN_CXXFLAGS@
+CODEGEN_LIBS = @CODEGEN_LIBS@
 
 ##########################################################################
 #

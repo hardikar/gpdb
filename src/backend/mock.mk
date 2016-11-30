@@ -36,10 +36,8 @@ ifeq ($(enable_orca),yes)
 MOCK_OBJS+=$(top_srcdir)/src/test/unit/mock/gpopt_mock.o
 endif
 
-# No test programs in GPDB currently exercise codegen, so
-# mock that instead of linking with the real library.
 ifeq ($(enable_codegen),yes)
-MOCK_OBJS+=$(top_srcdir)/src/test/unit/mock/gpcodegen_mock.o
+LDFLAGS+="-L$(top_srcdir)/src/backend/codegen -lgpcodegen"
 endif
 
 # $(OBJFILES) contains %/objfiles.txt, because src/backend/Makefile will
