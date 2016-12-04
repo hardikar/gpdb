@@ -14,7 +14,7 @@
 #include "gtest/gtest.h"
 
 extern "C" {
-#include "postgres.h"
+#include "postgres.h"  // NOLINT(build/include)
 #undef newNode  // undef newNode so it doesn't have name collision with llvm
 #include "utils/palloc.h"
 #include "utils/memutils.h"

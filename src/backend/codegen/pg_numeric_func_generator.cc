@@ -16,12 +16,13 @@ using gpcodegen::GpCodegenUtils;
 using gpcodegen::PGNumericFuncGenerator;
 using gpcodegen::PGFuncGeneratorInfo;
 
-bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(gpcodegen::GpCodegenUtils* codegen_utils,
-                                                    const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
-                                                    llvm::Value** llvm_out_value) {
-  // TODO: Can we figure if we need to detoast during generation?
-  llvm::Function* llvm_pg_detoast_datum =
-      codegen_utils->GetOrRegisterExternalFunction(pg_detoast_datum, "pg_detoast_datum");
+bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(
+    gpcodegen::GpCodegenUtils* codegen_utils,
+    const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
+    llvm::Value** llvm_out_value) {
+  // TODO(nikos): Can we figure if we need to detoast during generation?
+  llvm::Function* llvm_pg_detoast_datum = codegen_utils->
+      GetOrRegisterExternalFunction(pg_detoast_datum, "pg_detoast_datum");
 
   auto irb = codegen_utils->ir_builder();
   llvm::Function* current_function = irb->GetInsertBlock()->getParent();
@@ -37,7 +38,8 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(gpcodegen::GpCodegenUtils* c
   llvm::Value* llvm_varlena_null_size_cond;
   CreateVarlenSizeCheck(codegen_utils,
                         llvm_in_tr1,
-                        codegen_utils->GetConstant<uint32>(sizeof(IntFloatAvgTransdata)),
+                        codegen_utils->
+                        GetConstant<uint32>(sizeof(IntFloatAvgTransdata)),
                         &llvm_varlena_null_size_cond);
 
   llvm::BasicBlock* update_block = codegen_utils->CreateBasicBlock(
@@ -54,10 +56,10 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(gpcodegen::GpCodegenUtils* c
   llvm::Value* llvm_tr0_count_ptr =
       codegen_utils->GetPointerToMember(llvm_tr0, &IntFloatAvgTransdata::count);
 
-  llvm::Value* llvm_tr1_sum_ptr =
-      codegen_utils->GetPointerToMember(llvm_in_tr1, &IntFloatAvgTransdata::sum);
-  llvm::Value* llvm_tr1_count_ptr =
-      codegen_utils->GetPointerToMember(llvm_in_tr1, &IntFloatAvgTransdata::count);
+  llvm::Value* llvm_tr1_sum_ptr = codegen_utils->
+      GetPointerToMember(llvm_in_tr1, &IntFloatAvgTransdata::sum);
+  llvm::Value* llvm_tr1_count_ptr = codegen_utils->
+      GetPointerToMember(llvm_in_tr1, &IntFloatAvgTransdata::count);
 
   irb->CreateStore(irb->CreateFAdd(
       irb->CreateLoad(llvm_tr0_sum_ptr),
@@ -75,10 +77,11 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(gpcodegen::GpCodegenUtils* c
   return true;
 }
 
-void PGNumericFuncGenerator::CreateVarlenSizeCheck(gpcodegen::GpCodegenUtils* codegen_utils,
-                                                   llvm::Value* llvm_ptr,
-                                                   llvm::Value* llvm_size,
-                                                   llvm::Value** llvm_out_cond) {
+void PGNumericFuncGenerator::CreateVarlenSizeCheck(
+    gpcodegen::GpCodegenUtils* codegen_utils,
+    llvm::Value* llvm_ptr,
+    llvm::Value* llvm_size,
+    llvm::Value** llvm_out_cond) {
 
   llvm::Function* llvm_varsize =
       codegen_utils->GetOrRegisterExternalFunction(varsize, "varsize");
@@ -92,9 +95,10 @@ void PGNumericFuncGenerator::CreateVarlenSizeCheck(gpcodegen::GpCodegenUtils* co
           llvm_size));
 }
 
-void PGNumericFuncGenerator::CreatePallocTransdata(gpcodegen::GpCodegenUtils* codegen_utils,
-                                                   llvm::Value* llvm_in_transdata_ptr,
-                                                   llvm::Value** llvm_out_trandata_ptr) {
+void PGNumericFuncGenerator::CreatePallocTransdata(
+    gpcodegen::GpCodegenUtils* codegen_utils,
+    llvm::Value* llvm_in_transdata_ptr,
+    llvm::Value** llvm_out_trandata_ptr) {
 
   llvm::Function* llvm_set_varsize =
       codegen_utils->GetOrRegisterExternalFunction(set_varsize, "set_varsize");
@@ -103,16 +107,17 @@ void PGNumericFuncGenerator::CreatePallocTransdata(gpcodegen::GpCodegenUtils* co
 
   llvm::BasicBlock* entry_block = irb->GetInsertBlock();
   llvm::Function* current_function = entry_block->getParent();
-  llvm::BasicBlock* transdata_palloc_block =
-      codegen_utils->CreateBasicBlock("transdata_palloc_block", current_function);
-  llvm::BasicBlock* end_transdata_palloc_block =
-      codegen_utils->CreateBasicBlock("end_transdata_palloc_block", current_function);
+  llvm::BasicBlock* transdata_palloc_block = codegen_utils->
+      CreateBasicBlock("transdata_palloc_block", current_function);
+  llvm::BasicBlock* end_transdata_palloc_block = codegen_utils->
+      CreateBasicBlock("end_transdata_palloc_block", current_function);
 
 
   llvm::Value* palloc_cond;
   CreateVarlenSizeCheck(codegen_utils,
                         llvm_in_transdata_ptr,
-                        codegen_utils->GetConstant<uint32>(sizeof(IntFloatAvgTransdata)),
+                        codegen_utils->GetConstant<uint32>(
+                            sizeof(IntFloatAvgTransdata)),
                         &palloc_cond);
   irb->CreateCondBr(palloc_cond,
                     transdata_palloc_block,
@@ -125,19 +130,23 @@ void PGNumericFuncGenerator::CreatePallocTransdata(gpcodegen::GpCodegenUtils* co
       llvm_palloc_transdata_ptr,
       codegen_utils->GetConstant(sizeof(IntFloatAvgTransdata))});
   irb->CreateStore(codegen_utils->GetConstant<float8>(0),
-                   codegen_utils->GetPointerToMember(llvm_palloc_transdata_ptr,
-                                                     &IntFloatAvgTransdata::sum));
+                   codegen_utils->GetPointerToMember(
+                       llvm_palloc_transdata_ptr, &IntFloatAvgTransdata::sum));
   irb->CreateStore(codegen_utils->GetConstant<int64>(0),
-                   codegen_utils->GetPointerToMember(llvm_palloc_transdata_ptr,
-                                                     &IntFloatAvgTransdata::count));
+                   codegen_utils->GetPointerToMember(
+                       llvm_palloc_transdata_ptr,
+                       &IntFloatAvgTransdata::count));
 
   irb->CreateBr(end_transdata_palloc_block);
 
   irb->SetInsertPoint(end_transdata_palloc_block);
-  assert(llvm_in_transdata_ptr->getType() == llvm_palloc_transdata_ptr->getType());
-  llvm::PHINode* llvm_transdata_ptr = irb->CreatePHI(llvm_in_transdata_ptr->getType(), 2);
+  assert(llvm_in_transdata_ptr->getType() ==
+      llvm_palloc_transdata_ptr->getType());
+  llvm::PHINode* llvm_transdata_ptr = irb->
+      CreatePHI(llvm_in_transdata_ptr->getType(), 2);
   llvm_transdata_ptr->addIncoming(llvm_in_transdata_ptr, entry_block);
-  llvm_transdata_ptr->addIncoming(llvm_palloc_transdata_ptr, transdata_palloc_block);
+  llvm_transdata_ptr->addIncoming(llvm_palloc_transdata_ptr,
+                                  transdata_palloc_block);
 
   *llvm_out_trandata_ptr = llvm_transdata_ptr;
 }

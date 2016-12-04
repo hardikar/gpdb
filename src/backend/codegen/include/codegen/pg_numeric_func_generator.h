@@ -46,17 +46,19 @@ struct PGFuncGeneratorInfo;
  **/
 
 class PGNumericFuncGenerator {
-public:
+ public:
   template<typename CType>
-  static bool CreateIntFloatAvgAccum(gpcodegen::GpCodegenUtils* codegen_utils,
-                              const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
-                              llvm::Value** llvm_out_value);
+  static bool CreateIntFloatAvgAccum(
+      gpcodegen::GpCodegenUtils* codegen_utils,
+      const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
+      llvm::Value** llvm_out_value);
 
-  static bool CreateIntFloatAvgAmalg(gpcodegen::GpCodegenUtils* codegen_utils,
-                              const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
-                              llvm::Value** llvm_out_value);
+  static bool CreateIntFloatAvgAmalg(
+      gpcodegen::GpCodegenUtils* codegen_utils,
+      const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
+      llvm::Value** llvm_out_value);
 
-private:
+ private:
   static
   void CreateVarlenSizeCheck(gpcodegen::GpCodegenUtils* codegen_utils,
                              llvm::Value* llvm_ptr,
@@ -70,12 +72,13 @@ private:
 };
 
 template<typename CType>
-bool PGNumericFuncGenerator::CreateIntFloatAvgAccum (gpcodegen::GpCodegenUtils* codegen_utils,
-                             const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
-                             llvm::Value** llvm_out_value) {
-  // TODO: Can we figure if we need to detoast during generation?
-  llvm::Function* llvm_pg_detoast_datum =
-      codegen_utils->GetOrRegisterExternalFunction(pg_detoast_datum, "pg_detoast_datum");
+bool PGNumericFuncGenerator::CreateIntFloatAvgAccum(
+    gpcodegen::GpCodegenUtils* codegen_utils,
+    const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
+    llvm::Value** llvm_out_value) {
+  // TODO(nikos): Can we figure if we need to detoast during generation?
+  llvm::Function* llvm_pg_detoast_datum = codegen_utils->
+      GetOrRegisterExternalFunction(pg_detoast_datum, "pg_detoast_datum");
 
   auto irb = codegen_utils->ir_builder();
 
@@ -85,12 +88,14 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAccum (gpcodegen::GpCodegenUtils* 
       pg_func_info.llvm_args[1]);
 
   llvm::Value* llvm_transdata_ptr;
-  CreatePallocTransdata(codegen_utils, llvm_in_transdata_ptr, &llvm_transdata_ptr);
+  CreatePallocTransdata(codegen_utils,
+                        llvm_in_transdata_ptr,
+                        &llvm_transdata_ptr);
 
-  llvm::Value* llvm_transdata_sum_ptr =
-      codegen_utils->GetPointerToMember(llvm_transdata_ptr, &IntFloatAvgTransdata::sum);
-  llvm::Value* llvm_transdata_count_ptr =
-      codegen_utils->GetPointerToMember(llvm_transdata_ptr, &IntFloatAvgTransdata::count);
+  llvm::Value* llvm_transdata_sum_ptr = codegen_utils->GetPointerToMember(
+      llvm_transdata_ptr, &IntFloatAvgTransdata::sum);
+  llvm::Value* llvm_transdata_count_ptr = codegen_utils->GetPointerToMember(
+      llvm_transdata_ptr, &IntFloatAvgTransdata::count);
 
   irb->CreateStore(irb->CreateFAdd(
       irb->CreateLoad(llvm_transdata_sum_ptr),
@@ -109,4 +114,4 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAccum (gpcodegen::GpCodegenUtils* 
 /** @} */
 }  // namespace gpcodegen
 
-#endif //GPDB_PG_NUMERIC_FUNC_GENERATOR_H_
+#endif  // GPDB_PG_NUMERIC_FUNC_GENERATOR_H_

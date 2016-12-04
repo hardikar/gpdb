@@ -27,7 +27,7 @@
 
 extern "C" {
 #include "lib/stringinfo.h"
-#include "postgres.h"
+#include "postgres.h"  // NOLINT(build/include)
 }
 
 using gpcodegen::CodegenManager;

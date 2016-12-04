@@ -244,8 +244,9 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
 
     llvm::BasicBlock* transtypebyref_block = codegen_utils->CreateBasicBlock(
         "transtypebyref_block", pg_func_info->llvm_main_func);
-    llvm::BasicBlock* end_transtypebyref_block = codegen_utils->CreateBasicBlock(
-        "end_transtypebyref_block", pg_func_info->llvm_main_func);
+    llvm::BasicBlock* end_transtypebyref_block =
+        codegen_utils->CreateBasicBlock("end_transtypebyref_block",
+                                        pg_func_info->llvm_main_func);
 
     irb->CreateCondBr(irb->CreateAnd(llvm_val_changed, llvm_fcinfo_is_not_null),
                       transtypebyref_block /* true */,
