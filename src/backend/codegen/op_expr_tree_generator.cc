@@ -55,7 +55,6 @@ using llvm::IRBuilder;
 CodeGenFuncMap
 OpExprTreeGenerator::supported_function_;
 
-
 void OpExprTreeGenerator::InitializeSupportedFunction() {
   if (!supported_function_.empty()) { return; }
 

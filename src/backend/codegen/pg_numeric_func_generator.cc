@@ -32,9 +32,12 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(
   llvm::Value* llvm_in_tr1 =
       irb->CreateCall(llvm_pg_detoast_datum, {pg_func_info.llvm_args[1]});
 
+  // if(transdata == NULL ||
+  //    VARSIZE(transdata) != sizeof(IntFloatAvgTransdata)) { ... }
   llvm::Value* llvm_tr0;
   CreatePallocTransdata(codegen_utils, llvm_in_tr0, &llvm_tr0);
 
+  // if(tr1 == NULL || VARSIZE(tr1) != sizeof(IntFloatAvgTransdata))
   llvm::Value* llvm_varlena_null_size_cond;
   CreateVarlenSizeCheck(codegen_utils,
                         llvm_in_tr1,
@@ -51,16 +54,16 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(
                     update_block);
 
   irb->SetInsertPoint(update_block);
+  // tr0->count += tr1->count;
+  // tr0->sum += tr1->sum; {{
   llvm::Value* llvm_tr0_sum_ptr =
       codegen_utils->GetPointerToMember(llvm_tr0, &IntFloatAvgTransdata::sum);
   llvm::Value* llvm_tr0_count_ptr =
       codegen_utils->GetPointerToMember(llvm_tr0, &IntFloatAvgTransdata::count);
-
   llvm::Value* llvm_tr1_sum_ptr = codegen_utils->
       GetPointerToMember(llvm_in_tr1, &IntFloatAvgTransdata::sum);
   llvm::Value* llvm_tr1_count_ptr = codegen_utils->
       GetPointerToMember(llvm_in_tr1, &IntFloatAvgTransdata::count);
-
   irb->CreateStore(irb->CreateFAdd(
       irb->CreateLoad(llvm_tr0_sum_ptr),
       irb->CreateLoad(llvm_tr1_sum_ptr)),
@@ -69,7 +72,7 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(
       irb->CreateLoad(llvm_tr0_count_ptr),
       irb->CreateLoad(llvm_tr1_count_ptr)),
                    llvm_tr0_count_ptr);
-
+  // }}
   irb->CreateBr(end_update_block);
   irb->SetInsertPoint(end_update_block);
 
@@ -83,8 +86,8 @@ void PGNumericFuncGenerator::CreateVarlenSizeCheck(
     llvm::Value* llvm_size,
     llvm::Value** llvm_out_cond) {
 
-  llvm::Function* llvm_varsize =
-      codegen_utils->GetOrRegisterExternalFunction(varsize, "varsize");
+  llvm::Function* llvm_varsize = codegen_utils->
+      GetOrRegisterExternalFunction(VARSIZE_regular, "VARSIZE_regular");
 
   auto irb = codegen_utils->ir_builder();
 
@@ -100,8 +103,8 @@ void PGNumericFuncGenerator::CreatePallocTransdata(
     llvm::Value* llvm_in_transdata_ptr,
     llvm::Value** llvm_out_trandata_ptr) {
 
-  llvm::Function* llvm_set_varsize =
-      codegen_utils->GetOrRegisterExternalFunction(set_varsize, "set_varsize");
+  llvm::Function* llvm_set_varsize = codegen_utils->
+      GetOrRegisterExternalFunction(SET_VARSIZE_regular, "SET_VARSIZE_regular");
 
   auto irb = codegen_utils->ir_builder();
 
@@ -112,33 +115,36 @@ void PGNumericFuncGenerator::CreatePallocTransdata(
   llvm::BasicBlock* end_transdata_palloc_block = codegen_utils->
       CreateBasicBlock("end_transdata_palloc_block", current_function);
 
-
+  // if(tr0 == NULL || VARSIZE(tr0) != sizeof(IntFloatAvgTransdata)) {{
   llvm::Value* palloc_cond;
   CreateVarlenSizeCheck(codegen_utils,
                         llvm_in_transdata_ptr,
                         codegen_utils->GetConstant<uint32>(
                             sizeof(IntFloatAvgTransdata)),
-                        &palloc_cond);
+                            &palloc_cond);
   irb->CreateCondBr(palloc_cond,
                     transdata_palloc_block,
                     end_transdata_palloc_block);
-
+  // }}
   irb->SetInsertPoint(transdata_palloc_block);
+  // tr0 = (IntFloatAvgTransdata *) palloc(sizeof(IntFloatAvgTransdata));
   llvm::Value* llvm_palloc_transdata_ptr =
       EXPAND_CREATE_PALLOC(codegen_utils, sizeof(IntFloatAvgTransdata));
+  // SET_VARSIZE(tr0, sizeof(IntFloatAvgTransdata));
   irb->CreateCall(llvm_set_varsize, {
       llvm_palloc_transdata_ptr,
       codegen_utils->GetConstant(sizeof(IntFloatAvgTransdata))});
+  // tr0->count = 0;
   irb->CreateStore(codegen_utils->GetConstant<float8>(0),
                    codegen_utils->GetPointerToMember(
                        llvm_palloc_transdata_ptr, &IntFloatAvgTransdata::sum));
+  // tr0->sum = 0;
   irb->CreateStore(codegen_utils->GetConstant<int64>(0),
                    codegen_utils->GetPointerToMember(
                        llvm_palloc_transdata_ptr,
                        &IntFloatAvgTransdata::count));
 
   irb->CreateBr(end_transdata_palloc_block);
-
   irb->SetInsertPoint(end_transdata_palloc_block);
   assert(llvm_in_transdata_ptr->getType() ==
       llvm_palloc_transdata_ptr->getType());

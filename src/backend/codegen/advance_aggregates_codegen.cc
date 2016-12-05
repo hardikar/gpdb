@@ -222,21 +222,16 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   // We do not need to set *transValueIsNull = fcinfo->isnull, since
   // transValueIsNull is passed as argument to pg_func_gen->GenerateCode
 
+  // !fcinfo->isnull
   llvm::Value* llvm_fcinfo_is_not_null = irb->CreateNot(
       irb->CreateLoad(llvm_pergroupstate_transValueIsNull_ptr));
 
-  // if (!transtypeByVal &&
-  //         DatumGetPointer(newVal) != DatumGetPointer(transValue))
-  //     if (!fcinfo->isnull)
-  //     {
-  //       newVal = datumCopyWithMemManager(transValue, newVal, transtypeByVal,
-  //                        transtypeLen, mem_manager);
-  //     }
-  // }
   if (!peraggstate->transtypeByVal) {
     llvm::Value* llvm_newval_by_ref =
         codegen_utils->CreateCppTypeToDatumCast(llvm_newval);
 
+    // if (DatumGetPointer(newVal) != DatumGetPointer(transValue) &&
+    //     !fcinfo->isnull) {{
     llvm::Value* llvm_val_changed = irb->CreateICmpNE(
        codegen_utils->CreateDatumToCppTypeCast<void*>(llvm_newval),
        codegen_utils->CreateDatumToCppTypeCast<void*>(
@@ -251,8 +246,10 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
     irb->CreateCondBr(irb->CreateAnd(llvm_val_changed, llvm_fcinfo_is_not_null),
                       transtypebyref_block /* true */,
                       end_transtypebyref_block /* false */);
-
+    // }} if (DatumGetPointer ...
     irb->SetInsertPoint(transtypebyref_block);
+    // newVal = datumCopyWithMemManager(transValue, newVal, transtypeByVal,
+    //                  transtypeLen, mem_manager); {{
     llvm_newval_by_ref = irb->CreateCall(
             llvm_datumCopyWithMemManager, {
                 irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
@@ -264,6 +261,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
     // pergroupstate->transValue = newval
     irb->CreateStore(llvm_newval_by_ref,
                      llvm_pergroupstate_transValue_ptr);
+    // }} newVal = datumCopyWithMemManager ...
     irb->CreateBr(end_transtypebyref_block);
 
     irb->SetInsertPoint(end_transtypebyref_block);

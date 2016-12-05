@@ -113,12 +113,12 @@ att_align_nominal_regular(int cur_offset, char attalign) {
   return att_align_nominal(cur_offset, attalign);
 }
 
-void set_varsize(void* ptr, size_t len) {
+void SET_VARSIZE_regular(void* ptr, size_t len) {
   SET_VARSIZE(ptr, len);
 }
 
 uint32
-varsize(void* ptr) {
+VARSIZE_regular(void* ptr) {
   return VARSIZE(ptr);
 }
 
