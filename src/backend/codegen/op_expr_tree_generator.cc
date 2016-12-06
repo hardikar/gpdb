@@ -166,7 +166,7 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
       new PGGenericFuncGenerator<void*, void*, int32>(
           1963,
           "int4_avg_accum",
-          &PGNumericFuncGenerator::CreateIntFloatAvgAccum<int32>,
+          &PGNumericFuncGenerator::GenerateIntFloatAvgAccum<int32>,
           nullptr,
           true));
 
@@ -174,7 +174,7 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
       new PGGenericFuncGenerator<void*, void*, float8>(
           3108,
           "float8_avg_accum",
-          &PGNumericFuncGenerator::CreateIntFloatAvgAccum<float8>,
+          &PGNumericFuncGenerator::GenerateIntFloatAvgAccum<float8>,
           nullptr,
           true));
 
@@ -182,7 +182,7 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
       new PGGenericFuncGenerator<void*, void*, void*>(
           6009,
           "int8_avg_amalg",
-          &PGNumericFuncGenerator::CreateIntFloatAvgAmalg,
+          &PGNumericFuncGenerator::GenerateIntFloatAvgAmalg,
           nullptr,
           true));
 
@@ -190,7 +190,7 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
       new PGGenericFuncGenerator<void*, void*, void*>(
           3111,
           "float8_avg_amalg",
-          &PGNumericFuncGenerator::CreateIntFloatAvgAmalg,
+          &PGNumericFuncGenerator::GenerateIntFloatAvgAmalg,
           nullptr,
           true));
 }

@@ -16,7 +16,7 @@ using gpcodegen::GpCodegenUtils;
 using gpcodegen::PGNumericFuncGenerator;
 using gpcodegen::PGFuncGeneratorInfo;
 
-bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(
+bool PGNumericFuncGenerator::GenerateIntFloatAvgAmalg(
     gpcodegen::GpCodegenUtils* codegen_utils,
     const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
     llvm::Value** llvm_out_value) {
@@ -34,16 +34,16 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(
 
   // if(transdata == NULL ||
   //    VARSIZE(transdata) != sizeof(IntFloatAvgTransdata)) { ... }
-  llvm::Value* llvm_tr0;
-  CreatePallocTransdata(codegen_utils, llvm_in_tr0, &llvm_tr0);
+  llvm::Value* llvm_tr0 = nullptr;
+  GeneratePallocTransdata(codegen_utils, llvm_in_tr0, &llvm_tr0);
 
   // if(tr1 == NULL || VARSIZE(tr1) != sizeof(IntFloatAvgTransdata))
-  llvm::Value* llvm_varlena_null_size_cond;
-  CreateVarlenSizeCheck(codegen_utils,
-                        llvm_in_tr1,
-                        codegen_utils->
-                        GetConstant<uint32>(sizeof(IntFloatAvgTransdata)),
-                        &llvm_varlena_null_size_cond);
+  llvm::Value* llvm_varlena_null_size_cond = nullptr;
+  GenerateVarlenSizeCheck(codegen_utils,
+                          llvm_in_tr1,
+                          codegen_utils->
+                          GetConstant<uint32>(sizeof(IntFloatAvgTransdata)),
+                          &llvm_varlena_null_size_cond);
 
   llvm::BasicBlock* update_block = codegen_utils->CreateBasicBlock(
       "update_block", current_function);
@@ -80,7 +80,7 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAmalg(
   return true;
 }
 
-void PGNumericFuncGenerator::CreateVarlenSizeCheck(
+bool PGNumericFuncGenerator::GenerateVarlenSizeCheck(
     gpcodegen::GpCodegenUtils* codegen_utils,
     llvm::Value* llvm_ptr,
     llvm::Value* llvm_size,
@@ -92,13 +92,14 @@ void PGNumericFuncGenerator::CreateVarlenSizeCheck(
   auto irb = codegen_utils->ir_builder();
 
   *llvm_out_cond = irb->CreateOr(
-      irb->CreateICmpEQ(llvm_ptr, codegen_utils->GetConstant<void*>(NULL)),
+      irb->CreateICmpEQ(llvm_ptr, codegen_utils->GetConstant<void*>(nullptr)),
       irb->CreateICmpNE(
           irb->CreateCall(llvm_varsize, {llvm_ptr}),
           llvm_size));
+  return true;
 }
 
-void PGNumericFuncGenerator::CreatePallocTransdata(
+bool PGNumericFuncGenerator::GeneratePallocTransdata(
     gpcodegen::GpCodegenUtils* codegen_utils,
     llvm::Value* llvm_in_transdata_ptr,
     llvm::Value** llvm_out_trandata_ptr) {
@@ -116,12 +117,12 @@ void PGNumericFuncGenerator::CreatePallocTransdata(
       CreateBasicBlock("end_transdata_palloc_block", current_function);
 
   // if(tr0 == NULL || VARSIZE(tr0) != sizeof(IntFloatAvgTransdata)) {{
-  llvm::Value* palloc_cond;
-  CreateVarlenSizeCheck(codegen_utils,
-                        llvm_in_transdata_ptr,
-                        codegen_utils->GetConstant<uint32>(
-                            sizeof(IntFloatAvgTransdata)),
-                            &palloc_cond);
+  llvm::Value* palloc_cond = nullptr;
+  GenerateVarlenSizeCheck(codegen_utils,
+                          llvm_in_transdata_ptr,
+                          codegen_utils->GetConstant<uint32>(
+                              sizeof(IntFloatAvgTransdata)),
+                              &palloc_cond);
   irb->CreateCondBr(palloc_cond,
                     transdata_palloc_block,
                     end_transdata_palloc_block);
@@ -134,11 +135,11 @@ void PGNumericFuncGenerator::CreatePallocTransdata(
   irb->CreateCall(llvm_set_varsize, {
       llvm_palloc_transdata_ptr,
       codegen_utils->GetConstant(sizeof(IntFloatAvgTransdata))});
-  // tr0->count = 0;
+  // tr0->sum = 0;
   irb->CreateStore(codegen_utils->GetConstant<float8>(0),
                    codegen_utils->GetPointerToMember(
                        llvm_palloc_transdata_ptr, &IntFloatAvgTransdata::sum));
-  // tr0->sum = 0;
+  // tr0->count = 0;
   irb->CreateStore(codegen_utils->GetConstant<int64>(0),
                    codegen_utils->GetPointerToMember(
                        llvm_palloc_transdata_ptr,
@@ -155,4 +156,5 @@ void PGNumericFuncGenerator::CreatePallocTransdata(
                                   transdata_palloc_block);
 
   *llvm_out_trandata_ptr = llvm_transdata_ptr;
+  return true;
 }

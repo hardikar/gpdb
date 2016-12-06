@@ -67,7 +67,7 @@ class BaseCodegen: public CodegenInterface {
       for (llvm::Function* function : uncompiled_generated_functions_) {
         assert(nullptr != function);
         std::string func_name = function->getName();
-        std::string error_message;
+        std::string error_message = "";
         llvm::raw_string_ostream out(error_message);
         // Verify function returns true if there are errors.
         valid_generated_functions &= !llvm::verifyFunction(*function, &out);

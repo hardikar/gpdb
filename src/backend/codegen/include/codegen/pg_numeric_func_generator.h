@@ -47,20 +47,20 @@ struct PGFuncGeneratorInfo;
 
 class PGNumericFuncGenerator {
  public:
-
   /**
-   * @brief Create LLVM instructions for intfloat_avg_accum_decum function,
-   *        which is called by int8_avg_accum and float8_avg_accum
-   *        built-in functions. Only accum case has been implemented.
+   * @brief  Create LLVM instructions for intfloat_avg_accum_decum function,
+   *         which is called by int8_avg_accum and float8_avg_accum
+   *         built-in functions. Only accum case has been implemented.
    *
-   * @param codegen_utils      Utility for easy code generation.
-   * @param pg_func_info       Details for pgfunc generation
-   * @param llvm_out_value     Variable to keep the result
+   * @tparam CType              Data type of input argument.
+   * @param  codegen_utils      Utility for easy code generation.
+   * @param  pg_func_info       Details for pgfunc generation
+   * @param  llvm_out_value     Variable to keep the result
    *
    * @return true if generation was successful otherwise return false.
    **/
   template<typename CType>
-  static bool CreateIntFloatAvgAccum(
+  static bool GenerateIntFloatAvgAccum(
       gpcodegen::GpCodegenUtils* codegen_utils,
       const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
       llvm::Value** llvm_out_value);
@@ -76,7 +76,7 @@ class PGNumericFuncGenerator {
    *
    * @return true if generation was successful otherwise return false.
    **/
-  static bool CreateIntFloatAvgAmalg(
+  static bool GenerateIntFloatAvgAmalg(
       gpcodegen::GpCodegenUtils* codegen_utils,
       const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
       llvm::Value** llvm_out_value);
@@ -90,11 +90,13 @@ class PGNumericFuncGenerator {
    * @param llvm_ptr           Pointer to the memory chunk
    * @param llvm_size          Expected size
    * @param llvm_out_cond      Will contain the result of the condition.
+   *
+   * @return true if generation was successful otherwise return false.
    **/
-  static void CreateVarlenSizeCheck(gpcodegen::GpCodegenUtils* codegen_utils,
-                                    llvm::Value* llvm_ptr,
-                                    llvm::Value* llvm_size,
-                                    llvm::Value** llvm_out_cond);
+  static bool GenerateVarlenSizeCheck(gpcodegen::GpCodegenUtils* codegen_utils,
+                                      llvm::Value* llvm_ptr,
+                                      llvm::Value* llvm_size,
+                                      llvm::Value** llvm_out_cond);
 
   /**
    * @brief A helper function that creates LLVM instructions which implement
@@ -106,14 +108,16 @@ class PGNumericFuncGenerator {
    * @param llvm_out_trandata_ptr  If llvm_in_transdata_ptr is not valid,
    *                               then llvm_out_trandata_ptr will point to
    *                               a valid transdata llvm value.
+   *
+   * @return true if generation was successful otherwise return false.
    **/
-  static void CreatePallocTransdata(gpcodegen::GpCodegenUtils* codegen_utils,
-                                    llvm::Value* llvm_in_transdata_ptr,
-                                    llvm::Value** llvm_out_trandata_ptr);
+  static bool GeneratePallocTransdata(gpcodegen::GpCodegenUtils* codegen_utils,
+                                      llvm::Value* llvm_in_transdata_ptr,
+                                      llvm::Value** llvm_out_trandata_ptr);
 };
 
 template<typename CType>
-bool PGNumericFuncGenerator::CreateIntFloatAvgAccum(
+bool PGNumericFuncGenerator::GenerateIntFloatAvgAccum(
     gpcodegen::GpCodegenUtils* codegen_utils,
     const gpcodegen::PGFuncGeneratorInfo& pg_func_info,
     llvm::Value** llvm_out_value) {
@@ -130,10 +134,10 @@ bool PGNumericFuncGenerator::CreateIntFloatAvgAccum(
 
   // if(transdata == NULL ||
   //    VARSIZE(transdata) != sizeof(IntFloatAvgTransdata)) { ... } {{
-  llvm::Value* llvm_transdata_ptr;
-  CreatePallocTransdata(codegen_utils,
-                        llvm_in_transdata_ptr,
-                        &llvm_transdata_ptr);
+  llvm::Value* llvm_transdata_ptr = nullptr;
+  GeneratePallocTransdata(codegen_utils,
+                          llvm_in_transdata_ptr,
+                          &llvm_transdata_ptr);
   // }}
   // ++transdata->count;
   // transdata->sum += newval; {{
