@@ -37,7 +37,7 @@ void __assert_fail(const char * expr,
     func = "";
   }
 
-  if ((assert_enabled) && (expr)) {
+  if ((assert_enabled) && (nullptr != expr)) {
     ExceptionalCondition(expr, ("Failed C++ assertion"), file, line);
   }
 
