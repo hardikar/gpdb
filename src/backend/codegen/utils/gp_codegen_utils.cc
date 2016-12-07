@@ -74,10 +74,8 @@ llvm::Value* GpCodegenUtils::CreatePalloc(Size size,
   llvm::Function* llvm_memory_context_alloc_impl =
       GetOrRegisterExternalFunction(MemoryContextAllocImpl,
       "MemoryContextAllocImpl");
-  // On function return values, the noalias attribute indicates that the
-  // function acts like a system memory allocation function, returning a
-  // pointer to allocated storage disjoint from the storage for any other
-  // object accessible to the caller.
+  // Define llvm_memory_context_alloc_impl as a system memory allocation
+  // function that returns a pointer to allocated storage.
   llvm_memory_context_alloc_impl->setDoesNotAlias(0 /* return value */);
   llvm::Value* llvm_current_memory_context =
       ir_builder()->CreateLoad(GetConstant(&CurrentMemoryContext));
