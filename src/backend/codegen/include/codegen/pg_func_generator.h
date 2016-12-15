@@ -181,8 +181,8 @@ class PGIRBuilderFuncGenerator
     : public PGFuncGeneratorInterface {
  public:
   // Type of the IRBuilder function we need to call
-  using IRBuilderFuncPtrType = llvm::Value* (llvm::IRBuilder<>::*) (
-      llvm::Value*, llvm::Value*, const llvm::Twine&);
+  using IRBuilderIntFuncPtrType = decltype(&llvm::IRBuilder<>::CreateICmpEQ);
+  using IRBuilderFloatFuncPtrType = decltype(&llvm::IRBuilder<>::CreateFCmpOEQ);
 
   /**
    * @brief Constructor.
@@ -194,12 +194,23 @@ class PGIRBuilderFuncGenerator
    **/
   PGIRBuilderFuncGenerator(int pg_func_oid,
                            const std::string& pg_func_name,
-                           IRBuilderFuncPtrType mem_func_ptr,
+                           IRBuilderIntFuncPtrType mem_func_ptr,
                            bool is_strict)
   : pg_func_oid_(pg_func_oid),
     pg_func_name_(pg_func_name),
-    func_ptr_(mem_func_ptr),
+    int_func_ptr_(mem_func_ptr),
+    float_func_ptr_(nullptr),
     is_strict_(is_strict) {
+  }
+  PGIRBuilderFuncGenerator(int pg_func_oid,
+                           const std::string& pg_func_name,
+                           IRBuilderFloatFuncPtrType mem_func_ptr,
+                           bool is_strict)
+      : pg_func_oid_(pg_func_oid),
+        pg_func_name_(pg_func_name),
+        int_func_ptr_(nullptr),
+        float_func_ptr_(mem_func_ptr),
+        is_strict_(is_strict) {
   }
 
   std::string GetName() final {
@@ -278,8 +289,17 @@ class PGIRBuilderFuncGenerator
     // function's execution
     llvm::Value* llvm_func_tmp_value = nullptr;
     // Generate code for the built-in function
-    llvm_func_tmp_value = (irb->*this->func_ptr_)(llvm_preproc_args[0],
-        llvm_preproc_args[1], "");
+    if (nullptr != this->int_func_ptr_) {
+      llvm_func_tmp_value = (irb->*this->int_func_ptr_)(llvm_preproc_args[0],
+                                                        llvm_preproc_args[1],
+                                                        "");
+    } else {
+      llvm_func_tmp_value = (irb->*this->float_func_ptr_)(llvm_preproc_args[0],
+                                                        llvm_preproc_args[1],
+                                                        "",
+                                                        nullptr);
+
+    }
     // Keep track of the last created block during execution of the built-in
     // function. This will be used as an incoming edge to the phi node.
     llvm::BasicBlock* func_generation_last_block = irb->GetInsertBlock();
@@ -321,7 +341,8 @@ class PGIRBuilderFuncGenerator
  private:
   int pg_func_oid_;
   std::string pg_func_name_;
-  IRBuilderFuncPtrType func_ptr_;
+  IRBuilderIntFuncPtrType int_func_ptr_;
+  IRBuilderFloatFuncPtrType float_func_ptr_;
   bool is_strict_;
 };
 

@@ -149,9 +149,43 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           nullptr,
           true));
 
+  supported_function_[298] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGIRBuilderFuncGenerator<bool, float8, float8>(
+          298,
+          "float8ge",
+          &IRBuilder<>::CreateFCmpOGE,
+          true));
+
+  supported_function_[296] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGIRBuilderFuncGenerator<bool, float8, float8>(
+          296,
+          "float8le",
+          &IRBuilder<>::CreateFCmpOLE,
+          true));
+
+  supported_function_[295] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGIRBuilderFuncGenerator<bool, float8, float8>(
+          295,
+          "float8lt",
+          &IRBuilder<>::CreateFCmpOLT,
+          true));
+
   supported_function_[1088] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGIRBuilderFuncGenerator<bool, int32_t, int32_t>(
           1088, "date_le", &IRBuilder<>::CreateICmpSLE,
+          true));
+
+  supported_function_[1090] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGIRBuilderFuncGenerator<bool, int32_t, int32_t>(
+          1090, "date_ge", &IRBuilder<>::CreateICmpSGE,
+          true));
+
+  supported_function_[2338] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<bool, int32_t, int64_t>(
+          2338,
+          "date_lt_timestamp",
+          &PGDateFuncGenerator::DateLTTimestamp,
+          nullptr,
           true));
 
   supported_function_[2339] = std::unique_ptr<PGFuncGeneratorInterface>(

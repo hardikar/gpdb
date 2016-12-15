@@ -60,6 +60,11 @@ class PGDateFuncGenerator {
       const PGFuncGeneratorInfo& pg_func_info,
       llvm::Value** llvm_out_value);
 
+  static bool DateLTTimestamp(
+      gpcodegen::GpCodegenUtils* codegen_utils,
+      const PGFuncGeneratorInfo& pg_func_info,
+      llvm::Value** llvm_out_value);
+
  private:
   /**
    * @brief Internal routines for promoting date to timestamp and timestamp

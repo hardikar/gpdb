@@ -59,6 +59,31 @@ bool PGDateFuncGenerator::DateLETimestamp(
   return true;
 }
 
+bool PGDateFuncGenerator::DateLTTimestamp(
+    gpcodegen::GpCodegenUtils* codegen_utils,
+    const PGFuncGeneratorInfo& pg_func_info,
+    llvm::Value** llvm_out_value) {
+
+  llvm::IRBuilder<>* irb = codegen_utils->ir_builder();
+
+  // llvm_args[0] is of date type
+  llvm::Value* llvm_arg0_Timestamp = GenerateDate2Timestamp(
+      codegen_utils, pg_func_info);
+
+  // timestamp_cmp_internal {{{
+#ifdef HAVE_INT64_TIMESTAMP
+  *llvm_out_value =
+      irb->CreateICmpSLT(llvm_arg0_Timestamp, pg_func_info.llvm_args[1]);
+#else
+  // TODO(nikos): We do not support NaNs.
+  elog(DEBUG1, "Timestamp != int_64: NaNs are not supported.");
+  return false;
+#endif
+  // }}}
+
+  return true;
+}
+
 llvm::Value* PGDateFuncGenerator::GenerateDate2Timestamp(
     GpCodegenUtils* codegen_utils,
     const PGFuncGeneratorInfo& pg_func_info) {
