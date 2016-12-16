@@ -327,6 +327,7 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	return result;
 }
 #endif
+void hack(Plan* plan) ;
 
 /*****************************************************************************
  *
@@ -404,9 +405,31 @@ planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		}
 		END_MEMORY_ACCOUNT();
 	}
+	if (codegen) {
+    hack(result->planTree);
+	}
 
 	return result;
 }
+
+void hack(Plan* plan) {
+  switch(nodeTag(plan)) {
+    TableScan *scan;
+    case T_TableScan:
+    case T_SeqScan:
+      scan = (Scan*) plan;
+      scan->plan.qual = list_make1(makeBoolExpr(AND_EXPR, scan->plan.qual, -1));
+      break;
+    default:
+      if (plan->lefttree) {
+        hack(plan->lefttree);
+      }
+      if (plan->righttree) {
+        hack(plan->righttree);
+      }
+  }
+}
+
 
 PlannedStmt *
 standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
