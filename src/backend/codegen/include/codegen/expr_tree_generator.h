@@ -39,7 +39,8 @@ namespace gpcodegen {
 enum class ExprTreeNodeType {
   kConst = 0,
   kVar = 1,
-  kOperator = 2
+  kOperator = 2,
+  kBool = 3
 };
 
 /**
