@@ -21,6 +21,7 @@ MOCK_LIBS := -ldl $(filter-out -lpgport -ledit, $(LIBS)) $(LDAP_LIBS_BE)
 # These files are not linked into test programs.
 EXCL_OBJS=\
 	src/backend/main/main.o \
+	src/backend/codegen/%.o \
 	src/backend/gpopt/%.o \
 	src/backend/gpopt/config/%.o \
 	src/backend/gpopt/relcache/%.o \
@@ -37,7 +38,7 @@ MOCK_OBJS+=$(top_srcdir)/src/test/unit/mock/gpopt_mock.o
 endif
 
 ifeq ($(enable_codegen),yes)
-LDFLAGS+="-L$(top_srcdir)/src/backend/codegen -lgpcodegen"
+MOCK_OBJS+=$(top_srcdir)/src/test/unit/mock/gpcodegen_mock.o
 endif
 
 # $(OBJFILES) contains %/objfiles.txt, because src/backend/Makefile will
