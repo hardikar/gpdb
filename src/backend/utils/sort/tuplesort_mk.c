@@ -1721,36 +1721,6 @@ tuplesort_getdatum_mk(Tuplesortstate_mk *state, bool forward,
 }
 
 /*
- * tuplesort_merge_order - report merge order we'll use for given memory
- * (note: "merge order" just means the number of input tapes in the merge).
- *
- * This is exported for use by the planner.  allowedMem is in bytes.
- */
-int
-tuplesort_merge_order(long allowedMem)
-{
-	int			mOrder;
-
-	/*
-	 * We need one tape for each merge input, plus another one for the output,
-	 * and each of these tapes needs buffer space.  In addition we want
-	 * MERGE_BUFFER_SIZE workspace per input tape (but the output tape doesn't
-	 * count).
-	 *
-	 * Note: you might be thinking we need to account for the memtuples[]
-	 * array in this calculation, but we effectively treat that as part of the
-	 * MERGE_BUFFER_SIZE workspace.
-	 */
-	mOrder = (allowedMem - TAPE_BUFFER_OVERHEAD) /
-		(MERGE_BUFFER_SIZE + TAPE_BUFFER_OVERHEAD);
-
-	mOrder = Max(mOrder, MINORDER);
-	mOrder = Min(mOrder, MAXORDER);
-
-	return mOrder;
-}
-
-/*
  * inittapes - initialize for tape sorting.
  *
  * This is called only if we have found we don't have room to sort in memory.
