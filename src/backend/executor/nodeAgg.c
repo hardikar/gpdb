@@ -103,6 +103,7 @@
 #include "utils/memutils.h"
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
+#include "utils/tuplesort_gp.h"
 #include "utils/datum.h"
 
 #include "cdb/cdbexplain.h"

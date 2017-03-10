@@ -117,6 +117,7 @@
 #include "utils/pg_rusage.h"
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
+#include "utils/tuplesort_gp.h"
 #include "utils/pg_locale.h"
 #include "utils/builtins.h"
 #include "utils/tuplesort_mk.h"

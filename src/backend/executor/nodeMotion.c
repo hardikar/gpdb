@@ -25,6 +25,7 @@
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 #include "utils/tuplesort.h"
+#include "utils/tuplesort_gp.h"
 #include "utils/tuplesort_mk.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"

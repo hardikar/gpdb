@@ -69,6 +69,7 @@
 #include "miscadmin.h"
 #include "storage/smgr.h"
 #include "utils/tuplesort.h"
+#include "utils/tuplesort_gp.h"
 
 #include "cdb/cdbvars.h"
 
