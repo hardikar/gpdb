@@ -23,19 +23,14 @@
 
 #include "access/itup.h"
 #include "executor/tuptable.h"
-#include "nodes/execnodes.h"
-#include "utils/workfile_mgr.h"
+#include "utils/tuplesort_gp.h"
 
-#include "gpmon/gpmon.h"
 
-struct Instrumentation;                 /* #include "executor/instrument.h" */
-struct StringInfoData;                  /* #include "lib/stringinfo.h" */
-
-/* Tuplesortstate and TuplesortPos are opaque types whose details are not known outside
+/* Tuplesortstate is an opaque type whose details are not known outside
  * tuplesort.c.
  */
-typedef struct TuplesortPos TuplesortPos;
 typedef struct Tuplesortstate Tuplesortstate;
+
 /*
  * We provide two different interfaces to what is essentially the same
  * code: one for sorting HeapTuples and one for sorting IndexTuples.
@@ -50,57 +45,40 @@ typedef struct Tuplesortstate Tuplesortstate;
  *
  * Yet a third slightly different interface supports sorting bare Datums.
  */
-extern void tuplesort_begin_pos(Tuplesortstate *state, TuplesortPos **pos);
 
 extern Tuplesortstate *tuplesort_begin_heap(TupleDesc tupDesc,
 					 int nkeys, AttrNumber *attNums,
 					 Oid *sortOperators, bool *nullsFirstFlags,
 					 int workMem, bool randomAccess);
-
-
-extern Tuplesortstate *tuplesort_begin_heap_file_readerwriter(
-		const char* rwfile_prefix, bool isWriter,
-		TupleDesc tupDesc, 
-		int nkeys, AttrNumber *attNums,
-		Oid *sortOperators, bool *nullsFirstFlags,
-		int workMem, bool randomAccess);
-
 extern Tuplesortstate *tuplesort_begin_index(Relation indexRel,
 					  bool enforceUnique,
 					  int workMem, bool randomAccess);
-
 extern Tuplesortstate *tuplesort_begin_datum(Oid datumType,
 					  Oid sortOperator, bool nullsFirstFlag,
 					  int workMem, bool randomAccess);
 
-extern void cdb_tuplesort_init(Tuplesortstate *state, int unique,
-							   int sort_flags,
-							   int64 maxdistinct);
-
 extern void tuplesort_set_bound(Tuplesortstate *state, int64 bound);
 
-extern void tuplesort_puttupleslot(Tuplesortstate *state, TupleTableSlot *slot);
-
+extern void tuplesort_puttupleslot(Tuplesortstate *state,
+					   TupleTableSlot *slot);
 extern void tuplesort_putindextuple(Tuplesortstate *state, IndexTuple tuple);
-
-extern void tuplesort_putdatum(Tuplesortstate *state, Datum val, bool isNull);
+extern void tuplesort_putdatum(Tuplesortstate *state, Datum val,
+				   bool isNull);
 
 extern void tuplesort_performsort(Tuplesortstate *state);
 
-extern bool tuplesort_gettupleslot_pos(Tuplesortstate *state, TuplesortPos *pos, bool forward, TupleTableSlot *slot, MemoryContext mcontext);
+extern bool tuplesort_gettupleslot(Tuplesortstate *state, bool forward,
+					   TupleTableSlot *slot);
+extern IndexTuple tuplesort_getindextuple(Tuplesortstate *state, bool forward,
+						bool *should_free);
+extern bool tuplesort_getdatum(Tuplesortstate *state, bool forward,
+				   Datum *val, bool *isNull);
 
-extern bool tuplesort_gettupleslot(Tuplesortstate *state, bool forward, TupleTableSlot *slot);
-
-extern IndexTuple tuplesort_getindextuple(Tuplesortstate *state, bool forward, bool *should_free);
-
-extern bool tuplesort_getdatum(Tuplesortstate *state, bool forward, Datum *val, bool *isNull);
 
 extern void tuplesort_end(Tuplesortstate *state);
-extern void tuplesort_flush(Tuplesortstate *state);
-
-extern void tuplesort_finalize_stats(Tuplesortstate *state);
 
 extern int	tuplesort_merge_order(long allowedMem);
+
 
 /*
  * These routines may only be called if randomAccess was specified 'true'.
@@ -108,28 +86,9 @@ extern int	tuplesort_merge_order(long allowedMem);
  * randomAccess was specified.
  */
 
-extern void tuplesort_rescan_pos(Tuplesortstate *state, TuplesortPos *pos);
 extern void tuplesort_rescan(Tuplesortstate *state);
 extern void tuplesort_markpos(Tuplesortstate *state);
-extern void tuplesort_markpos_pos(Tuplesortstate *state, TuplesortPos *pos);
 extern void tuplesort_restorepos(Tuplesortstate *state);
-extern void tuplesort_restorepos_pos(Tuplesortstate *state, TuplesortPos *pos);
-
-/*
- * tuplesort_set_instrument
- *
- * May be called after tuplesort_begin_xxx() to enable reporting of
- * statistics and events for EXPLAIN ANALYZE.
- *
- * The 'instr' and 'explainbuf' ptrs are retained in the 'state' object for
- * possible use anytime during the sort, up to and including tuplesort_end().
- * The caller must ensure that the referenced objects remain allocated and
- * valid for the life of the Tuplestorestate object; or if they are to be
- * freed early, disconnect them by calling again with NULL pointers.
- */
-extern void tuplesort_set_instrument(Tuplesortstate *state,
-                         struct Instrumentation    *instrument,
-                         struct StringInfoData     *explainbuf);
 
 /* Setup for ApplySortFunction */
 extern void SelectSortFunction(Oid sortOperator, bool nulls_first,
@@ -144,14 +103,5 @@ extern void SelectSortFunction(Oid sortOperator, bool nulls_first,
 extern int32 ApplySortFunction(FmgrInfo *sortFunction, int sortFlags,
 				  Datum datum1, bool isNull1,
 				  Datum datum2, bool isNull2);
-
-/* Gpmon */
-extern void 
-tuplesort_set_gpmon(Tuplesortstate *state,
-					gpmon_packet_t *gpmon_pkt,
-					int *gpmon_tick);
-
-extern void 
-tuplesort_checksend_gpmonpkt(gpmon_packet_t *pkt, int *tick);
 
 #endif   /* TUPLESORT_H */

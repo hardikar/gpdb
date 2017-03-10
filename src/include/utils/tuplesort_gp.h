@@ -16,24 +16,94 @@
 #ifndef TUPLESORT_GP_H
 #define TUPLESORT_GP_H
 
+#include "nodes/execnodes.h"
+#include "utils/workfile_mgr.h"
+#include "gpmon/gpmon.h"
+
+/*
+ *-------------------------------------------------------------------------
+ * TupleSort's GPDB related API.
+ *-------------------------------------------------------------------------
+ */
+struct Instrumentation;                 /* #include "executor/instrument.h" */
+struct StringInfoData;                  /* #include "lib/stringinfo.h" */
+
+/* 
+ * TuplesortState and TuplesortPos are opaque types whose details are not known
+ * outside tuplesort.c.
+ */
+typedef struct TuplesortPos TuplesortPos;
+struct Tuplesortstate;
+
+
+extern struct Tuplesortstate *tuplesort_begin_heap_file_readerwriter(
+		const char* rwfile_prefix, bool isWriter,
+		TupleDesc tupDesc, 
+		int nkeys, AttrNumber *attNums,
+		Oid *sortOperators, bool *nullsFirstFlags,
+		int workMem, bool randomAccess);
+
+extern void cdb_tuplesort_init(struct Tuplesortstate *state, int unique,
+							   int sort_flags,
+							   int64 maxdistinct);
+
+extern void tuplesort_begin_pos(struct Tuplesortstate *state, TuplesortPos **pos);
+extern bool tuplesort_gettupleslot_pos(struct Tuplesortstate *state, TuplesortPos *pos,
+                          bool forward, TupleTableSlot *slot, MemoryContext mcontext);
+
+extern void tuplesort_flush(struct Tuplesortstate *state);
+extern void tuplesort_finalize_stats(struct Tuplesortstate *state);
+
+/*
+ * These routines may only be called if randomAccess was specified 'true'.
+ * Likewise, backwards scan in gettuple/getdatum is only allowed if
+ * randomAccess was specified.
+ */
+
+extern void tuplesort_rescan_pos(struct Tuplesortstate *state, TuplesortPos *pos);
+extern void tuplesort_markpos_pos(struct Tuplesortstate *state, TuplesortPos *pos);
+extern void tuplesort_restorepos_pos(struct Tuplesortstate *state, TuplesortPos *pos);
+
+/*
+ * tuplesort_set_instrument
+ *
+ * May be called after tuplesort_begin_xxx() to enable reporting of
+ * statistics and events for EXPLAIN ANALYZE.
+ *
+ * The 'instr' and 'explainbuf' ptrs are retained in the 'state' object for
+ * possible use anytime during the sort, up to and including tuplesort_end().
+ * The caller must ensure that the referenced objects remain allocated and
+ * valid for the life of the Tuplestorestate object; or if they are to be
+ * freed early, disconnect them by calling again with NULL pointers.
+ */
+extern void tuplesort_set_instrument(struct Tuplesortstate *state,
+                         struct Instrumentation    *instrument,
+                         struct StringInfoData     *explainbuf);
+
+/* Gpmon */
+extern void 
+tuplesort_set_gpmon(struct Tuplesortstate *state,
+					gpmon_packet_t *gpmon_pkt,
+					int *gpmon_tick);
+
+extern void 
+tuplesort_checksend_gpmonpkt(gpmon_packet_t *pkt, int *tick);
+
+/*
+ *-------------------------------------------------------------------------
+ * MKSort related API
+ *-------------------------------------------------------------------------
+ */
+
 typedef struct TuplesortPos_mk TuplesortPos_mk;
 typedef struct Tuplesortstate_mk Tuplesortstate_mk;
 
-extern void tuplesort_begin_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk **pos);
 
 extern Tuplesortstate_mk *tuplesort_begin_heap_mk(ScanState * ss,
 					 TupleDesc tupDesc,
 					 int nkeys, AttrNumber *attNums,
 					 Oid *sortOperators, bool *nullsFirstFlags,
 					 int workMem, bool randomAccess);
-
-extern Tuplesortstate_mk *tuplesort_begin_heap_file_readerwriter_mk(
-		ScanState * ss,
-		const char* rwfile_prefix, bool isWriter,
-		TupleDesc tupDesc, 
-		int nkeys, AttrNumber *attNums,
-		Oid *sortOperators, bool *nullsFirstFlags,
-		int workMem, bool randomAccess);
 
 extern Tuplesortstate_mk *tuplesort_begin_index_mk(Relation indexRel,
 					  bool enforceUnique,
@@ -44,6 +114,14 @@ extern Tuplesortstate_mk *tuplesort_begin_datum_mk(ScanState * ss,
 					  Oid sortOperator, bool nullsFirstFlag,
 					  int workMem, bool randomAccess);
 
+extern Tuplesortstate_mk *tuplesort_begin_heap_file_readerwriter_mk(
+		ScanState * ss,
+		const char* rwfile_prefix, bool isWriter,
+		TupleDesc tupDesc, 
+		int nkeys, AttrNumber *attNums,
+		Oid *sortOperators, bool *nullsFirstFlags,
+		int workMem, bool randomAccess);
+
 extern void cdb_tuplesort_init_mk(Tuplesortstate_mk *state, int unique,
 							   int sort_flags,
 							   int64 maxdistinct);
@@ -51,38 +129,30 @@ extern void cdb_tuplesort_init_mk(Tuplesortstate_mk *state, int unique,
 extern void tuplesort_set_bound_mk(Tuplesortstate_mk *state, int64 bound);
 
 extern void tuplesort_puttupleslot_mk(Tuplesortstate_mk *state, TupleTableSlot *slot);
-
 extern void tuplesort_putindextuple_mk(Tuplesortstate_mk *state, IndexTuple tuple);
-
 extern void tuplesort_putdatum_mk(Tuplesortstate_mk *state, Datum val, bool isNull);
 
 extern void tuplesort_performsort_mk(Tuplesortstate_mk *state);
 
+extern void tuplesort_begin_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk **pos);
 extern bool tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos, bool forward, TupleTableSlot *slot, MemoryContext mcontext);
 
 extern bool tuplesort_gettupleslot_mk(Tuplesortstate_mk *state, bool forward, TupleTableSlot *slot);
-
 extern IndexTuple tuplesort_getindextuple_mk(Tuplesortstate_mk *state, bool forward, bool *should_free);
-
 extern bool tuplesort_getdatum_mk(Tuplesortstate_mk *state, bool forward, Datum *val, bool *isNull);
 
 extern void tuplesort_end_mk(Tuplesortstate_mk *state);
-
 extern void tuplesort_flush_mk(Tuplesortstate_mk *state);
-
 extern void tuplesort_finalize_stats_mk(Tuplesortstate_mk *state);
 
-extern void tuplesort_rescan_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos);
 
 extern void tuplesort_rescan_mk(Tuplesortstate_mk *state);
-
 extern void tuplesort_markpos_mk(Tuplesortstate_mk *state);
-
-extern void tuplesort_markpos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos);
-
 extern void tuplesort_restorepos_mk(Tuplesortstate_mk *state);
 
+extern void tuplesort_rescan_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos);
 extern void tuplesort_restorepos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos);
+extern void tuplesort_markpos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos);
 
 
 extern void tuplesort_set_instrument_mk(Tuplesortstate_mk *state,
