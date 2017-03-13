@@ -28,14 +28,16 @@
 #include "access/hash.h"
 #include "miscadmin.h"
 #include "utils/tuplesort.h"
+#include "utils/tuplesort_mk.h"
 
+#include "cdb/cdbvars.h"
 
 /*
  * Status record for spooling/sorting phase.
  */
 struct HSpool
 {
-	Tuplesortstate *sortstate;	/* state data for tuplesort.c */
+	void *sortstate;	/* state data for tuplesort.c */
 	Relation	index;
 };
 
@@ -67,10 +69,21 @@ _h_spoolinit(Relation index, uint32 num_buckets)
 	 * speed index creation.  This should be OK since a single backend can't
 	 * run multiple index creations in parallel.
 	 */
-	hspool->sortstate = tuplesort_begin_index_hash(index,
-												   hash_mask,
-												   maintenance_work_mem,
-												   false);
+	if (gp_enable_mk_sort)
+	{
+		hspool->sortstate = tuplesort_begin_index_hash_mk(index,
+													   hash_mask,
+													   maintenance_work_mem,
+													   false);
+	}
+	else
+	{
+		hspool->sortstate = tuplesort_begin_index_hash(index,
+													   hash_mask,
+													   maintenance_work_mem,
+													   false);
+	}
+
 
 	return hspool;
 }
@@ -81,7 +94,14 @@ _h_spoolinit(Relation index, uint32 num_buckets)
 void
 _h_spooldestroy(HSpool *hspool)
 {
-	tuplesort_end(hspool->sortstate);
+	if (gp_enable_mk_sort)
+	{
+		tuplesort_end_mk(hspool->sortstate);
+	}
+	else
+	{
+		tuplesort_end(hspool->sortstate);
+	}
 	pfree(hspool);
 }
 
@@ -91,7 +111,14 @@ _h_spooldestroy(HSpool *hspool)
 void
 _h_spool(IndexTuple itup, HSpool *hspool)
 {
-	tuplesort_putindextuple(hspool->sortstate, itup);
+	if (gp_enable_mk_sort)
+	{
+		tuplesort_putindextuple_mk(hspool->sortstate, itup);
+	}
+	else
+	{
+		tuplesort_putindextuple(hspool->sortstate, itup);
+	}
 }
 
 /*
@@ -104,13 +131,34 @@ _h_indexbuild(HSpool *hspool)
 	IndexTuple	itup;
 	bool		should_free;
 
-	tuplesort_performsort(hspool->sortstate);
+	if (gp_enable_mk_sort)
+	{
+		tuplesort_performsort_mk(hspool->sortstate);
+		itup = tuplesort_getindextuple_mk(hspool->sortstate,
+										   true, &should_free);
+	}
+	else
+	{
+		tuplesort_performsort(hspool->sortstate);
+		itup = tuplesort_getindextuple(hspool->sortstate,
+										   true, &should_free);
+	}
 
-	while ((itup = tuplesort_getindextuple(hspool->sortstate,
-										   true, &should_free)) != NULL)
+	while (NULL != itup)
 	{
 		_hash_doinsert(hspool->index, itup);
 		if (should_free)
 			pfree(itup);
+
+		if (gp_enable_mk_sort)
+		{
+			itup = tuplesort_getindextuple_mk(hspool->sortstate,
+											   true, &should_free);
+		}
+		else
+		{
+			itup = tuplesort_getindextuple(hspool->sortstate,
+											   true, &should_free);
+		}
 	}
 }
