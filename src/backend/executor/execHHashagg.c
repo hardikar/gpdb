@@ -392,7 +392,8 @@ lookup_agg_hash_entry(AggState *aggstate,
 	ExprContext *tmpcontext = aggstate->tmpcontext; /* per input tuple context */
 	Agg *agg = (Agg*)aggstate->ss.ps.plan;
 	MemoryContext oldcxt;
-	unsigned int bucket_idx;
+	unsigned int bucket_idx, bucket_grp;
+
 	uint64 bloomval;			/* bloom filter value */
    
 	Assert(mt_bind != NULL);
@@ -402,6 +403,7 @@ lookup_agg_hash_entry(AggState *aggstate,
 
 	oldcxt = MemoryContextSwitchTo(tmpcontext->ecxt_per_tuple_memory);
 	bucket_idx = (hashkey >> parent_hash_bit) % (hashtable->nbuckets);
+	bucket_grp = bucket_idx / hashtable->nbucketgroups;
 	bloomval = ((uint64)1) << ((hashkey >> 23) & 0x3f);
 	entry = (0 == (hashtable->bloom[bucket_idx] & bloomval) ? NULL :
 			 hashtable->buckets[bucket_idx]);
@@ -481,6 +483,10 @@ lookup_agg_hash_entry(AggState *aggstate,
 			entry->next = hashtable->buckets[bucket_idx];
 			hashtable->buckets[bucket_idx] = entry;
 			hashtable->bloom[bucket_idx] |= bloomval;
+			if (hashtable->bitfield)
+			{
+				hashtable->bitfield[bucket_grp] = true;
+			}
 			
 			hashtable->num_ht_groups++;
 
@@ -520,6 +526,7 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 		+ transpace;
 	
 	double nbuckets;
+	double nbucketgroups;
 
 	/* Hash Entries */
 	double nentries;
@@ -586,16 +593,27 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 		}
 	}
 
-    if (out_hats)
-    {
-        out_hats->nbuckets = (unsigned)nbuckets;
-        out_hats->nentries = (unsigned)nentries;
+	if (nbuckets >= BUCKET_GROUPING_THRESHOLD)
+	{
+		nbucketgroups = nbuckets / BUCKETS_PER_BUCKET_GROUP;
+	}
+	else
+	{
+		nbucketgroups = 0;
+	}
+
+
+	if (out_hats)
+	{
+		out_hats->nbuckets = (unsigned)nbuckets;
+		out_hats->nbucketgroups = (unsigned) nbucketgroups;
+		out_hats->nentries = (unsigned)nentries;
 		out_hats->nbatches = (unsigned)nbatches;
 		out_hats->hashentry_width = entrysize;
 		out_hats->spill = expectSpill;
-        out_hats->workmem_initial = (unsigned)(nbatches * batchfile_buffer_size);
-        out_hats->workmem_per_entry = (unsigned)entrysize;
-    }
+		out_hats->workmem_initial = (unsigned)(nbatches * batchfile_buffer_size);
+		out_hats->workmem_per_entry = (unsigned)entrysize;
+	}
 	
 	elog(HHA_MSG_LVL, "HashAgg: nbuckets = %d, nentries = %d, nbatches = %d",
 		 (int)nbuckets, (int)nentries, (int)nbatches);
@@ -701,6 +719,16 @@ create_agg_hash_table(AggState *aggstate)
 	hashtable->total_buckets = hashtable->nbuckets;
 	hashtable->buckets = (HashAggEntry **)palloc0(hashtable->nbuckets * sizeof(HashAggEntry *));
 	hashtable->bloom = (uint64 *)palloc0(hashtable->nbuckets * sizeof(uint64));
+
+	hashtable->nbucketgroups = hashtable->hats.nbucketgroups;
+	if (0 == hashtable->nbucketgroups)
+	{
+		hashtable->bitfield = NULL;
+	}
+	else
+	{
+		hashtable->bitfield = (char *) palloc0(hashtable->nbucketgroups);
+	}
 
 	MemoryContextSwitchTo(hashtable->entry_cxt);
 	
@@ -1415,19 +1443,35 @@ agg_hash_iter(AggState *aggstate)
 	
 	oldcxt = MemoryContextSwitchTo(hashtable->entry_cxt);
 
+	unsigned bucket_idx, bucket_grp, bg;
+
+	if (NULL == entry && hashtable->bitfield)
+	{
+	  bucket_idx = hashtable->curr_bucket_idx + 1;
+
+		if (0 == bucket_idx % hashtable->nbucketgroups)
+		{
+			bucket_grp = bucket_idx / hashtable->nbucketgroups;
+			bg = bucket_grp;
+
+			while (bg < hashtable->nbucketgroups &&
+						 0 == hashtable->bitfield[bg])
+			{
+				++bg;
+			}
+			hashtable->curr_bucket_idx = bg * BUCKETS_PER_BUCKET_GROUP - 1;
+		}
+	}
+
 	while (entry == NULL &&
 		   hashtable->nbuckets > ++ hashtable->curr_bucket_idx)
 	{
 		entry = hashtable->buckets[hashtable->curr_bucket_idx];
-		if (entry != NULL)
-		{
-			Assert(entry->is_primodial);
-			break;
-		}
 	}
 
 	if (entry != NULL)
 	{
+		Assert(entry->is_primodial);
 		hashtable->num_output_groups++;
 		hashtable->next_entry = entry->next;
 		entry->next = NULL;
@@ -1956,6 +2000,10 @@ void reset_agg_hash_table(AggState *aggstate)
 	
 	MemSet(hashtable->buckets, 0, hashtable->nbuckets * sizeof(HashAggEntry*));
 	MemSet(hashtable->bloom, 0, hashtable->nbuckets * sizeof(uint64));
+	if (NULL != hashtable->bitfield)
+	{
+		MemSet(hashtable->bitfield, 0, hashtable->nbucketgroups * sizeof(bool));
+	}
 	hashtable->num_ht_groups = 0;
 
 	CdbCellBuf_Reset(&(hashtable->entry_buf));
@@ -1988,6 +2036,10 @@ void destroy_agg_hash_table(AggState *aggstate)
 		/* destroy_batches(aggstate->hhashtable); */
 		pfree(aggstate->hhashtable->buckets);
 		pfree(aggstate->hhashtable->bloom);
+		if (aggstate->hhashtable->bitfield)
+		{
+			pfree(aggstate->hhashtable->bitfield);
+		}
 		if (aggstate->hhashtable->hashkey_buf)
 			pfree(aggstate->hhashtable->hashkey_buf);
 

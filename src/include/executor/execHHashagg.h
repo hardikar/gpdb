@@ -100,6 +100,10 @@ typedef struct SpillFile
 	bool respilled;
 } SpillFile;
 
+/* Must be a power of 2 */
+#define BUCKET_GROUPING_THRESHOLD (( 1 << 15))
+#define BUCKETS_PER_BUCKET_GROUP (( 1 << 8))
+
 /* A SpillSet is sequence of SpillFiles that partition a range of
  * hash key values into smaller ranges.  When the range represented
  * by a SpillFile turns out to be too large, an additional SpillSet
@@ -119,13 +123,14 @@ typedef struct SpillSet
 
 typedef struct HashAggTableSizes
 {
-    unsigned             nbuckets;   /* Calculated # of hash buckets. */
-    unsigned             nentries;   /* Calculated # of hash entries. */
-    unsigned             nbatches;   /* Calculated # of passes. */
+	unsigned             nbuckets;   /* Calculated # of hash buckets. */
+	unsigned             nbucketgroups; /* Calculated # of bucket groups */
+	unsigned             nentries;   /* Calculated # of hash entries. */
+	unsigned             nbatches;   /* Calculated # of passes. */
 	double               hashentry_width; /* Estimated hash entry size */
-    unsigned             workmem_initial;    /* Estimated work_mem bytes at #entries=0 */
-    unsigned             workmem_per_entry;  /* Additional work_mem bytes per entry */
-    bool                 spill;      /* Do we expect to spill ? */
+	unsigned             workmem_initial;    /* Estimated work_mem bytes at #entries=0 */
+	unsigned             workmem_per_entry;  /* Additional work_mem bytes per entry */
+	bool                 spill;      /* Do we expect to spill ? */
 } HashAggTableSizes;
 
 /*
@@ -164,6 +169,9 @@ typedef struct HashAggTable
 	unsigned nbuckets;
 	HashAggEntry  **buckets;
 	uint64 *bloom;
+
+	bool *bitfield;
+	unsigned nbucketgroups;
 
 	/* Overflow batches */
 	SpillSet       *spill_set;
