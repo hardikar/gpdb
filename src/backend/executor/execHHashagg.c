@@ -1380,6 +1380,9 @@ agg_hash_table_stat_upd(HashAggTable *ht)
     }
 }                               /* agg_hash_table_stat_upd */
 
+#define THING_SIZE 64
+uint64 thing[THING_SIZE]; // SHOULD BE ZERO
+
 /* Function: init_agg_hash_iter
  *
  * Initialize the HashAggTable's (one and only) entry iterator. */
@@ -1389,6 +1392,7 @@ void init_agg_hash_iter(HashAggTable* hashtable)
 	
 	hashtable->curr_bucket_idx = -1;
 	hashtable->next_entry = NULL;
+	MemSet(thing, 0, sizeof(thing));
 }
 
 /* Function: agg_hash_iter
@@ -1407,6 +1411,7 @@ agg_hash_iter(AggState *aggstate)
 	HashAggEntry *entry = hashtable->next_entry;
 	SpillSet *spill_set = hashtable->spill_set;
 	MemoryContext oldcxt;
+	unsigned bucket_idx;
 
 	Assert( hashtable != NULL && hashtable->buckets != NULL && hashtable->nbuckets > 0 );
 
@@ -1415,15 +1420,24 @@ agg_hash_iter(AggState *aggstate)
 	
 	oldcxt = MemoryContextSwitchTo(hashtable->entry_cxt);
 
-	while (entry == NULL &&
-		   hashtable->nbuckets > ++ hashtable->curr_bucket_idx)
+	/*
+	 * Fast path in case of a sparse hash table
+	 */
+	if (NULL == entry)
+	{
+		bucket_idx = hashtable->curr_bucket_idx + 1;
+		while(bucket_idx + THING_SIZE < hashtable->nbuckets &&
+					0 == memcmp(&hashtable->bloom[bucket_idx], thing, sizeof(thing)))
+		{
+			bucket_idx += THING_SIZE;
+		}
+		hashtable->curr_bucket_idx = bucket_idx - 1;
+	}
+
+	while (NULL == entry &&
+				 ++hashtable->curr_bucket_idx < hashtable->nbuckets)
 	{
 		entry = hashtable->buckets[hashtable->curr_bucket_idx];
-		if (entry != NULL)
-		{
-			Assert(entry->is_primodial);
-			break;
-		}
 	}
 
 	if (entry != NULL)
