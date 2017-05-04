@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinpath.c,v 1.115.2.1 2008/03/24 21:53:12 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinpath.c,v 1.118 2008/10/04 21:56:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -362,6 +362,7 @@ match_unsorted_outer(PlannerInfo *root,
 					 List *mergeclause_list,
 					 JoinType jointype)
 {
+	JoinType	save_jointype = jointype;
 	bool		nestjoinOK;
 	bool		useallclauses;
 	Path	   *inner_cheapest_startup = innerrel->cheapest_startup_path;
@@ -404,28 +405,24 @@ match_unsorted_outer(PlannerInfo *root,
     		&& !root->config->mpp_trying_fallback_plan)
         nestjoinOK = false;
 
-    /*
-     * For NJ there may be some special inner paths we should try.
-     */
     if (nestjoinOK)
 	{
-        bool    materialize_inner = true;
+		/*
+		 * If the cheapest inner path is a join or seqscan, we should consider
+		 * materializing it.  (This is a heuristic: we could consider it
+		 * always, but for inner indexscans it's probably a waste of time.)
+		 * Also skip it if the inner path materializes its output anyway.
+		 */
+		if (!(inner_cheapest_total->pathtype == T_IndexScan ||
+			  inner_cheapest_total->pathtype == T_BitmapHeapScan ||
+			  inner_cheapest_total->pathtype == T_TidScan ||
+			  inner_cheapest_total->pathtype == T_Material ||
+			  inner_cheapest_total->pathtype == T_FunctionScan ||
+			  inner_cheapest_total->pathtype == T_CteScan ||
+			  inner_cheapest_total->pathtype == T_WorkTableScan))
+			matpath = (Path *)
+				create_material_path(root, innerrel, inner_cheapest_total);
 
-        /*
-         * Consider materializing the cheapest inner path unless it is
-         * cheaply rescannable.
-         */
-		if (IsA(inner_cheapest_total, UniquePath))
-        {
-            UniquePath *unique_path = (UniquePath *)inner_cheapest_total;
-
-            if (unique_path->umethod == UNIQUE_PATH_SORT ||
-                unique_path->umethod == UNIQUE_PATH_HASH)
-                materialize_inner = false;
-        }
-
-        if (materialize_inner)
-			matpath = (Path *)create_material_path(root, innerrel, inner_cheapest_total);
 
 		/*
 		 * Get the best innerjoin indexpaths (if any) for this outer rel.

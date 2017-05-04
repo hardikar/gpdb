@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.168.2.4 2009/03/10 20:58:41 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.174 2008/10/04 21:56:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -66,7 +66,9 @@ static void set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel,
 static void set_values_pathlist(PlannerInfo *root, RelOptInfo *rel,
 					RangeTblEntry *rte);
 static void set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel,
-				 RangeTblEntry *rte);
+							 RangeTblEntry *rte);
+static void set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel,
+								   RangeTblEntry *rte);
 static RelOptInfo *make_rel_from_joinlist(PlannerInfo *root, List *joinlist);
 static Query *push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
 				   RangeTblEntry *rte, Index rti, Query *subquery);
@@ -218,7 +220,7 @@ set_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	}
 	else if (rel->rtekind == RTE_FUNCTION)
 	{
-		/* RangeFunction --- generate a separate plan for it */
+		/* RangeFunction --- generate a suitable path for it */
 		set_function_pathlist(root, rel, rte);
 	}
 	else if (rel->rtekind == RTE_TABLEFUNCTION)
@@ -228,12 +230,16 @@ set_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	}
 	else if (rel->rtekind == RTE_VALUES)
 	{
-		/* Values list --- generate a separate plan for it */
+		/* Values list --- generate a suitable path for it */
 		set_values_pathlist(root, rel, rte);
 	}
 	else if (rel->rtekind == RTE_CTE)
 	{
-		set_cte_pathlist(root, rel, rte);
+		/* CTE reference --- generate a suitable path for it */
+		if (rte->self_reference)
+			set_worktable_pathlist(root, rel, rte);
+		else
+			set_cte_pathlist(root, rel, rte);
 	}
 	else
 	{
@@ -703,8 +709,11 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		/* Generate the plan for the subquery */
 		config = CopyPlannerConfig(root->config);
 
-		rel->subplan = subquery_planner(root->glob, subquery, root, tuple_fraction,
-										&subroot, config);
+		rel->subplan = subquery_planner(root->glob, subquery,
+									root,
+									false, tuple_fraction,
+									&subroot,
+									config);
 		rel->subrtable = subroot->parse->rtable;
 	}
 	else
@@ -787,6 +796,7 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 
 	/* Plan input subquery */
 	rel->subplan = subquery_planner(root->glob, rte->subquery, root,
+									false,
 									0.0, //tuple_fraction
 									& subroot,
 									config);
@@ -851,182 +861,102 @@ set_values_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 
 /*
  * set_cte_pathlist
- *		Buld the (single) access path for a CTE RTE.
+ *		Build the (single) access path for a non-self-reference CTE RTE
  */
 static void
 set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
-	/* Find the referenced CTE based on the given range table entry */
-	Index		levelsup = rte->ctelevelsup;
-	PlannerInfo *cteroot = root;
+	Plan	   *cteplan;
+	PlannerInfo *cteroot;
+	Index		levelsup;
+	int			ndx;
 	ListCell   *lc;
-	CommonTableExpr *cte = NULL;
-	int			planinfo_id;
-	double		tuple_fraction = 0.0;
-	CtePlanInfo *cteplaninfo;
-	Plan	   *subplan = NULL;
-	List	   *subrtable = NULL;
-	List	   *pathkeys = NULL;
-	PlannerInfo *subroot = NULL;
+	int			plan_id;
 
-	while (levelsup > 0)
+	/*
+	 * Find the referenced CTE, and locate the plan previously made for it.
+	 */
+	levelsup = rte->ctelevelsup;
+	cteroot = root;
+	while (levelsup-- > 0)
 	{
 		cteroot = cteroot->parent_root;
-		Assert(cteroot != NULL);
-		levelsup--;
+		if (!cteroot)			/* shouldn't happen */
+			elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
 	}
-
-	planinfo_id = 0;
+	/*
+	 * Note: cte_plan_ids can be shorter than cteList, if we are still working
+	 * on planning the CTEs (ie, this is a side-reference from another CTE).
+	 * So we mustn't use forboth here.
+	 */
+	ndx = 0;
+	List *rtable = NIL;
 	foreach(lc, cteroot->parse->cteList)
 	{
-		cte = (CommonTableExpr *) lfirst(lc);
-
+		CommonTableExpr *cte = (CommonTableExpr *) lfirst(lc);
+		rtable = ((Query*)(cte->ctequery))->rtable;
 		if (strcmp(cte->ctename, rte->ctename) == 0)
 			break;
-		planinfo_id++;
+		ndx++;
 	}
-
-	Assert(lc != NULL);
-	Assert(cte != NULL);
-
-
-	Assert(IsA(cte->ctequery, Query));
-
-	/*
-	 * Determine whether we need to generate a new subplan for this CTE.
-	 *
-	 * There are the following cases:
-	 *   (1) If this subquery can be pulled up as an InitPlan, we will
-	 *       generate a new subplan. In InitPlan case, the subplan can
-	 *       not be shared with the main query or other InitPlans. We
-	 *       do not store this subplan in cteplaninfo.
-	 *   (2) If we never generate a subplan for this CTE, then we generate
-	 *       one. If the reference count for this CTE is greater than 1
-	 *       (excluding ones used in InitPlans), we create multiple subplans,
-	 *       each of which has a SharedNode on top. We store these subplans
-	 *       in cteplaninfo so that they can be used later.
-	 */
-	Assert(list_length(cteroot->list_cteplaninfo) > planinfo_id);
-	cteplaninfo = list_nth(cteroot->list_cteplaninfo, planinfo_id);
-
-	/*
-	 * If there is exactly one reference to this CTE in the query, or plan
-	 * sharing is disabled, create a new subplan for this CTE. It will
-	 * become simple subquery scan.
-	 *
-	 * NOTE: The check for "exactly one reference" is a bit fuzzy. The
-	 * references are counted in parse analysis phase, and it's possible
-	 * that we duplicate a reference during query planning. So the check
-	 * for number of references must be treated merely as a hint. If it
-	 * turns out that there are in fact multiple references to the same
-	 * CTE, even though we thought that there is only one, we might choose
-	 * a sub-optimal plan because we missed the opportunity to share the
-	 * subplan. That's acceptable for now.
-	 *
-	 * subquery tree will be modified if any qual is pushed down.
-	 * There's risk that it'd be confusing if the tree is used
-	 * later. At the moment InitPlan case uses the tree, but it
-	 * is called earlier than this pass always, so we don't avoid it.
-	 *
-	 * Also, we might want to think extracting "common"
-	 * qual expressions between multiple references, but
-	 * so far we don't support it.
-	 */
-	if (!root->config->gp_cte_sharing ||
-		(cte->cterefcount) == 1)
-	{
-		PlannerConfig *config = CopyPlannerConfig(root->config);
-
-		/*
-		 * Copy query node since subquery_planner may trash it, and we need it
-		 * intact in case we need to create another plan for the CTE
-		 */
-		Query	   *subquery = (Query *) copyObject(cte->ctequery);
-
-		/*
-		 * Having multiple SharedScans can lead to deadlocks. For now,
-		 * disallow sharing of ctes at lower levels.
-		 */
-		config->gp_cte_sharing = false;
-
-		/*
-		 * Adjust the subquery so that 'root', i.e. this subquery, is the
-		 * parent of the CTE subquery, even though the CTE might've been
-		 * higher up syntactically. This is because some of the quals that
-		 * we push down might refer to relations between the current level
-		 * and the CTE's syntactical level. Such relations are not visible
-		 * at the CTE's syntactical level, and SS_finalize_plan() would
-		 * throw an error on them.
-		 */
-		IncrementVarSublevelsUp((Node *) subquery, rte->ctelevelsup, 1);
-
-		/*
-		 * Push down quals, like we do in set_subquery_pathlist()
-		 */
-		subquery = push_down_restrict(root, rel, rte, rel->relid, subquery);
-
-		subplan = subquery_planner(cteroot->glob, subquery, root,
-								   tuple_fraction, &subroot, config);
-
-		subrtable = subroot->parse->rtable;
-		pathkeys = subroot->query_pathkeys;
-
-		/*
-		 * Do not store the subplan in cteplaninfo, since we will not share
-		 * this plan.
-		 */
-	}
-	else
-	{
-		/*
-		 * If we haven't created a subplan for this CTE yet, do it now. This
-		 * subplan will not be used by InitPlans, so that they can be shared
-		 * if this CTE is referenced multiple times (excluding in InitPlans).
-		 */
-		if (cteplaninfo->shared_plan == NULL)
-		{
-			PlannerConfig *config = CopyPlannerConfig(root->config);
-
-			/*
-			 * Copy query node since subquery_planner may trash it and we need
-			 * it intact in case we need to create another plan for the CTE
-			 */
-			Query	   *subquery = (Query *) copyObject(cte->ctequery);
-
-			/*
-			 * Having multiple SharedScans can lead to deadlocks. For now,
-			 * disallow sharing of ctes at lower levels.
-			 */
-			config->gp_cte_sharing = false;
-
-			subplan = subquery_planner(cteroot->glob, subquery, cteroot,
-									   tuple_fraction, &subroot, config);
-
-			cteplaninfo->shared_plan = prepare_plan_for_sharing(cteroot, subplan);
-			cteplaninfo->subrtable = subroot->parse->rtable;
-			cteplaninfo->pathkeys = subroot->query_pathkeys;
-		}
-
-		/*
-		 * Create another ShareInputScan to reference the already-created
-		 * subplan.
-		 */
-		subplan = share_prepared_plan(cteroot, cteplaninfo->shared_plan);
-		subrtable = cteplaninfo->subrtable;
-		pathkeys = cteplaninfo->pathkeys;
-	}
-
-	rel->subplan = subplan;
-	rel->subrtable = subrtable;
+	if (lc == NULL)				/* shouldn't happen */
+		elog(ERROR, "could not find CTE \"%s\"", rte->ctename);
+	if (ndx >= list_length(cteroot->cte_plan_ids))
+		elog(ERROR, "could not find plan for CTE \"%s\"", rte->ctename);
+	plan_id = list_nth_int(cteroot->cte_plan_ids, ndx);
+	Assert(plan_id > 0);
+	cteplan = (Plan *) list_nth(root->glob->subplans, plan_id - 1);
 
 	/* Mark rel with estimated output rows, width, etc */
-	set_cte_size_estimates(root, rel, rel->subplan);
-
-	/* Convert subquery pathkeys to outer representation */
-	pathkeys = convert_subquery_pathkeys(root, rel, pathkeys);
+	set_cte_size_estimates(root, rel, cteplan);
 
 	/* Generate appropriate path */
-	add_path(root, rel, create_ctescan_path(root, rel, pathkeys));
+	// FIXME CTE_MERGE: For `create_ctescan_path How to get pathkeys. For now we are passing NULL.
+	rel->subplan = cteplan;
+	rel->subrtable = rtable;
+	add_path(root, rel, create_ctescan_path(root, rel, NIL));
+
+	/* Select cheapest path (pretty easy in this case...) */
+	set_cheapest(root, rel);
+}
+
+/*
+ * set_worktable_pathlist
+ *		Build the (single) access path for a self-reference CTE RTE
+ */
+static void
+set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
+{
+	Plan	   *cteplan;
+	PlannerInfo *cteroot;
+	Index		levelsup;
+
+	/*
+	 * We need to find the non-recursive term's plan, which is in the plan
+	 * level that's processing the recursive UNION, which is one level
+	 * *below* where the CTE comes from.
+	 */
+	levelsup = rte->ctelevelsup;
+	if (levelsup == 0)			/* shouldn't happen */
+		elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
+	levelsup--;
+	cteroot = root;
+	while (levelsup-- > 0)
+	{
+		cteroot = cteroot->parent_root;
+		if (!cteroot)			/* shouldn't happen */
+			elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
+	}
+	cteplan = cteroot->non_recursive_plan;
+	if (!cteplan)				/* shouldn't happen */
+		elog(ERROR, "could not find plan for CTE \"%s\"", rte->ctename);
+
+	/* Mark rel with estimated output rows, width, etc */
+	set_cte_size_estimates(root, rel, cteplan);
+
+	/* Generate appropriate path */
+	// FIXME : CTE_MERGE : Do we want pathkeys for `create_worktablescan_path`?
+	add_path(root, rel, create_worktablescan_path(root, rel));
 
 	/* Select cheapest path (pretty easy in this case...) */
 	set_cheapest(root, rel);
