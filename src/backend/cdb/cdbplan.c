@@ -283,6 +283,19 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
+		case T_CteScan:
+			{
+				CteScan *ctescan = (CteScan *) node;
+				CteScan *newctescan;
+
+				FLATCOPY(newctescan, ctescan, CteScan);
+				SCANMUTATE(newctescan, ctescan);
+				newctescan->ctePlanId = ctescan->ctePlanId;
+				newctescan->cteParam = ctescan->cteParam;
+				return (Node *) newctescan;
+			}
+			break;
+
 		case T_AppendOnlyScan:
 			{
 				AppendOnlyScan    *appendonlyscan = (AppendOnlyScan *) node;

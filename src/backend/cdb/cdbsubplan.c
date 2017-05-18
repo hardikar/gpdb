@@ -253,18 +253,20 @@ addRemoteExecParamsToParamList(PlannedStmt *stmt, ParamListInfo extPrm, ParamExe
 		}
 	}
 
-	if (context.params == NIL)
-	{
-		/* We apparently have an initplan with no corresponding parameter.
-		 * This shouldn't happen, but we had a bug once (MPP-239) because
-		 * we weren't looking for parameters in Function RTEs.  So we still 
-		 * better check.  The old correct, but unhelpful to ENG, message was 
-		 * "Subquery datatype information unavailable."
-		 */
-		ereport(ERROR,
-				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
-				 errmsg("no parameter found for initplan subquery")));
-	}
+	/* CTE_MERGE FIXME: Is this valid after the CTE merge ? */
+
+//	if (context.params == NIL)
+//	{
+//		/* We apparently have an initplan with no corresponding parameter.
+//		 * This shouldn't happen, but we had a bug once (MPP-239) because
+//		 * we weren't looking for parameters in Function RTEs.  So we still 
+//		 * better check.  The old correct, but unhelpful to ENG, message was 
+//		 * "Subquery datatype information unavailable."
+//		 */
+//		ereport(ERROR,
+//				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+//				 errmsg("no parameter found for initplan subquery")));
+//	}
 
 	/*
 	 * Now initialize the ParamListInfo elements corresponding to the

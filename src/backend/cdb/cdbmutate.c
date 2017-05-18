@@ -2921,6 +2921,11 @@ initplan_walker(Node *node, ParamWalkerContext *context)
 					break;
 				}
 			}
+			if (subplan->is_cte)
+			{
+				/* CTE_MERGE FIXME : Assume CteScan InitPlans are referenced for now */
+				anyused = true;
+			}
 
 			/* If none of its params are used, leave out from the new list */
 			if (anyused)

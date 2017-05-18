@@ -639,6 +639,8 @@ ExecEagerFree(PlanState *node)
 		case T_DynamicIndexScanState:
 		case T_SequenceState:
 		case T_PartitionSelectorState:
+		case T_CteScanState:
+			/* CTE_MERGE FIXME: This has a tuplestore we can eager free probably */
 			break;
 
 		case T_TableScanState:

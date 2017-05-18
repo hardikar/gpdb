@@ -625,7 +625,7 @@ typedef struct SubPlan
 	Node	   *testexpr;		/* OpExpr or RowCompareExpr expression tree */
 	List	   *paramIds;		/* IDs of Params embedded in the above */
 
-    int         qDispSliceId;   /* CDB: slice# of initplan's root slice, or 0 */
+	int	    qDispSliceId;   /* CDB: slice# of initplan's root slice, or 0 */
 
 	/* Identification of the Plan tree to use: */
 	int			plan_id;		/* Index (from 1) in PlannedStmt.subplans */
@@ -648,6 +648,7 @@ typedef struct SubPlan
 	bool		is_multirow;	/* CDB: May the subplan return more than
 								 * one row? */
 	bool		is_parallelized; /* Has subplan been processed to be executed in parallel setting */
+	bool		is_cte; /* CDB: Does this subplan represent a CteScan definition */
 	/* Information for passing params into and out of the subselect: */
 	/* setParam and parParam are lists of integers (param IDs) */
 	List	   *setParam;		/* initplan subqueries have to set these

@@ -527,6 +527,7 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 				/* and we must push a new slice */
 				pushNewDirectDispatchInfo = true;
 				break;
+			case T_CteScan:
 			case T_ShareInputScan:
 				/* note: could try to peek into the building slice to get its direct dispatch values but we don't */
 				DisableTargetedDispatch(&dispatchInfo);
