@@ -927,8 +927,9 @@ plan_tree_walker(Node *node,
 		case T_BitmapTableScan:
 		case T_TableFunctionScan:
 		case T_ValuesScan:
-			if (walk_scan_node_fields((Scan *) node, walker, context))
-				return true;
+		case T_CteScan:
+		if (walk_scan_node_fields((Scan *) node, walker, context))
+			return true;
 			break;
 
 		case T_FunctionScan:
@@ -1065,7 +1066,6 @@ plan_tree_walker(Node *node,
 			break;
 
 		case T_ShareInputScan:
-		case T_CteScan:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;
 			break;

@@ -477,6 +477,7 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 		|| IsA(node, AppendOnlyScan)
 		|| IsA(node, AOCSScan)
 		|| IsA(node, ShareInputScan)
+		|| IsA(node, CteScan)
 		|| IsA(node, ExternalScan))
 	{
 		Plan *scanPlan = (Plan *) node;
@@ -838,7 +839,7 @@ prescan_walker(Node *node, PlanProfile * context)
 			 */
 			SubPlan    *subplan = (SubPlan *) node;
 
-			if (!subplan->is_parallelized)
+			if (!subplan->is_cte && !subplan->is_parallelized)
 			{
 				ParallelizeSubplan(subplan, context);
 			}

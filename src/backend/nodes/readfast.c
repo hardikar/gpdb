@@ -1637,6 +1637,22 @@ _readScan(void)
 }
 
 /*
+ * _readCteScan
+ */
+static CteScan *
+_readCteScan(void)
+{
+    READ_LOCALS(CteScan);
+
+    readScanInfo((Scan *)local_node);
+    READ_INT_FIELD(ctePlanId);
+    READ_INT_FIELD(cteParam);
+
+    READ_DONE();
+}
+
+
+/*
  * _readSeqScan
  */
 static SeqScan *
@@ -2778,6 +2794,9 @@ readNodeBinary(void)
 				break;
 			case T_Scan:
 				return_value = _readScan();
+				break;
+			case T_CteScan:
+				return_value = _readCteScan();
 				break;
 			case T_SeqScan:
 				return_value = _readSeqScan();

@@ -498,6 +498,7 @@ build_subplan(PlannerInfo *root, Plan *plan, List *rtable,
 	splan->is_initplan = false;
 	splan->is_multirow = false;
 	splan->is_parallelized = false;
+	splan->is_cte = false;
 	splan->setParam = NIL;
 	splan->parParam = NIL;
 	splan->args = NIL;
@@ -1004,6 +1005,13 @@ SS_process_ctes(PlannerInfo *root)
 		splan->setParam = NIL;
 		splan->parParam = NIL;
 		splan->args = NIL;
+		/* CTE_MERGE FIXME: initplan = true? is_parallelizes = true? */
+		splan->is_initplan = true;
+		splan->is_multirow = true;
+		splan->is_parallelized = false;
+		splan->is_cte = true;
+		splan->extParam = NIL;
+		splan->qDispSliceId = 0;
 
 		/*
 		 * Make parParam and args lists of param IDs and expressions that
