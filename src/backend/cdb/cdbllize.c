@@ -624,6 +624,7 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 	if (IsA(node, SubPlan))
 	{
 		SubPlan *sp = (SubPlan *) node;
+    /* FIXME: Why ?? */
 		if (sp->is_initplan)
 		{
 			return node;

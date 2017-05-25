@@ -77,7 +77,6 @@ typedef struct ApplyShareInputContext
 
 } ApplyShareInputContext;
 
-
 /*----------
  * PlannerGlobal
  *		Global information for planning/optimization

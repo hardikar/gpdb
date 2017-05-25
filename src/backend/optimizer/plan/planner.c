@@ -553,6 +553,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		 * slices.
 		 */
 		top_plan = apply_shareinput_xslice(top_plan, glob);
+        apply_cte_xslice(top_plan, glob);
 	}
 
 	/*

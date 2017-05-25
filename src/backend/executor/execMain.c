@@ -5614,12 +5614,11 @@ typedef struct
 } FillSliceTable_cxt;
 
 static bool
-FillSliceTable_walker(Node *node, void *context)
+FillSliceTable_walker(Node *node, FillSliceTable_cxt *context)
 {
-	FillSliceTable_cxt *cxt = (FillSliceTable_cxt *) context;
-	EState	   *estate = cxt->estate;
+	EState	   *estate = context->estate;
 	SliceTable *sliceTable = estate->es_sliceTable;
-	int			parentSliceIndex = cxt->currentSliceId;
+	int			parentSliceIndex = context->currentSliceId;
 	bool		result;
 
 	if (node == NULL)
@@ -5627,6 +5626,7 @@ FillSliceTable_walker(Node *node, void *context)
 
 	if (IsA(node, Motion))
 	{
+
 		Motion	   *motion = (Motion *) node;
 		MemoryContext oldcxt = MemoryContextSwitchTo(estate->es_query_cxt);
 		Flow	   *sendFlow;
@@ -5649,8 +5649,11 @@ FillSliceTable_walker(Node *node, void *context)
 			   (recvSlice->rootIndex > sliceTable->nMotions &&
 				recvSlice->rootIndex < list_length(sliceTable->slices)));
 
-		/* Sending slice become a children of recv slice */
-		recvSlice->children = lappend_int(recvSlice->children, sendSlice->sliceIndex);
+		/* Sending slice become a children of recv slice if not already present */
+		if (-1 == list_find_int(recvSlice->children, sendSlice->sliceIndex))
+		{
+			recvSlice->children = lappend_int(recvSlice->children, sendSlice->sliceIndex);
+		}
 		sendSlice->parentIndex = parentSliceIndex;
 		sendSlice->rootIndex = recvSlice->rootIndex;
 
@@ -5676,26 +5679,44 @@ FillSliceTable_walker(Node *node, void *context)
 		MemoryContextSwitchTo(oldcxt);
 
 		/* recurse into children */
-		cxt->currentSliceId = motion->motionID;
-		result = plan_tree_walker(node, FillSliceTable_walker, cxt);
-		cxt->currentSliceId = parentSliceIndex;
+		context->currentSliceId = motion->motionID;
+		result = plan_tree_walker(node, FillSliceTable_walker, context);
+		context->currentSliceId = parentSliceIndex;
 		return result;
 	}
 
-	if (IsA(node, SubPlan))
+	else if (IsA(node, SubPlan))
 	{
 		SubPlan *subplan = (SubPlan *) node;
 
+		if (subplan->is_cte)
+		{
+			/* Ignore it; we'll be back */
+			return false;
+		}
 		if (subplan->is_initplan)
 		{
-			cxt->currentSliceId = subplan->qDispSliceId;
-			result = plan_tree_walker(node, FillSliceTable_walker, cxt);
-			cxt->currentSliceId = parentSliceIndex;
+			context->currentSliceId = subplan->qDispSliceId;
+			result = plan_tree_walker(node, FillSliceTable_walker, context);
+			context->currentSliceId = parentSliceIndex;
 			return result;
 		}
 	}
 
-	return plan_tree_walker(node, FillSliceTable_walker, cxt);
+	else if (IsA(node, CteScan))
+	{
+		CteScan * cteScan = (CteScan *) node;
+		PlannedStmt *stmt = (PlannedStmt*) context->prefix.node;
+		Plan *subplan = (Plan *) list_nth(stmt->subplans, cteScan->ctePlanId - 1);
+
+		/* FIXME Walk the CTE here also */
+		result = plan_tree_walker((Node *) subplan, FillSliceTable_walker, context);
+		if (!result)
+			result = plan_tree_walker(node, FillSliceTable_walker, context);
+		return result;
+	}
+
+	return plan_tree_walker(node, FillSliceTable_walker, context);
 }
 
 /*

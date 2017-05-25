@@ -42,6 +42,7 @@ extern Plan *apply_shareinput_dag_to_tree(PlannerGlobal *glob, Plan *plan, List 
 extern void collect_shareinput_producers(PlannerGlobal *glob, Plan *plan, List *rtable);
 extern Plan *replace_shareinput_targetlists(PlannerGlobal *glob, Plan *plan, List *rtable);
 extern Plan *apply_shareinput_xslice(Plan *plan, PlannerGlobal *glob);
+extern void apply_cte_xslice(Plan *plan, PlannerGlobal *glob);
 extern void assign_plannode_id(PlannedStmt *stmt);
 
 extern List *getExprListFromTargetList(List *tlist, int numCols, AttrNumber *colIdx,

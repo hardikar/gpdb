@@ -813,9 +813,11 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
     foreach(cell, state.initPlans)
     {
         SubPlan    *subplan = (SubPlan *)lfirst(cell);
+        Assert(IsA(subplan, SubPlan));
+        AssertImply(!subplan->is_cte, subplan->qDispSliceId == 0);
 
-        Assert(IsA(subplan, SubPlan) && subplan->qDispSliceId == 0);
-        subplan->qDispSliceId = state.nextMotionID++;
+        if (!subplan->is_cte)
+            subplan->qDispSliceId = state.nextMotionID++;
     }
 
     /* 
@@ -2600,7 +2602,107 @@ apply_shareinput_xslice(Plan *plan, PlannerGlobal *glob)
 	return plan;
 }
 
-/* 
+
+
+typedef struct ApplyCteSliceContext
+{
+    plan_tree_base_prefix base;
+    List *motStack;
+    List *subPlanExpr;
+}ApplyCteSliceContext;
+
+
+static bool
+cte_xslice_walker(Node *node, ApplyCteSliceContext *context)
+{
+    bool ret;
+    if (NULL == node)
+    {
+        return false;
+    }
+    if (IsA(node, SubPlan))
+    {
+		SubPlan * subPlan = (SubPlan *) node;
+		if (subPlan->is_cte)
+		{
+			/* Ignore for now; We'll be back later via CteScan */
+			return false;
+		}
+		else
+		{
+			return plan_tree_walker(node, cte_xslice_walker, context);
+		}
+    }
+    else if (IsA(node, CteScan))
+    {
+        CteScan *cte = (CteScan *) node;
+		/* CTE_MERGE FIXME: What about master-only tables? */
+        Assert(context->motStack != NIL);
+        
+        Motion *topMotion = (Motion *) lfirst(list_head(context->motStack));
+        
+        ListCell *lc;
+        SubPlan *subPlan;
+        foreach(lc, context->subPlanExpr)
+        {
+            subPlan = (SubPlan *) lfirst(lc);
+            Assert(subPlan && IsA(subPlan, SubPlan));
+            if (subPlan->plan_id == cte->ctePlanId)
+                break;
+        }
+        
+        Assert(subPlan->is_cte);
+        Assert(subPlan->plan_id == cte->ctePlanId);
+        
+        if (subPlan->qDispSliceId == 0)
+        {
+            /* Assign the CTE definition to the same slice as the right motion */
+            subPlan->qDispSliceId = topMotion->motionID;
+        }
+        else if (subPlan->qDispSliceId != topMotion->motionID)
+		{
+			elog(ERROR, "Cross-slice CTE using CteScan not supported.");
+		}
+
+		PlannerGlobal *glob = (PlannerGlobal *) context->base.node;
+		Plan *subplan = (Plan *) list_nth(glob->subplans, cte->ctePlanId - 1);
+
+		/* CTE_MERGE FIXME : Which should happen first ? */
+		ret = plan_tree_walker((Node *) subplan, cte_xslice_walker, context);
+		if (!ret)
+			ret = plan_tree_walker(node, cte_xslice_walker, context);
+		return ret;
+    }
+    else if (IsA(node, Motion))
+    {
+        Motion *motion = (Motion *) node;
+
+        context->motStack = lcons(motion, context->motStack);
+		ret = plan_tree_walker(node, cte_xslice_walker, context);
+		/* pop motStack when coming back from Motion's subtree */
+		context->motStack = list_delete_first(context->motStack);
+
+		return ret;
+    }
+
+    return plan_tree_walker(node, cte_xslice_walker, context);
+}
+
+/*
+ * FIXME : Write comments
+ */
+void
+apply_cte_xslice(Plan *plan, PlannerGlobal *glob)
+{
+    ApplyCteSliceContext ctx;
+    ctx.base.node = (Node *) glob;
+    ctx.motStack = NIL;
+    ctx.subPlanExpr = extract_nodes_plan(plan, T_SubPlan, true);
+    
+    cte_xslice_walker((Node *)plan, &ctx);
+}
+
+/*
  * assign_plannode_id - Assign an id for each plan node.  Used by gpmon. 
  */
 void assign_plannode_id(PlannedStmt *stmt)
