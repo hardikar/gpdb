@@ -2007,6 +2007,65 @@ gpdb::DConvertNetworkToScalar
 	return 0.0;
 }
 
+double
+gpdb::DConvertTextToScalar
+	(
+	Datum datum,
+	Oid typid
+	)
+{
+	GP_WRAP_START;
+	{
+		const int N = 32;
+		const double base = 256;
+		double num, denom;
+
+		unsigned char *value, *dptr;
+		int valuelen;
+
+		switch(typid)
+		{
+		case BPCHAROID:
+			dptr = (unsigned char *) DatumGetBpCharP(datum);
+			break;
+		case VARCHAROID:
+			dptr = (unsigned char *) DatumGetVarCharP(datum);
+			break;
+		case TEXTOID:
+			dptr = (unsigned char *) DatumGetTextP(datum);
+			break;
+		default:
+			elog(ERROR, "unsupported type: %u", typid);
+		}
+
+		// We already de-toasted the datum above
+		value = (unsigned char *) VARDATA(dptr);
+		valuelen = VARSIZE(dptr) - VARHDRSZ;
+
+		if (valuelen <= 0)
+			return 0.0;				/* empty string has scalar value 0 */
+
+		// Consider only the first N bytes
+		if (valuelen > N)
+			valuelen = N;
+
+		/* Convert initial characters to fraction */
+		num = 0.0;
+		denom = base;
+		while (valuelen-- > 0)
+		{
+			int			ch = *value++;
+
+			num += ((double) ch) / denom;
+			denom *= base;
+		}
+
+		return num;
+	}
+	GP_WRAP_END;
+	return 0.0;
+}
+
 bool
 gpdb::FOpHashJoinable
 	(

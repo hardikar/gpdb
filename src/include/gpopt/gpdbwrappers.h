@@ -441,6 +441,9 @@ namespace gpdb {
 	// convert network-related datums to double for stats purpose
 	double DConvertNetworkToScalar(Datum datum, Oid typid);
 
+	// convert text-related datums to double for stats purpose
+	double DConvertTextToScalar(Datum datum, Oid typid);
+
 	// is the given operator hash-joinable
 	bool FOpHashJoinable(Oid opno);
 
