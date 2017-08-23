@@ -240,7 +240,7 @@ CTranslatorRelcacheToDXL::PmdnameRel
 //		Return the indexes defined on the given relation
 //
 //---------------------------------------------------------------------------
-DrgPmdid *
+DrgPmdIndexInfo *
 CTranslatorRelcacheToDXL::PdrgpmdidRelIndexes
 	(
 	IMemoryPool *pmp,
@@ -248,7 +248,7 @@ CTranslatorRelcacheToDXL::PdrgpmdidRelIndexes
 	)
 {
 	GPOS_ASSERT(NULL != rel);
-	DrgPmdid *pdrgpmdidIndexes = GPOS_NEW(pmp) DrgPmdid(pmp);
+	DrgPmdIndexInfo *pdrgpmdidIndexes = GPOS_NEW(pmp) DrgPmdIndexInfo(pmp);
 
 	List *plIndexOids = NIL;
 	
@@ -293,7 +293,8 @@ CTranslatorRelcacheToDXL::PdrgpmdidRelIndexes
 			if (FIndexSupported(relIndex))
 			{
 				CMDIdGPDB *pmdidIndex = GPOS_NEW(pmp) CMDIdGPDB(oidIndex);
-				pdrgpmdidIndexes->Append(pmdidIndex);
+				CMDIndexInfo *pmdidIndexInfo = GPOS_NEW(pmp) CMDIndexInfo(pmdidIndex, false);
+				pdrgpmdidIndexes->Append(pmdidIndexInfo);
 			}
 
 			gpdb::CloseRelation(relIndex);
@@ -495,7 +496,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 	DrgPmdcol *pdrgpmdcol = NULL;
 	IMDRelation::Ereldistrpolicy ereldistribution = IMDRelation::EreldistrSentinel;
 	DrgPul *pdrpulDistrCols = NULL;
-	DrgPmdid *pdrgpmdidIndexes = NULL;
+	DrgPmdIndexInfo *pdrgpmdidIndexes = NULL;
 	DrgPmdid *pdrgpmdidTriggers = NULL;
 	DrgPul *pdrgpulPartKeys = NULL;
 	DrgPsz *pdrgpszPartTypes = NULL;
@@ -588,32 +589,32 @@ CTranslatorRelcacheToDXL::Pmdrel
 
 	if (IMDRelation::ErelstorageExternal == erelstorage)
 	{
-		ExtTableEntry *extentry = gpdb::Pexttable(oid);
-
-		// get format error table id
-		IMDId *pmdidFmtErrTbl = NULL;
-		if (InvalidOid != extentry->fmterrtbl)
-		{
-			pmdidFmtErrTbl = GPOS_NEW(pmp) CMDIdGPDB(extentry->fmterrtbl);
-		}
-
-		pmdrel = GPOS_NEW(pmp) CMDRelationExternalGPDB
-							(
-							pmp,
-							pmdid,
-							pmdname,
-							ereldistribution,
-							pdrgpmdcol,
-							pdrpulDistrCols,
-							fConvertHashToRandom,
-							pdrgpdrgpulKeys,
-							pdrgpmdidIndexes,
-							pdrgpmdidTriggers,
-							pdrgpmdidCheckConstraints,
-							extentry->rejectlimit,
-							('r' == extentry->rejectlimittype),
-							pmdidFmtErrTbl
-							);
+//		ExtTableEntry *extentry = gpdb::Pexttable(oid);
+//
+//		// get format error table id
+//		IMDId *pmdidFmtErrTbl = NULL;
+//		if (InvalidOid != extentry->fmterrtbl)
+//		{
+//			pmdidFmtErrTbl = GPOS_NEW(pmp) CMDIdGPDB(extentry->fmterrtbl);
+//		}
+//
+//		pmdrel = GPOS_NEW(pmp) CMDRelationExternalGPDB
+//							(
+//							pmp,
+//							pmdid,
+//							pmdname,
+//							ereldistribution,
+//							pdrgpmdcol,
+//							pdrpulDistrCols,
+//							fConvertHashToRandom,
+//							pdrgpdrgpulKeys,
+//							pdrgpmdidIndexes,
+//							pdrgpmdidTriggers,
+//							pdrgpmdidCheckConstraints,
+//							extentry->rejectlimit,
+//							('r' == extentry->rejectlimittype),
+//							pmdidFmtErrTbl
+//							);
 	}
 	else
 	{

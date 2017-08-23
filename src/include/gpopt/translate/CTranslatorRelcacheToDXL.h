@@ -339,7 +339,7 @@ namespace gpdxl
 
 			// return the indexes defined on the given relation
 			static
-			DrgPmdid *PdrgpmdidRelIndexes(IMemoryPool *pmp, Relation rel);
+			DrgPmdIndexInfo *PdrgpmdidRelIndexes(IMemoryPool *pmp, Relation rel);
 			
 			// retrieve an index over a partitioned table from the relcache
 			static
