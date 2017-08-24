@@ -1066,11 +1066,13 @@ CTranslatorRelcacheToDXL::Pmdindex
 
 			// cleanup
 			pmdidRel->Release();
-	
-			gpdb::GPDBFree(plgidx);
-			gpdb::CloseRelation(relIndex);
 
-			return pmdindex;
+			if (NULL != pmdindex)
+			{
+				gpdb::GPDBFree(plgidx);
+				gpdb::CloseRelation(relIndex);
+				return pmdindex;
+			}
 		}
 	
 		emdindt = IMDIndex::EmdindBtree;
@@ -1126,7 +1128,6 @@ CTranslatorRelcacheToDXL::Pmdindex
 										pgIndex->indisclustered,
 										emdindt,
 										pmdidItemType,
-										false, // fPartial
 										pdrgpulKeyCols,
 										pdrgpulIncludeCols,
 										pdrgpmdidOpFamilies,
@@ -1165,7 +1166,7 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 	LogicalIndexInfo *pidxinfo = PidxinfoLookup(plind, oid);
 	if (NULL == pidxinfo)
 	{
-		 GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound, pmdidIndex->Wsz());
+		 return NULL;
 	}
 	
 	return PmdindexPartTable(pmp, pmda, pidxinfo, pmdidIndex, pmdrel);
@@ -1320,8 +1321,6 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 	}
 	gpdb::FreeList(plDefaultLevelsDerived);
 
-	BOOL fPartial = (NULL != pnodePartCnstr || NIL != plDefaultLevels);
-
 	if (NULL == pnodePartCnstr)
 	{
 		if (NIL == plDefaultLevels)
@@ -1360,7 +1359,6 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 										pgIndex->indisclustered,
 										emdindt,
 										pmdidItemType,
-										fPartial,
 										pdrgpulKeyCols,
 										pdrgpulIncludeCols,
 										pdrgpmdidOpFamilies,
