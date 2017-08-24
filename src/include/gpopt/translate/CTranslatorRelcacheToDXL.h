@@ -341,6 +341,12 @@ namespace gpdxl
 			static
 			DrgPmdIndexInfo *PdrgpmdidRelIndexes(IMemoryPool *pmp, Relation rel);
 			
+			static
+			DrgPmdIndexInfo *PdrgpmdidRelIndexesPartTable(IMemoryPool *pmp, Relation rootrel);
+
+			static
+			DrgPmdIndexInfo *PdrgpmdidRelIndexesNonPartTable(IMemoryPool *pmp, Relation rel);
+
 			// retrieve an index over a partitioned table from the relcache
 			static
 			IMDIndex *PmdindexPartTable(IMemoryPool *pmp, CMDAccessor *pmda, IMDId *pmdidIndex, const IMDRelation *pmdrel, LogicalIndexes *plind);

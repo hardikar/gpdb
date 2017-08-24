@@ -248,26 +248,91 @@ CTranslatorRelcacheToDXL::PdrgpmdidRelIndexes
 	)
 {
 	GPOS_ASSERT(NULL != rel);
-	DrgPmdIndexInfo *pdrgpmdidIndexes = GPOS_NEW(pmp) DrgPmdIndexInfo(pmp);
 
-	List *plIndexOids = NIL;
-	
-	if (gpdb::FRelPartIsNone(rel->rd_id))
+	if (gpdb::FRelPartIsNone(rel->rd_id) || gpdb::FLeafPartition(rel->rd_id))
 	{
-		// not a partitioned table: obtain indexes directly from the catalog
-		plIndexOids = gpdb::PlRelationIndexes(rel);
+		return PdrgpmdidRelIndexesNonPartTable(pmp, rel);
 	}
 	else if (gpdb::FRelPartIsRoot(rel->rd_id))
 	{
-		// root of partitioned table: aggregate index information across different parts
-		plIndexOids = PlIndexOidsPartTable(rel);
+		return PdrgpmdidRelIndexesPartTable(pmp, rel);
 	}
 	else  
 	{
 		// interior or leaf partition: do not consider indexes
+		DrgPmdIndexInfo *pdrgpmdidIndexes = GPOS_NEW(pmp) DrgPmdIndexInfo(pmp);
+		// Can we return a NULL Instead ??
 		return pdrgpmdidIndexes;
 	}
-	
+}
+
+DrgPmdIndexInfo *
+CTranslatorRelcacheToDXL::PdrgpmdidRelIndexesPartTable
+	(
+	IMemoryPool *pmp,
+	Relation rootrel
+	)
+{
+	DrgPmdIndexInfo *pdrgpmdidIndexes = GPOS_NEW(pmp) DrgPmdIndexInfo(pmp);
+
+	// root of partitioned table: aggregate index information across different parts
+	List *plLogicalIndexInfo = PlIndexOidsPartTable(rootrel);
+
+	ListCell *plc = NULL;
+
+	ForEach (plc, plLogicalIndexInfo)
+	{
+		LogicalIndexInfo *logicalIndexInfo = (LogicalIndexInfo *) lfirst(plc);
+		OID oidIndex = logicalIndexInfo->logicalIndexOid;
+
+		// only add supported indexes
+		Relation relIndex = gpdb::RelGetRelation(oidIndex);
+
+		if (NULL == relIndex)
+		{
+			WCHAR wsz[1024];
+			CWStringStatic str(wsz, 1024);
+			COstreamString oss(&str);
+			oss << (ULONG) oidIndex;
+			GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound, str.Wsz());
+		}
+
+		GPOS_ASSERT(NULL != relIndex->rd_indextuple);
+
+		GPOS_TRY
+		{
+			if (FIndexSupported(relIndex))
+			{
+				CMDIdGPDB *pmdidIndex = GPOS_NEW(pmp) CMDIdGPDB(oidIndex);
+				BOOL fPartial = (NULL != logicalIndexInfo->partCons) || (NIL != logicalIndexInfo->defaultLevels);
+				CMDIndexInfo *pmdidIndexInfo = GPOS_NEW(pmp) CMDIndexInfo(pmdidIndex, fPartial);
+				pdrgpmdidIndexes->Append(pmdidIndexInfo);
+			}
+
+			gpdb::CloseRelation(relIndex);
+		}
+		GPOS_CATCH_EX(ex)
+		{
+			gpdb::CloseRelation(relIndex);
+			GPOS_RETHROW(ex);
+		}
+		GPOS_CATCH_END;
+	}
+	return pdrgpmdidIndexes;
+}
+
+DrgPmdIndexInfo *
+CTranslatorRelcacheToDXL::PdrgpmdidRelIndexesNonPartTable
+	(
+	IMemoryPool *pmp,
+	Relation rel
+	)
+{
+	DrgPmdIndexInfo *pdrgpmdidIndexes = GPOS_NEW(pmp) DrgPmdIndexInfo(pmp);
+
+	// not a partitioned table: obtain indexes directly from the catalog
+	List *plIndexOids = gpdb::PlRelationIndexes(rel);
+
 	ListCell *plc = NULL;
 
 	ForEach (plc, plIndexOids)
@@ -345,7 +410,7 @@ CTranslatorRelcacheToDXL::PlIndexOidsPartTable
 	for (ULONG ul = 0; ul < ulIndexes; ul++)
 	{
 		LogicalIndexInfo *pidxinfo = (plgidx->logicalIndexInfo)[ul];
-		plOids = gpdb::PlAppendOid(plOids, pidxinfo->logicalIndexOid);
+		plOids = gpdb::PlAppendElement(plOids, pidxinfo);
 	}
 	
 	gpdb::GPDBFree(plgidx);
