@@ -104,6 +104,10 @@
 #include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
 
+#ifdef USE_ORCA
+extern void InterruptGPOPT();
+#endif
+
 extern int	optind;
 extern char *optarg;
 
@@ -3554,6 +3558,8 @@ StatementCancelHandler(SIGNAL_ARGS)
 		InterruptPending = true;
 		QueryCancelPending = true;
 		QueryCancelCleanup = true;
+
+		InterruptGPOPT(postgres_signal_arg);
 
 		/*
 		 * If it's safe to interrupt, and we're waiting for a lock, service

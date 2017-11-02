@@ -42,6 +42,9 @@ class CGPOptimizer
 
     static
     void TerminateGPOPT();
+
+    static
+    void InterruptGPOPT(int signal);
 };
 
 #endif // CGPOptimizer_H

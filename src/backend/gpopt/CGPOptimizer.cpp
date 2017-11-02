@@ -157,6 +157,17 @@ CGPOptimizer::TerminateGPOPT ()
   gpos_terminate();
 }
 
+
+void
+CGPOptimizer::InterruptGPOPT
+	(
+	int signal
+	)
+{
+	if (SIGINT == signal)
+		CTask::abort_requested = true;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		PplstmtOptimize
@@ -225,6 +236,14 @@ extern "C"
 void TerminateGPOPT ()
 {
 	return CGPOptimizer::TerminateGPOPT();
+}
+}
+
+extern "C"
+{
+void InterruptGPOPT (int signal)
+{
+	CGPOptimizer::InterruptGPOPT(signal);
 }
 }
 
