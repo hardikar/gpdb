@@ -631,7 +631,6 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
         Expr *pexprTestExpr = PexprSubplanTestExpr(pdxlop->PdxlnTestExpr(), slink, pmapcidvar);
 
 	const DrgPdxlcr *pdrgdxlcrOuterRefs = pdxlop->DrgdxlcrOuterRefs();
-	const DrgPmdid *pdrgmdidOuterRefs = pdxlop->DrgmdidOuterRefs();
 
 	const ULONG ulLen = pdrgdxlcrOuterRefs->UlLength();
 	
@@ -641,8 +640,9 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 	// insert new outer ref mappings in the subplan translate context
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
-		IMDId *pmdid = (*pdrgmdidOuterRefs)[ul];
 		CDXLColRef *pdxlcr = (*pdrgdxlcrOuterRefs)[ul];
+		IMDId *pmdid = pdxlcr->PmdidType();
+		// Maybe need an addref
 		ULONG ulColid = pdxlcr->UlID();
 		
 		if (NULL == dxltrctxSubplan.Pmecolidparamid(ulColid))
@@ -816,10 +816,9 @@ CTranslatorDXLToScalar::TranslateSubplanParams
                 Param *pparam = PparamFromMapping(pmecolidparamid);
                 psubplan->parParam = gpdb::PlAppendInt(psubplan->parParam, pparam->paramid);
 
-                IMDId *pmdidType = pmecolidparamid->PmdidType();
-                pmdidType->AddRef();
+				GPOS_ASSERT(pmecolidparamid->PmdidType()->FEquals(pdxlcr->PmdidType()));
 
-                CDXLScalarIdent *pdxlopIdent = GPOS_NEW(m_pmp) CDXLScalarIdent(m_pmp, pdxlcr, pmdidType);
+                CDXLScalarIdent *pdxlopIdent = GPOS_NEW(m_pmp) CDXLScalarIdent(m_pmp, pdxlcr);
                 Expr *parg = (Expr *) pmapcidvar->PvarFromDXLNodeScId(pdxlopIdent);
 
                 // not found in mapping, it must be an external parameter
