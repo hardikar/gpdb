@@ -764,7 +764,7 @@ CTranslatorRelcacheToDXL::Pdrgpmdcol
 		}
 
 		ULONG ulColLen = ULONG_MAX;
-		CMDIdGPDB *pmdidCol = GPOS_NEW(pmp) CMDIdGPDB(att->atttypid);
+		CMDIdGPDB *pmdidCol = GPOS_NEW(pmp) CMDIdGPDB(att->atttypid, att->atttypmod);
 		HeapTuple heaptupleStats = gpdb::HtAttrStats(rel->rd_id, ul+1);
 
 		// Column width priority:
