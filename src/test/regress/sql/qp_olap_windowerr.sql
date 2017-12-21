@@ -3,7 +3,7 @@
 --
 -- start_ignore
 -- GPDB_84_MERGE_FIXME
-set optimizer to off;
+-- set optimizer to off;
 
 drop table cf_olap_windowerr_customer;
 drop table cf_olap_windowerr_vendor;
@@ -405,7 +405,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.vn)) OVER(order by cf_olap_windowerr_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.pn desc rows between unbounded preceding and 2 preceding ),
-win2 as (order by cf_olap_windowerr_sale.vn desc),
+win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
 win3 as (order by cf_olap_windowerr_sale.cn asc);
 
 -- MAX() function with partition by and order by having rows based framing clause --
@@ -1624,7 +1624,7 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_ola
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.vn asc rows between unbounded preceding and unbounded following ),
 win2 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.qty order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc),
 win3 as (order by cf_olap_windowerr_sale.vn asc),
-win4 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.cn asc),
+win4 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc),
 win5 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc);
 
 -- VARIANCE() function with ONLY order by having rows based framing clause in combination with other functions --
@@ -2706,7 +2706,7 @@ TO_CHAR(COALESCE(RANK() OVER(win4),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc rows floor(cf_olap_windowerr_sale.qty) preceding ),
 win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
-win3 as (partition by cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.pn desc),
+win3 as (partition by cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc),
 win4 as (partition by cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.vn desc);
 
 -- REGR_INTERCEPT() function with ONLY order by having rows based framing clause --
@@ -3360,7 +3360,7 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_ol
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc,cf_olap_windowerr_sale.vn desc,cf_olap_windowerr_sale.cn asc rows between floor(cf_olap_windowerr_sale.pn) following and unbounded following ),
 win2 as (order by cf_olap_windowerr_sale.vn desc),
 win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
-win4 as (partition by cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.vn desc);
+win4 as (partition by cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc);
 
 -- REGR_SXX() function with partition by and order by having range based framing clause --
 
