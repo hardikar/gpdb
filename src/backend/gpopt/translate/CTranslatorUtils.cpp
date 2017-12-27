@@ -1750,7 +1750,8 @@ CTranslatorUtils::UlColId
 	)
 {
 	OID oid = CMDIdGPDB::PmdidConvert(pmdid)->OidObjectId();
-	Var *pvar = gpdb::PvarMakeVar(iVarno, iVarAttno, oid, -1, 0);
+	INT iTypeMod = CMDIdGPDB::PmdidConvert(pmdid)->ITypeModification();
+	Var *pvar = gpdb::PvarMakeVar(iVarno, iVarAttno, oid, iTypeMod, 0);
 	ULONG ulColId = pmapvarcolid->UlColId(ulQueryLevel, pvar, EpspotNone);
 	gpdb::GPDBFree(pvar);
 

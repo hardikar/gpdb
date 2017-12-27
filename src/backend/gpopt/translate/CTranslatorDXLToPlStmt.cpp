@@ -2988,7 +2988,7 @@ CTranslatorDXLToPlStmt::PappendFromDXLAppend
 							idxVarno,
 							attno,
 							CMDIdGPDB::PmdidConvert(pdxlopScIdent->PmdidType())->OidObjectId(),
-							-1,	// vartypmod
+							CMDIdGPDB::PmdidConvert(pdxlopScIdent->PmdidType())->ITypeModification(),
 							0	// varlevelsup
 							);
 
@@ -3194,7 +3194,7 @@ CTranslatorDXLToPlStmt::PshscanFromDXLCTEProducer
 			GPOS_ASSERT(IsA(pexpr, Var));
 
 			Var *pvar = (Var *) pexpr;
-			Var *pvarNew = gpdb::PvarMakeVar(OUTER, pvar->varattno, pvar->vartype, -1 /* vartypmod */,	0 /* varlevelsup */);
+			Var *pvarNew = gpdb::PvarMakeVar(OUTER, pvar->varattno, pvar->vartype, pvar->vartypmod,	0 /* varlevelsup */);
 			pvarNew->varnoold = pvar->varnoold;
 			pvarNew->varoattno = pvar->varoattno;
 
@@ -3384,8 +3384,9 @@ CTranslatorDXLToPlStmt::PshscanFromDXLCTEConsumer
 		CDXLNode *pdxlnScIdent = (*pdxlnPrE)[0];
 		CDXLScalarIdent *pdxlopScIdent = CDXLScalarIdent::PdxlopConvert(pdxlnScIdent->Pdxlop());
 		OID oidType = CMDIdGPDB::PmdidConvert(pdxlopScIdent->PmdidType())->OidObjectId();
+		INT iTypeMod = CMDIdGPDB::PmdidConvert(pdxlopScIdent->PmdidType())->ITypeModification();
 
-		Var *pvar = gpdb::PvarMakeVar(OUTER, (AttrNumber) (ul + 1), oidType, -1 /* vartypmod */,  0	/* varlevelsup */);
+		Var *pvar = gpdb::PvarMakeVar(OUTER, (AttrNumber) (ul + 1), oidType, iTypeMod,  0	/* varlevelsup */);
 
 		CHAR *szResname = CTranslatorUtils::SzFromWsz(pdxlopPrE->PmdnameAlias()->Pstr()->Wsz());
 		TargetEntry *pte = gpdb::PteMakeTargetEntry((Expr *) pvar, (AttrNumber) (ul + 1), szResname, false /* resjunk */);
@@ -4487,6 +4488,7 @@ CTranslatorDXLToPlStmt::PlTargetListForHashNode
 
 		// find column type
 		OID oidType = gpdb::OidExprType((Node*) pteChild->expr);
+		INT iTypeMod = gpdb::IExprTypeMod((Node*) pteChild->expr);
 
 		// find the original varno and attno for this column
 		Index idxVarnoold = 0;
@@ -4510,7 +4512,7 @@ CTranslatorDXLToPlStmt::PlTargetListForHashNode
 					OUTER,
 					pteChild->resno,
 					oidType,
-					-1,	// vartypmod
+					iTypeMod,
 					0	// varlevelsup
 					);
 
@@ -4856,12 +4858,13 @@ CTranslatorDXLToPlStmt::UlAddTargetEntryForColId
 	// TODO: Oct 29, 2012; see if entry already exists in the target list
 	
 	OID oidExpr = gpdb::OidExprType((Node*) pte->expr);
+	INT iTypeMod = gpdb::IExprTypeMod((Node*) pte->expr);
 	Var *pvar = gpdb::PvarMakeVar
 						(
 						OUTER,
 						pte->resno,
 						oidExpr,
-						-1,	// vartypmod
+						iTypeMod,
 						0	// varlevelsup
 						);
 	ULONG ulResNo = gpdb::UlListLength(*pplTargetList) + 1;
