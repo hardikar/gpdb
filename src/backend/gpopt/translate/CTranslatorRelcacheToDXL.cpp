@@ -811,6 +811,7 @@ CTranslatorRelcacheToDXL::Pdrgpmdcol
 										pmdnameCol,
 										att->attnum,
 										pmdidCol,
+										att->atttypmod,
 										!att->attnotnull,
 										att->attisdropped,
 										pdxlnDefault /* default value */,
@@ -1028,7 +1029,8 @@ CTranslatorRelcacheToDXL::AddSystemColumns
 										(
 										pmdnameCol, 
 										attno, 
-										CTranslatorUtils::PmdidSystemColType(pmp, attno), 
+										CTranslatorUtils::PmdidSystemColType(pmp, attno),
+										-1, // iTypeModifier
 										false,	// fNullable
 										false,	// fDropped
 										NULL,	// default value
@@ -2117,6 +2119,7 @@ CTranslatorRelcacheToDXL::Pmdcheckconstraint
 										ul + 1 /*ulColId*/,
 										pmdcol->IAttno(),
 										pmdidColType,
+										pmdcol->ITypeModifier(), /* iTypeModifier */
 										false /* fColDropped */
 										);
 		pdrgpdxlcd->Append(pdxlcd);
@@ -3440,6 +3443,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrIndex
 										ul + 1, // ulColId
 										pmdcol->IAttno(),
 										pmdidColType,
+										pmdcol->ITypeModifier(), /* iTypeModifier */
 										false // fColDropped
 										);
 		pdrgpdxlcd->Append(pdxlcd);
@@ -3528,6 +3532,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrRelation
 											ul + 1, // ulColId
 											pmdcol->IAttno(),
 											pmdidColType,
+											pmdcol->ITypeModifier(), /* iTypeModifier */
 											false // fColDropped
 											);
 			pdrgpdxlcd->Append(pdxlcd);

@@ -172,7 +172,8 @@ CTranslatorScalarToDXL::PdxlnScIdFromVar
 												m_pmp,
 												pmdname,
 												ulId,
-												GPOS_NEW(m_pmp) CMDIdGPDB(pvar->vartype)
+												GPOS_NEW(m_pmp) CMDIdGPDB(pvar->vartype),
+												pvar->vartypmod
 												);
 
 	// create the scalar ident operator
@@ -1504,7 +1505,8 @@ CTranslatorScalarToDXL::PdxlnWindowFrameEdgeVal
 																m_pmp,
 																GPOS_NEW(m_pmp) CMDName(m_pmp, &strUnnamedCol),
 																ulPrElId,
-																GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType(const_cast<Node*>(pnode)))
+																GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType(const_cast<Node*>(pnode))),
+																gpdb::IExprTypeMod(const_cast<Node*>(pnode))
 																)
 													);
 

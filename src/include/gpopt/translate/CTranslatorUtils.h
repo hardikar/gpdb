@@ -190,6 +190,7 @@ namespace gpdxl
 						IMemoryPool *pmp,
 						CIdGenerator *pidgtor,
 						IMDId *pmdidRetType,
+						INT iTypeModifier,
 						CMDName *pmdName
 						);
 
