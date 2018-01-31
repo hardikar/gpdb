@@ -594,7 +594,9 @@ CTranslatorScalarToDXL::Pdxldatum
 	pmdid->Release();
 
  	// translate gpdb datum into a DXL datum
-	CDXLDatum *pdxldatum = CTranslatorScalarToDXL::Pdxldatum(pmp, pmdtype, pconst->constisnull, pconst->constlen, pconst->constvalue);
+	CDXLDatum *pdxldatum = CTranslatorScalarToDXL::Pdxldatum(pmp, pmdtype, pconst->consttypmod, pconst->constisnull,
+															 pconst->constlen,
+															 pconst->constvalue);
 
 	return pdxldatum;
 }
@@ -2077,6 +2079,7 @@ CTranslatorScalarToDXL::Pdxldatum
 	(
 	IMemoryPool *pmp,
 	const IMDType *pmdtype,
+	INT iTypeModifier,
 	BOOL fNull,
 	ULONG ulLen,
 	Datum datum
@@ -2107,7 +2110,7 @@ CTranslatorScalarToDXL::Pdxldatum
 	if (NULL == pf)
 	{
 		// generate a datum of generic type
-		return PdxldatumGeneric(pmp, pmdtype, fNull, ulLen, datum);
+		return PdxldatumGeneric(pmp, pmdtype, iTypeModifier, fNull, ulLen, datum);
 	}
 	else
 	{
@@ -2127,6 +2130,7 @@ CTranslatorScalarToDXL::PdxldatumGeneric
 	(
 	IMemoryPool *pmp,
 	const IMDType *pmdtype,
+	INT iTypeModifier,
 	BOOL fNull,
 	ULONG ulLen,
 	Datum datum
@@ -2155,7 +2159,7 @@ CTranslatorScalarToDXL::PdxldatumGeneric
 		lValue = LValue(pmdid, fNull, pba, ulLength);
 	}
 
-	return CMDTypeGenericGPDB::Pdxldatum(pmp, pmdid, fConstByVal, fNull, pba, ulLength, lValue, dValue);
+	return CMDTypeGenericGPDB::Pdxldatum(pmp, pmdid, iTypeModifier, fConstByVal, fNull, pba, ulLength, lValue, dValue);
 }
 
 
@@ -2480,7 +2484,7 @@ CTranslatorScalarToDXL::Pdatum
 	}
 	GPOS_ASSERT(fNull || ulLength > 0);
 
-	CDXLDatum *pdxldatum = CTranslatorScalarToDXL::Pdxldatum(pmp, pmdtype, fNull, ulLength, datum);
+	CDXLDatum *pdxldatum = CTranslatorScalarToDXL::Pdxldatum(pmp, pmdtype, 0, fNull, ulLength, datum);
 	IDatum *pdatum = pmdtype->Pdatum(pmp, pdxldatum);
 	pdxldatum->Release();
 	return pdatum;

@@ -1657,7 +1657,7 @@ CTranslatorDXLToScalar::PconstGeneric
 
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumgeneric->Pmdid())->OidObjectId();
-	pconst->consttypmod = -1;
+	pconst->consttypmod = pdxldatumgeneric->ITypeModifier();
 	pconst->constbyval = pdxldatumgeneric->FByValue();
 	pconst->constisnull = pdxldatumgeneric->FNull();
 	pconst->constlen = pdxldatumgeneric->UlLength();

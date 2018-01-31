@@ -2396,6 +2396,7 @@ CTranslatorUtils::PdxlnPrElNull
 										(
 										pmp,
 										pmdid,
+										-1 /* iTypeModifier */,
 										fByValue /*fConstByVal*/,
 										true /*fConstNull*/,
 										NULL, /*pba */
