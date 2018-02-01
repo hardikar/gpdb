@@ -1254,6 +1254,7 @@ CTranslatorScalarToDXL::PdxlnScFuncExprFromFuncExpr
 {
 	GPOS_ASSERT(IsA(pexpr, FuncExpr));
 	const FuncExpr *pfuncexpr = (FuncExpr *) pexpr;
+	int32 iTypeModifier = gpdb::IExprTypeMod((Node *) pexpr);
 
 	CMDIdGPDB *pmdidFunc = GPOS_NEW(m_pmp) CMDIdGPDB(pfuncexpr->funcid);
 
@@ -1266,6 +1267,7 @@ CTranslatorScalarToDXL::PdxlnScFuncExprFromFuncExpr
 												m_pmp,
 												pmdidFunc,
 												GPOS_NEW(m_pmp) CMDIdGPDB(pfuncexpr->funcresulttype),
+												iTypeModifier,
 												pfuncexpr->funcretset
 												)
 									);
