@@ -665,11 +665,12 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 		CDXLColRef *pdxlcr = (*pdrgdxlcrOuterRefs)[ul];
 		IMDId *pmdid = pdxlcr->PmdidType();
 		ULONG ulColid = pdxlcr->UlID();
+		INT iTypeModifier = pdxlcr->ITypeModifier();
 
 		if (NULL == dxltrctxSubplan.Pmecolidparamid(ulColid))
 		{
 			// keep outer reference mapping to the original column for subsequent subplans
-			CMappingElementColIdParamId *pmecolidparamid = GPOS_NEW(m_pmp) CMappingElementColIdParamId(ulColid, pctxdxltoplstmt->UlNextParamId(), pmdid);
+			CMappingElementColIdParamId *pmecolidparamid = GPOS_NEW(m_pmp) CMappingElementColIdParamId(ulColid, pctxdxltoplstmt->UlNextParamId(), pmdid, iTypeModifier);
 
 #ifdef GPOS_DEBUG
 			BOOL fInserted =
@@ -861,6 +862,7 @@ CTranslatorDXLToScalar::TranslateSubplanParams
 		pdxlcr->AddRef();
 		const CMappingElementColIdParamId *pmecolidparamid = pdxltrctx->Pmecolidparamid(pdxlcr->UlID());
 
+		// TODO: eliminate pparam, it's not *really* used, and it's (short-term) leaked
 		Param *pparam = PparamFromMapping(pmecolidparamid);
 		psubplan->parParam = gpdb::PlAppendInt(psubplan->parParam, pparam->paramid);
 
@@ -958,6 +960,7 @@ CTranslatorDXLToScalar::PparamFromMapping
 	pparam->paramid = pmecolidparamid->UlParamId();
 	pparam->paramkind = PARAM_EXEC;
 	pparam->paramtype = CMDIdGPDB::PmdidConvert(pmecolidparamid->PmdidType())->OidObjectId();
+	pparam->paramtypmod = pmecolidparamid->ITypeModifier();
 
 	return pparam;
 }

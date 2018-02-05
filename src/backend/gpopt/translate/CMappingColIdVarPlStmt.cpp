@@ -113,6 +113,7 @@ CMappingColIdVarPlStmt::PparamFromDXLNodeScId
 		pparam->paramkind = PARAM_EXEC;
 		pparam->paramid = pmecolidparamid->UlParamId();
 		pparam->paramtype = CMDIdGPDB::PmdidConvert(pmecolidparamid->PmdidType())->OidObjectId();
+		pparam->paramtypmod = pmecolidparamid->ITypeModifier();
 	}
 
 	return pparam;
