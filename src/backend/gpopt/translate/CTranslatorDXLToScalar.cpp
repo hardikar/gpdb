@@ -719,7 +719,7 @@ inline BOOL FDXLCastedId(CDXLNode *pdxln)
 		   pdxln->UlArity() > 0 && EdxlopScalarIdent == (*pdxln)[0]->Pdxlop()->Edxlop();
 }
 
-inline Oid OidParamOidFromDXLIdentOrDXLCastIdent(CDXLNode *pdxlnIdentOrCastIdent)
+inline CTranslatorDXLToScalar::STypeOidAndTypeModifier OidParamOidFromDXLIdentOrDXLCastIdent(CDXLNode *pdxlnIdentOrCastIdent)
 {
 	GPOS_ASSERT(EdxlopScalarIdent == pdxlnIdentOrCastIdent->Pdxlop()->Edxlop() || FDXLCastedId(pdxlnIdentOrCastIdent));
 
@@ -733,7 +733,8 @@ inline Oid OidParamOidFromDXLIdentOrDXLCastIdent(CDXLNode *pdxlnIdentOrCastIdent
 		pdxlopInnerIdent = CDXLScalarIdent::PdxlopConvert((*pdxlnIdentOrCastIdent)[0]->Pdxlop());
 	}
 	Oid oidInnerType = CMDIdGPDB::PmdidConvert(pdxlopInnerIdent->PmdidType())->OidObjectId();
-	return oidInnerType;
+	INT iTypeModifier = pdxlopInnerIdent->ITypeModifier();
+	return {oidInnerType, iTypeModifier};
 }
 
 //---------------------------------------------------------------------------
@@ -808,7 +809,9 @@ CTranslatorDXLToScalar::PexprSubplanTestExpr
 	pparam->paramkind = PARAM_EXEC;
 	CContextDXLToPlStmt *pctxdxltoplstmt = (dynamic_cast<CMappingColIdVarPlStmt *>(pmapcidvar))->Pctxdxltoplstmt();
 	pparam->paramid = pctxdxltoplstmt->UlNextParamId();
-	pparam->paramtype = OidParamOidFromDXLIdentOrDXLCastIdent(pdxlnInnerChild);
+	CTranslatorDXLToScalar::STypeOidAndTypeModifier oidAndTypeModifier = OidParamOidFromDXLIdentOrDXLCastIdent(pdxlnInnerChild);
+	pparam->paramtype = oidAndTypeModifier.OidType;
+	pparam->paramtypmod = oidAndTypeModifier.ITypeModifier;
 
 	// test expression is used for non-scalar subplan,
 	// second arg of test expression must be an EXEC param referring to subplan output,
