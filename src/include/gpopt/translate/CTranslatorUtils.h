@@ -170,7 +170,8 @@ namespace gpdxl
 						IMemoryPool *pmp,
 						CIdGenerator *pidgtor,
 						List *plColNames,
-						List *plColTypes
+						List *plColTypes,
+						List *plColTypeModifiers
 						);
 
 			// get column descriptors from a record type

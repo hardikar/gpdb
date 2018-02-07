@@ -293,7 +293,7 @@ CTranslatorUtils::Pdxltvf
 	if (NULL != prte->funccoltypes)
 	{
 		// function returns record - use col names and types from query
-		pdrgdxlcd = PdrgdxlcdRecord(pmp, pidgtor, prte->eref->colnames, prte->funccoltypes);
+		pdrgdxlcd = PdrgdxlcdRecord(pmp, pidgtor, prte->eref->colnames, prte->funccoltypes, prte->funccoltypmods);
 	}
 	else if (pmdType->FComposite() && IMDId::FValid(pmdType->PmdidBaseRelation()))
 	{
@@ -327,7 +327,8 @@ CTranslatorUtils::Pdxltvf
 	{
 		// function returns base type
 		CMDName mdnameFunc = pmdfunc->Mdname();
-		pdrgdxlcd = PdrgdxlcdBase(pmp, pidgtor, pmdidRetType, -1 /* TODO: extract type modifier */, &mdnameFunc);
+		// table valued functions don't describe the returned column type modifiers, hence the -1
+		pdrgdxlcd = PdrgdxlcdBase(pmp, pidgtor, pmdidRetType, -1 /* iTypeModifier */, &mdnameFunc);
 	}
 
 	CMDName *pmdfuncname = GPOS_NEW(pmp) CMDName(pmp, pmdfunc->Mdname().Pstr());
@@ -450,20 +451,24 @@ CTranslatorUtils::PdrgdxlcdRecord
 	IMemoryPool *pmp,
 	CIdGenerator *pidgtor,
 	List *plColNames,
-	List *plColTypes
+	List *plColTypes,
+	List *plColTypeModifiers
 	)
 {
 	ListCell *plcColName = NULL;
 	ListCell *plcColType = NULL;
+	ListCell *plcColTypeModifier = NULL;
 
 	ULONG ul = 0;
 	DrgPdxlcd *pdrgdxlcd = GPOS_NEW(pmp) DrgPdxlcd(pmp);
 
-	ForBoth (plcColName, plColNames,
-			plcColType, plColTypes)
+	ForThree (plcColName, plColNames,
+			plcColType, plColTypes,
+			plcColTypeModifier, plColTypeModifiers)
 	{
 		Value *pvalue = (Value *) lfirst(plcColName);
 		Oid coltype = lfirst_oid(plcColType);
+		INT iTypeModifier = lfirst_int(plcColTypeModifier);
 
 		CHAR *szColName = strVal(pvalue);
 		CWStringDynamic *pstrColName = CDXLUtils::PstrFromSz(pmp, szColName);
@@ -479,7 +484,7 @@ CTranslatorUtils::PdrgdxlcdRecord
 										pidgtor->UlNextId(),
 										INT(ul + 1) /* iAttno */,
 										pmdidColType,
-										-1, /* TODO: extract type modifier */
+										iTypeModifier,
 										false /* fColDropped */
 										);
 		pdrgdxlcd->Append(pdxlcd);
@@ -524,6 +529,8 @@ CTranslatorUtils::PdrgdxlcdRecord
 		IMDId *pmdidColType = (*pdrgpmdidOutArgTypes)[ul];
 		pmdidColType->AddRef();
 
+		// This function is only called to construct column descriptors for table-valued functions
+		// which won't have type modifiers for columns of the returned table
 		CDXLColDescr *pdxlcd = GPOS_NEW(pmp) CDXLColDescr
 										(
 										pmp,
@@ -531,7 +538,7 @@ CTranslatorUtils::PdrgdxlcdRecord
 										pidgtor->UlNextId(),
 										INT(ul + 1) /* iAttno */,
 										pmdidColType,
-										-1, /* TODO extract type modifier */
+										-1 /* iTypeModifier */,
 										false /* fColDropped */
 										);
 		pdrgdxlcd->Append(pdxlcd);
