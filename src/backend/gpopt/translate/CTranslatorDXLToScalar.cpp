@@ -1226,7 +1226,7 @@ CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceToDomain
 
         pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
         pcoerce->arg = pexprChild;
-        pcoerce->resulttypmod = pdxlop->IMod();
+        pcoerce->resulttypmod = pdxlop->ITypeModifier();
         pcoerce->location = pdxlop->ILoc();
         pcoerce->coercionformat = (CoercionForm)  pdxlop->Edxlcf();
 
@@ -1294,7 +1294,7 @@ CTranslatorDXLToScalar::PcoerceFromDXLNodeScArrayCoerceExpr
         pcoerce->arg = pexprChild;
         pcoerce->elemfuncid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidElementFunc())->OidObjectId();
         pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
-        pcoerce->resulttypmod = pdxlop->IMod();
+        pcoerce->resulttypmod = pdxlop->ITypeModifier();
         pcoerce->isExplicit = pdxlop->FIsExplicit();
         pcoerce->coerceformat = (CoercionForm)  pdxlop->Edxlcf();
         pcoerce->location = pdxlop->ILoc();
