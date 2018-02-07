@@ -1941,6 +1941,7 @@ CTranslatorScalarToDXL::PdxlnArrayRef
 	const ArrayRef *parrayref = (ArrayRef *) pexpr;
 	Oid restype;
 
+	INT iTypeModifier = parrayref->reftypmod;
 	/* slice and/or store operations yield the array type */
 	if (parrayref->reflowerindexpr || parrayref->refassgnexpr)
 		restype = parrayref->refarraytype;
@@ -1952,6 +1953,7 @@ CTranslatorScalarToDXL::PdxlnArrayRef
 						(
 						m_pmp,
 						GPOS_NEW(m_pmp) CMDIdGPDB(parrayref->refelemtype),
+						iTypeModifier,
 						GPOS_NEW(m_pmp) CMDIdGPDB(parrayref->refarraytype),
 						GPOS_NEW(m_pmp) CMDIdGPDB(restype)
 						);
