@@ -451,7 +451,7 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 				sublink->subLinkType = ANY_SUBLINK;
 				sublink->testexpr = (Node *) canonicalize_qual(make_notclause((Expr *) sublink->testexpr));
 			}
-			return pull_up_sublinks_qual_recurse(root, (Node *) sublink, available_rels, jtlink);
+			return make_notclause(pull_up_sublinks_qual_recurse(root, (Node *) sublink, available_rels, jtlink));
 		}
 
 		else if (not_clause(arg))
