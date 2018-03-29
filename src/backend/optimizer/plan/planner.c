@@ -1364,7 +1364,7 @@ static Plan *apply_preunique_distinct(PlannerInfo *root,
 				 hash_info.workmem_per_entry,
 				 hash_info.nbatches,
 				 hash_info.hashentry_width,
-				 false /* streaming */);
+				 true /* streaming */);
 		alt_cost += hashagg_path.startup_cost;
 	}
 	else
@@ -1391,7 +1391,7 @@ static Plan *apply_preunique_distinct(PlannerInfo *root,
 											result_plan->targetlist,
 											NIL,
 											AGG_HASHED,
-											false, /* streaming */
+											true, /* streaming */
 											list_length(parse->distinctClause),
 											extract_grouping_cols(parse->distinctClause,
 																  result_plan->targetlist),
