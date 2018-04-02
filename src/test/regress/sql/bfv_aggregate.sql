@@ -27,7 +27,7 @@ select distinct b, max(b) over() from smalldupl order by b;
 select distinct b, sum(b) over() from smalldupl order by b;
 select distinct b, sum(b) from smalldupl group by b order by b;
 select distinct b, sum(b) from smalldupl group by b having sum(b) > 3;
-select distinct t1.b, t2.b, t1.c, t2.c from smalldupl t1, smalldupl t2 where t1.c=t2.c order by t1.b, t1.b;
+select distinct t1.b, t2.b, t1.c, t2.c from smalldupl t1, smalldupl t2 where t1.c=t2.c order by t1.b, t2.b;
 
 -- EXPLAIN tests
 -- should see one-stage unique using hashagg
