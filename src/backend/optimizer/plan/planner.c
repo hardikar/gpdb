@@ -1423,15 +1423,25 @@ static Plan *apply_preunique_distinct(PlannerInfo *root,
 			 */
 			if (root->sort_pathkeys)
 			{
-				if (!pathkeys_contained_in(root->sort_pathkeys, *current_pathkeys))
+				List	   *needed_pathkeys;
+
+				/* DISTINCT ON needs special handling - see grouping_planner() */
+				if (parse->hasDistinctOn &&
+					list_length(root->distinct_pathkeys) <
+					list_length(root->sort_pathkeys))
+					needed_pathkeys = root->sort_pathkeys;
+				else
+					needed_pathkeys = root->distinct_pathkeys;
+
+				if (!pathkeys_contained_in(needed_pathkeys, *current_pathkeys))
 				{
 					result_plan = (Plan *) make_sort_from_pathkeys(root,
 																   result_plan,
-																   root->sort_pathkeys,
+																   needed_pathkeys,
 																   limit_tuples,
 																   true);
 					((Sort *) result_plan)->noduplicates = gp_enable_sort_distinct;
-					*current_pathkeys = root->sort_pathkeys;
+					*current_pathkeys = needed_pathkeys;
 					mark_sort_locus(result_plan);
 				}
 			}
