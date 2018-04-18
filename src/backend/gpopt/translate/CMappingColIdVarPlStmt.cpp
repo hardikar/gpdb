@@ -150,68 +150,48 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 		attnoOld = attno;
 	}
 
-	// if lookup has failed in the first step, attempt lookup again using outer and inner contexts
+	// if lookup has failed in the first step, attempt in all the contexts
 	if (0 == attno && NULL != m_pdrgpdxltrctx)
 	{
-		GPOS_ASSERT(0 != m_pdrgpdxltrctx->UlLength());
+		const ULONG ulContexts = m_pdrgpdxltrctx->UlLength();
+		const TargetEntry *pte;
 
-		const CDXLTranslateContext *pdxltrctxLeft = (*m_pdrgpdxltrctx)[0];
+		GPOS_ASSERT(0 != ulContexts);
 
-		//	const CDXLTranslateContext *pdxltrctxRight
-
-		// not a base table
-		GPOS_ASSERT(NULL != pdxltrctxLeft);
-
-		// lookup column in the left child translation context
-		const TargetEntry *pte = pdxltrctxLeft->Pte(ulColId);
-
-		if (NULL != pte)
+		for (ULONG ul = 0; ul < ulContexts; ++ul)
 		{
-			// identifier comes from left child
-			idxVarno = OUTER;
-		}
-		else
-		{
-			const ULONG ulContexts = m_pdrgpdxltrctx->UlLength();
-			if (2 > ulContexts)
+			const CDXLTranslateContext *pdxltrctx = (*m_pdrgpdxltrctx)[ul];
+			pte = pdxltrctx->Pte(ulColId);
+
+			if (NULL != pte)
 			{
-				// there are no more children. col id not found in this tree
-				// and must be an outer ref
-				return NULL;
-			}
+				if (0 == ul)
+				{  // Left context
+					idxVarno = OUTER;
+					attno = pte->resno;
+				}
+				else if (1 == ul)
+				{  // Right context
+					idxVarno = INNER;
+					attno = pte->resno;
+				}
+				else
+				{  // Additional context
+					GPOS_ASSERT(IsA(pte->expr, Var));
 
-			const CDXLTranslateContext *pdxltrctxRight = (*m_pdrgpdxltrctx)[1];
-
-			// identifier must come from right child
-			GPOS_ASSERT(NULL != pdxltrctxRight);
-
-			pte = pdxltrctxRight->Pte(ulColId);
-
-			idxVarno = INNER;
-
-			// check any additional contexts if col is still not found yet
-			for (ULONG ul = 2; NULL == pte && ul < ulContexts; ul++)
-			{
-				const CDXLTranslateContext *pdxltrctx = (*m_pdrgpdxltrctx)[ul];
-				GPOS_ASSERT(NULL != pdxltrctx);
-
-				pte = pdxltrctx->Pte(ulColId);
-				if (NULL == pte)
-				{
-					continue;
+					Var *pv = (Var*) pte->expr;
+					idxVarno = pv->varno;
+					attno = pv->varattno;
 				}
 
-				Var *pv = (Var*) pte->expr;
-				idxVarno = pv->varno;
+				break;
 			}
 		}
 
-		if (NULL  == pte)
+		if (NULL == pte)
 		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, ulColId);
+			return NULL;
 		}
-
-		attno = pte->resno;
 
 		// find the original varno and attno for this column
 		if (IsA(pte->expr, Var))
@@ -226,6 +206,8 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 			attnoOld = attno;
 		}
 	}
+
+	GPOS_ASSERT(attno != 0);
 
 	Var *pvar = gpdb::PvarMakeVar
 						(
