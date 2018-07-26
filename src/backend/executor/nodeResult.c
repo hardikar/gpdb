@@ -60,7 +60,7 @@
 #include "executor/spi.h"
 
 static TupleTableSlot *NextInputSlot(ResultState *node);
-static bool TupleMatchesHashFilter(Result *resultNode, TupleTableSlot *resultSlot);
+static bool TupleMatchesHashFilter(Result *resultNode, struct CdbHash *hash, TupleTableSlot *resultSlot);
 
 /**
  * Returns the next valid input tuple from the left subtree
@@ -237,7 +237,7 @@ ExecResult(ResultState *node)
 		if (!TupIsNull(candidateOutputSlot))
 		{
 			Result *result = (Result *)node->ps.plan;
-			if (TupleMatchesHashFilter(result, candidateOutputSlot))
+			if (TupleMatchesHashFilter(result, node->cdbhash, candidateOutputSlot))
 			{
 				outputSlot = candidateOutputSlot;
 			}
@@ -262,7 +262,7 @@ ExecResult(ResultState *node)
 /**
  * Returns true if tuple matches hash filter.
  */
-static bool TupleMatchesHashFilter(Result *resultNode, TupleTableSlot *resultSlot)
+static bool TupleMatchesHashFilter(Result *resultNode, struct CdbHash *hash, TupleTableSlot *resultSlot)
 {
 	bool res = true;
 
@@ -274,41 +274,46 @@ static bool TupleMatchesHashFilter(Result *resultNode, TupleTableSlot *resultSlo
 		Assert(resultNode->hashFilter);
 		ListCell	*cell = NULL;
 
-		CdbHash *hash = makeCdbHash(GpIdentity.numsegments);
 		cdbhashinit(hash);
-		foreach(cell, resultNode->hashList)
+		if (resultNode->hashList)
 		{
-			/**
-			 * Note that a table may be randomly distributed. The hashList will be empty.
-			 */
-			Datum		hAttr;
-			bool		isnull;
-			Oid			att_type;
-
-			int attnum = lfirst_int(cell);
-
-			Assert(attnum > 0);
-			hAttr = slot_getattr(resultSlot, attnum, &isnull);
-			if (!isnull)
+			foreach(cell, resultNode->hashList)
 			{
-				att_type = resultSlot->tts_tupleDescriptor->attrs[attnum - 1]->atttypid;
+				/**
+				 * Note that a table may be randomly distributed. The hashList will be empty.
+				 */
+				Datum		hAttr;
+				bool		isnull;
+				Oid			att_type;
 
-				if (get_typtype(att_type) == 'd')
-					att_type = getBaseType(att_type);
+				int attnum = lfirst_int(cell);
 
-				/* CdbHash treats all array-types as ANYARRAYOID, it doesn't know how to hash
-				 * the individual types (why is this ?) */
-				if (typeIsArrayType(att_type))
-					att_type = ANYARRAYOID;
+				Assert(attnum > 0);
+				hAttr = slot_getattr(resultSlot, attnum, &isnull);
+				if (!isnull)
+				{
+					att_type = resultSlot->tts_tupleDescriptor->attrs[attnum - 1]->atttypid;
 
-				cdbhash(hash, hAttr, att_type);
+					if (get_typtype(att_type) == 'd')
+						att_type = getBaseType(att_type);
+
+					/* CdbHash treats all array-types as ANYARRAYOID, it doesn't know how to hash
+					 * the individual types (why is this ?) */
+					if (typeIsArrayType(att_type))
+						att_type = ANYARRAYOID;
+
+					cdbhash(hash, hAttr, att_type);
+				}
+				else
+					cdbhashnull(hash);
 			}
-			else
-				cdbhashnull(hash);
 		}
-		int targetSeg = cdbhashreduce(hash);
+		else
+		{
+			cdbhashnokey(hash);
+		}
 
-		pfree(hash);
+		int targetSeg = cdbhashreduce(hash);
 
 		res = (targetSeg == GpIdentity.segindex);
 	}
@@ -421,6 +426,14 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 			&& IsResultMemoryIntensive(node))
 	{
 		SPI_ReserveMemory(((Plan *)node)->operatorMemKB * 1024L);
+	}
+
+	/* Initialize cdbHash */
+	resstate->cdbhash = NULL;
+	if (node->hashFilter == true && node->hashList == NIL)
+	{
+		resstate->cdbhash = makeCdbHash(GpIdentity.numsegments);
+		resstate->cdbhash->rrindex = 0;
 	}
 
 	return resstate;

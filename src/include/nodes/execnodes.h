@@ -1496,6 +1496,7 @@ typedef struct ResultState
 								 * functions in targetlist */
 	ExprDoneCond lastSRFCond;	/* Applicable only if isSRF is true.
 								 * Represents the last done flag */
+	struct CdbHash *cdbhash;
 } ResultState;
 
 /* ----------------
