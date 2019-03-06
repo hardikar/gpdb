@@ -132,6 +132,9 @@ namespace gpdxl
 				// the sorting / grouping reference of the original target list entry
 				ULONG m_sort_group_ref;
 
+				// indicate the levels up of the aggregate we are mutating
+				ULONG m_agg_levels_up;
+
 				// indicate whether we are mutating the argument of an aggregate
 				BOOL m_is_mutating_agg_arg;
 
@@ -150,6 +153,7 @@ namespace gpdxl
 					m_groupby_target_list(groupby_target_list),
 					m_current_query_level(0),
 					m_sort_group_ref(0),
+					m_agg_levels_up(gpos::ulong_max),
 					m_is_mutating_agg_arg(false)
 				{
 				}
