@@ -468,131 +468,217 @@ CQueryMutators::RunGroupByProjListMutator
 		return (Node *) gpdb::CopyObject(node);
 	}
 
-
-	if (IsA(node, Var) && context->m_is_mutating_agg_arg)
+	if (0 == context->m_current_query_level)
 	{
-		// if we are mutating an aggregate argument do nothing since the aggregate will be place in the derived table's target list
-		// fix any outer references in the grouping column expression or arguments of an aggregate
-		return (Node *) IncrLevelsUpInVar((Var*) node);
-	}
-	
-	// if we find an aggregate or precentile expression then insert into the new derived table
-	// and refer to it in the top-level query
-
-	if (IsA(node, Aggref))
-	{
-		Aggref *old_aggref = (Aggref*) node;
-		Aggref *aggref = FlatCopyAggref(old_aggref);
-		aggref->agglevelsup = old_aggref->agglevelsup;
-
-		List *new_args = NIL;
-		ListCell *lc = NULL;
-
-		BOOL fAggregate = context->m_is_mutating_agg_arg;
-		context->m_is_mutating_agg_arg = true;
-
-		ForEach (lc, old_aggref->args)
+		if (IsA(node, Var) && context->m_is_mutating_agg_arg)
 		{
-			Node *arg = (Node *) gpdb::CopyObject((Node*) lfirst(lc));
-			GPOS_ASSERT(NULL != arg);
-			// traverse each argument and fix levels up when needed
-			new_args = gpdb::LAppend
-						(
-						new_args,
-						gpdb::MutateQueryOrExpressionTree
-							(
-							arg,
-							(MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator,
-							(void *) context,
-							0 // flags -- mutate into cte-lists
-							)
-						);
+			// XXX ok this is needed -> handling outer refs in nested cases
+			// fix outer references used in the aggregates
+			return (Node *) IncrLevelsUpInVar((Var*) node);
 		}
-		context->m_is_mutating_agg_arg = fAggregate;
-		aggref->args = new_args;
 
-		const ULONG attno = gpdb::ListLength(context->m_groupby_target_list) + 1;
-		TargetEntry *target_entry = PteAggregateOrPercentileExpr(context->m_mp, context->m_md_accessor, (Node *) aggref, attno);
+		// XXX maybe this "IF" case is not needed
+		if (!context->m_is_mutating_agg_arg)
+		{
+			// if we find a target entry in the new derived table then return the appropriate var
+			// else investigate it to see if it needs to be added to the new derived table
 
-		// Add a new target entry to the query
-		context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, target_entry);
+			// XXX this search is wrong!
+			TargetEntry *found_target_entry = gpdb::FindFirstMatchingMemberInTargetList(node, context->m_groupby_target_list);
 
-		Var *new_var = gpdb::MakeVar
+			if (NULL != found_target_entry)
+			{
+				found_target_entry->resjunk = false;
+				Var *new_var = gpdb::MakeVar
 						(
-						1, // varno
-						(AttrNumber) attno,
-						gpdb::ExprType(node),
-						gpdb::ExprTypeMod(node),
-						0 // query levelsup
+								1, // varno
+								found_target_entry->resno,
+								gpdb::ExprType((Node*) found_target_entry->expr),
+								gpdb::ExprTypeMod( (Node*) found_target_entry->expr),
+								0 // query levelsup
 						);
 
-		return (Node*) new_var;
-	}
+				return (Node*) new_var;
+			}
+		}
 
-	if (IsA(node, PercentileExpr) || IsA(node, GroupingFunc))
-	{
-		Node *pnodeCopy = (Node *) gpdb::CopyObject(node);
 
-		const ULONG attno = gpdb::ListLength(context->m_groupby_target_list) + 1;
-		TargetEntry *target_entry = PteAggregateOrPercentileExpr(context->m_mp, context->m_md_accessor, pnodeCopy, attno);
-
-		// Add a new target entry to the query
-		context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, target_entry);
-
-		Var *new_var = gpdb::MakeVar
-								(
-								1, // varno
-								(AttrNumber) attno,
-								gpdb::ExprType(node),
-								gpdb::ExprTypeMod(node),
-								0 // query levelsup
-								);
-
-		return (Node*) new_var;
-	}
-
-	if (!context->m_is_mutating_agg_arg)
-	{
-		// if we find a target entry in the new derived table then return the appropriate var
-		// else investigate it to see if it needs to be added to the new derived table
-
-		TargetEntry *found_target_entry = gpdb::FindFirstMatchingMemberInTargetList(node, context->m_groupby_target_list);
-
-		if (NULL != found_target_entry)
+		if (IsA(node, PercentileExpr) || IsA(node, GroupingFunc))
 		{
-			found_target_entry->resjunk = false;
+			Node *pnodeCopy = (Node *) gpdb::CopyObject(node);
+
+			const ULONG attno = gpdb::ListLength(context->m_groupby_target_list) + 1;
+			TargetEntry *target_entry = PteAggregateOrPercentileExpr(context->m_mp, context->m_md_accessor, pnodeCopy, attno);
+
+			// Add a new target entry to the query
+			context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, target_entry);
+
 			Var *new_var = gpdb::MakeVar
-					(
-							1, // varno
-							found_target_entry->resno,
-							gpdb::ExprType((Node*) found_target_entry->expr),
-							gpdb::ExprTypeMod( (Node*) found_target_entry->expr),
-							0 // query levelsup
-					);
+			(
+			 1, // varno
+			 (AttrNumber) attno,
+			 gpdb::ExprType(node),
+			 gpdb::ExprTypeMod(node),
+			 0 // query levelsup
+			 );
 
 			return (Node*) new_var;
 		}
+	}
 
-		// if it is grouping column then we have already added it to the derived table
-		// so merely refer to it in the top-level query
-		TargetEntry *new_target_entry = gpdb::FindFirstMatchingMemberInTargetList(node, context->m_groupby_target_list);
-		if (NULL != new_target_entry)
+	// if we find an aggregate or precentile expression then insert into the new derived table
+	// and refer to it in the top-level query
+	if (IsA(node, Aggref))
+	{
+		Aggref *old_aggref = (Aggref*) node;
+		if (old_aggref->agglevelsup == context->m_current_query_level)
 		{
-			return (Node *) gpdb::MakeVar
+			Aggref *aggref = FlatCopyAggref(old_aggref);
+
+			BOOL is_agg_old = context->m_is_mutating_agg_arg;
+			ULONG agg_levels_up = context->m_agg_levels_up;
+
+			context->m_is_mutating_agg_arg = true;
+			context->m_agg_levels_up = old_aggref->agglevelsup;
+
+			List *new_args = NIL;
+			ListCell *lc = NULL;
+
+			ForEach (lc, old_aggref->args)
+			{
+				Node *arg = (Node *) gpdb::CopyObject((Node*) lfirst(lc));
+				GPOS_ASSERT(NULL != arg);
+				// traverse each argument and fix levels up when needed
+				new_args = gpdb::LAppend
+							(
+							new_args,
+							gpdb::MutateQueryOrExpressionTree
+								(
+								arg,
+								(MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator,
+								(void *) context,
+								0 // flags -- mutate into cte-lists
+								)
+							);
+			}
+			aggref->args = new_args;
+			context->m_is_mutating_agg_arg = is_agg_old;
+			context->m_agg_levels_up = agg_levels_up;
+
+			// XXX Missing a node search
+
+			// XXX The rest of this "IF" case is similar to MakeVarInDerivedTable
+			const ULONG attno = gpdb::ListLength(context->m_groupby_target_list) + 1;
+			TargetEntry *target_entry = PteAggregateOrPercentileExpr(context->m_mp, context->m_md_accessor, (Node *) aggref, attno);
+
+			// Add a new target entry to the query
+			context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, target_entry);
+
+			Var *new_var = gpdb::MakeVar
 							(
 							1, // varno
-							(AttrNumber) new_target_entry->resno,
-							gpdb::ExprType( (Node*) new_target_entry->expr),
-							gpdb::ExprTypeMod( (Node*) new_target_entry->expr),
-							0 // query levelsup
+							(AttrNumber) attno,
+							gpdb::ExprType(node),
+							gpdb::ExprTypeMod(node),
+							context->m_current_query_level
 							);
+
+			return (Node*) new_var;
 		}
+	}
+
+	if (IsA(node, Var))
+	{
+		Var *var = (Var *) gpdb::CopyObject(node);
+		if (var->varlevelsup == context->m_current_query_level)
+		{
+			// process outer references
+			if (var->varlevelsup == context->m_agg_levels_up)
+			{
+				// XXX write a nice comment
+				// an argument of an outer aggregate
+				var->varlevelsup = 0;
+
+				return (Node *) var;
+			}
+			var->varlevelsup = 0;
+			TargetEntry *found_target_entry =
+				gpdb::FindFirstMatchingMemberInTargetList((Node*) var,
+														  context->m_groupby_target_list);
+
+			if (NULL == found_target_entry)
+			{
+				// XXX Read & fix this:
+				// Consider two table r(a,b) and s(c,d) and the following query
+				// SELECT 1 from r LEFT JOIN s on (r.a = s.c) group by r.a having count(*) > a
+				// The having clause refers to the output of the left outer join while the
+				// grouping column refers to the base table column.
+				// While r.a and a are equivalent, the algebrizer at this point cannot detect this.
+				// Therefore, found_target_entry will be NULL and we fall back.
+
+				GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLError, GPOS_WSZ_LIT("No attribute"));
+			}
+			var->varlevelsup = context->m_current_query_level;
+			var->varno = 1;
+			var->varattno = found_target_entry->resno;
+			found_target_entry->resjunk = false;
+
+			return (Node*) var;
+		}
+		return (Node*) var;
+	}
+
+	if (IsA(node, CommonTableExpr))
+	{
+		CommonTableExpr *cte = (CommonTableExpr *) gpdb::CopyObject(node);
+		context->m_current_query_level++;
+
+		GPOS_ASSERT(IsA(cte->ctequery, Query));
+
+		cte->ctequery = gpdb::MutateQueryOrExpressionTree
+									(
+									cte->ctequery,
+									(MutatorWalkerFn) CQueryMutators::RunHavingQualMutator,
+									(void *) context,
+									0 // flags --- mutate into cte-lists
+									);
+
+		context->m_current_query_level--;
+		return (Node *) cte;
 	}
 
 	// do not traverse into sub queries as they will be inserted into top-level query as is
 	if (IsA(node, SubLink))
 	{
-		return (Node *) gpdb::CopyObject(node);
+		SubLink *old_sublink = (SubLink *) node;
+
+		SubLink *new_sublink = MakeNode(SubLink);
+		new_sublink->subLinkType = old_sublink->subLinkType;
+		new_sublink->location = old_sublink->location;
+		new_sublink->operName = (List *) gpdb::CopyObject(old_sublink->operName);
+
+		new_sublink->testexpr =	gpdb::MutateQueryOrExpressionTree
+										(
+										old_sublink->testexpr,
+										(MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator,
+										(void *) context,
+										0 // flags -- mutate into cte-lists
+										);
+		context->m_current_query_level++;
+
+		GPOS_ASSERT(IsA(old_sublink->subselect, Query));
+
+		new_sublink->subselect = gpdb::MutateQueryOrExpressionTree
+										(
+										old_sublink->subselect,
+										(MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator,
+										(void *) context,
+										0 // flags -- mutate into cte-lists
+										);
+
+		context->m_current_query_level--;
+
+		return (Node *) new_sublink;
 	}
 
 	return gpdb::MutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator, context);
@@ -995,6 +1081,7 @@ CQueryMutators::RunHavingQualMutator
 				// While r.a and a are equivalent, the algebrizer at this point cannot detect this.
 				// Therefore, found_target_entry will be NULL and we fall back.
 
+				// XXX Just raise here instead of this gimmick ?
 				context->m_should_fallback = true;
 				return NULL;
 			}
