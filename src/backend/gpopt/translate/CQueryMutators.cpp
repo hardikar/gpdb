@@ -198,7 +198,7 @@ CQueryMutators::NormalizeGroupByProjList
 		BOOL is_grouping_col = CTranslatorUtils::IsGroupingColumn(target_entry, derived_table_query->groupClause);
 		if (!is_grouping_col)
 		{
-			target_entry->expr = (Expr*) RunGroupByProjListMutator( (Node*) target_entry->expr, &context);
+			target_entry->expr = (Expr*) RunExtractAggregatesMutator((Node*) target_entry->expr, &context);
 			GPOS_ASSERT
 				(
 				(!IsA(target_entry->expr, Aggref) && !IsA(target_entry->expr, PercentileExpr)) && !IsA(target_entry->expr, GroupingFunc) &&
@@ -442,204 +442,6 @@ CQueryMutators::NeedsLevelsUpCorrection
 	// or above needs to be incremented
 	return cte_levels_up >= context->m_current_query_level;
 }
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CQueryMutators::RunGroupByProjListMutator
-//
-//	@doc:
-// 		Traverse the project list of a groupby operator and extract all aggregate
-//		functions in an arbitrarily complex project element
-//---------------------------------------------------------------------------
-Node *
-CQueryMutators::RunGroupByProjListMutator
-	(
-	Node *node,
-	SContextGrpbyPlMutator *context
-	)
-{
-	if (NULL == node)
-	{
-		return NULL;
-	}
-
-	if (IsA(node, Const))
-	{
-		return (Node *) gpdb::CopyObject(node);
-	}
-
-	if (0 == context->m_current_query_level)
-	{
-		if (IsA(node, Var) && context->m_is_mutating_agg_arg)
-		{
-			// XXX ok this is needed -> handling outer refs in nested cases
-			// fix outer references used in the aggregates
-			return (Node *) IncrLevelsUpIfOuterRef((Var*) node);
-		}
-
-		// XXX maybe this "IF" case is not needed
-		if (!context->m_is_mutating_agg_arg)
-		{
-			// if we find a target entry in the new derived table then return the appropriate var
-			// else investigate it to see if it needs to be added to the new derived table
-			Node *found_node = FindNodeInGroupByTargetList(node, context);
-			if (NULL != found_node)
-			{
-				return found_node;
-			}
-		}
-
-		if (IsA(node, PercentileExpr) || IsA(node, GroupingFunc))
-		{
-			// create a new entry in the derived table and return its corresponding var
-			Node *node_copy = (Node *) gpdb::CopyObject(node);
-			return (Node*) MakeVarInDerivedTable(node_copy, context);
-		}
-	}
-
-	// if we find an aggregate or precentile expression then insert into the new derived table
-	// and refer to it in the top-level query
-	if (IsA(node, Aggref))
-	{
-		Aggref *old_aggref = (Aggref*) node;
-		if (old_aggref->agglevelsup == context->m_current_query_level)
-		{
-			Aggref *aggref = FlatCopyAggref(old_aggref);
-
-			BOOL is_agg_old = context->m_is_mutating_agg_arg;
-			ULONG agg_levels_up = context->m_agg_levels_up;
-
-			context->m_is_mutating_agg_arg = true;
-			context->m_agg_levels_up = old_aggref->agglevelsup;
-
-			List *new_args = NIL;
-			ListCell *lc = NULL;
-
-			ForEach (lc, old_aggref->args)
-			{
-				Node *arg = (Node *) gpdb::CopyObject((Node*) lfirst(lc));
-				GPOS_ASSERT(NULL != arg);
-				// traverse each argument and fix levels up when needed
-				new_args = gpdb::LAppend
-							(
-							new_args,
-							gpdb::MutateQueryOrExpressionTree
-								(
-								arg,
-								(MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator,
-								(void *) context,
-								0 // flags -- mutate into cte-lists
-								)
-							);
-			}
-			aggref->args = new_args;
-			context->m_is_mutating_agg_arg = is_agg_old;
-			context->m_agg_levels_up = agg_levels_up;
-
-			// XXX Missing a node search
-
-			// create a new entry in the derived table and return its corresponding var
-			return (Node*) MakeVarInDerivedTable((Node *) aggref, context);
-		}
-	}
-
-	if (IsA(node, Var))
-	{
-		Var *var = (Var *) gpdb::CopyObject(node);
-		if (var->varlevelsup == context->m_current_query_level)
-		{
-			// process outer references
-			if (var->varlevelsup == context->m_agg_levels_up)
-			{
-				// XXX write a nice comment
-				// an argument of an outer aggregate
-				var->varlevelsup = 0;
-
-				return (Node *) var;
-			}
-			var->varlevelsup = 0;
-			TargetEntry *found_tle =
-				gpdb::FindFirstMatchingMemberInTargetList((Node*) var,
-														  context->m_groupby_tlist);
-
-			if (NULL == found_tle)
-			{
-				// XXX Read & fix this:
-				// Consider two table r(a,b) and s(c,d) and the following query
-				// SELECT 1 from r LEFT JOIN s on (r.a = s.c) group by r.a having count(*) > a
-				// The having clause refers to the output of the left outer join while the
-				// grouping column refers to the base table column.
-				// While r.a and a are equivalent, the algebrizer at this point cannot detect this.
-				// Therefore, found_target_entry will be NULL and we fall back.
-
-				GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLError, GPOS_WSZ_LIT("No attribute"));
-			}
-			var->varlevelsup = context->m_current_query_level;
-			var->varno = 1;
-			var->varattno = found_tle->resno;
-			found_tle->resjunk = false;
-
-			return (Node*) var;
-		}
-		return (Node*) var;
-	}
-
-	if (IsA(node, CommonTableExpr))
-	{
-		CommonTableExpr *cte = (CommonTableExpr *) gpdb::CopyObject(node);
-		context->m_current_query_level++;
-
-		GPOS_ASSERT(IsA(cte->ctequery, Query));
-
-		cte->ctequery = gpdb::MutateQueryOrExpressionTree
-									(
-									cte->ctequery,
-									(MutatorWalkerFn) CQueryMutators::RunHavingQualMutator,
-									(void *) context,
-									0 // flags --- mutate into cte-lists
-									);
-
-		context->m_current_query_level--;
-		return (Node *) cte;
-	}
-
-	// do not traverse into sub queries as they will be inserted into top-level query as is
-	if (IsA(node, SubLink))
-	{
-		SubLink *old_sublink = (SubLink *) node;
-
-		SubLink *new_sublink = MakeNode(SubLink);
-		new_sublink->subLinkType = old_sublink->subLinkType;
-		new_sublink->location = old_sublink->location;
-		new_sublink->operName = (List *) gpdb::CopyObject(old_sublink->operName);
-
-		new_sublink->testexpr =	gpdb::MutateQueryOrExpressionTree
-										(
-										old_sublink->testexpr,
-										(MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator,
-										(void *) context,
-										0 // flags -- mutate into cte-lists
-										);
-		context->m_current_query_level++;
-
-		GPOS_ASSERT(IsA(old_sublink->subselect, Query));
-
-		new_sublink->subselect = gpdb::MutateQueryOrExpressionTree
-										(
-										old_sublink->subselect,
-										(MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator,
-										(void *) context,
-										0 // flags -- mutate into cte-lists
-										);
-
-		context->m_current_query_level--;
-
-		return (Node *) new_sublink;
-	}
-
-	return gpdb::MutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator, context);
-}
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -908,20 +710,16 @@ CQueryMutators::PteAggregateOrPercentileExpr
 	return gpdb::MakeTargetEntry((Expr*) node, (AttrNumber) attno, name, false);
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CQueryMutators::RunHavingQualMutator
+// Traverse the entire tree under an arbitrarily complex project element (node)
+// to extract all aggregate functions out into the derived query's target list
 //
-//	@doc:
-// 		This mutator function checks to see if the current node is an AggRef
-//		or a correlated variable from the derived table.
-//		If it is an Aggref:
-//			Then replaces it with the appropriate attribute from the top-level query.
-//		If it is a correlated Var:
-//			Then replaces it with a attribute from the top-level query.
-//---------------------------------------------------------------------------
+// This mutator should be called after creating a derived query (a subquery in
+// the FROM clause), on each element in the old query's target list or qual to
+// update any AggRef & Var to refer to the output from the derived query.
+//
+// See comments below & in the callers for specific use cases.
 Node *
-CQueryMutators::RunHavingQualMutator
+CQueryMutators::RunExtractAggregatesMutator
 	(
 	Node *node,
 	SContextGrpbyPlMutator *context
@@ -937,21 +735,29 @@ CQueryMutators::RunHavingQualMutator
 		return (Node *) gpdb::CopyObject(node);
 	}
 
-	// check to see if the node is in the target list of the derived table.
-	// check if we have the corresponding target_entry entry in derived tables target list
 	if (0 == context->m_current_query_level)
 	{
 		if (IsA(node, Var) && context->m_is_mutating_agg_arg)
 		{
-			// fix outer references used in the aggregates
+			// This mutator may be run on a nested query object with aggregates on
+			// outer references. It pulls out any aggregates and moves it into the
+			// derived query (which is subquery), in effect, increasing the levels up
+			// any Var in the aggregate must now reference
+			//
+			// e.g SELECT (SELECT sum(o.o) + 1 FROM i GRP BY i.i) FROM o;
+			// becomes SELECT (SELECT x + 1 FROM (SELECT sum(o.o) GRP BY i.i)) FROM o;
+			// which means Var::varlevelup must be increased for o.o
 			return (Node *) IncrLevelsUpIfOuterRef((Var*) node);
 		}
 
-		// check if an entry already exists, if so no need for duplicate
-		Node *found_node = FindNodeInGroupByTargetList(node, context);
-		if (NULL != found_node)
+		if (!context->m_is_mutating_agg_arg)
 		{
-			return found_node;
+			// check if an entry already exists, if so no need for duplicate
+			Node *found_node = FindNodeInGroupByTargetList(node, context);
+			if (NULL != found_node)
+			{
+				return found_node;
+			}
 		}
 
 		if (IsA(node, PercentileExpr) || IsA(node, GroupingFunc))
@@ -965,6 +771,11 @@ CQueryMutators::RunHavingQualMutator
 	if (IsA(node, Aggref))
 	{
 		Aggref *old_aggref = (Aggref *) node;
+
+		// If the agglevelsup matches the current query level, this Aggref only
+		// uses vars from the top level query. This needs to be moved to the
+		// derived query, and the entire AggRef replaced with a Var referencing the
+		// derived table's target list.
 		if (old_aggref->agglevelsup == context->m_current_query_level)
 		{
 			Aggref *new_aggref = FlatCopyAggref(old_aggref);
@@ -989,7 +800,7 @@ CQueryMutators::RunHavingQualMutator
 									gpdb::MutateQueryOrExpressionTree
 											(
 											arg,
-											(MutatorWalkerFn) CQueryMutators::RunHavingQualMutator,
+											(MutatorWalkerFn) RunExtractAggregatesMutator,
 											(void *) context,
 											0 // mutate into cte-lists
 											)
@@ -1014,17 +825,27 @@ CQueryMutators::RunHavingQualMutator
 	if (IsA(node, Var))
 	{
 		Var *var = (Var *) gpdb::CopyObject(node);
+
+		// Handle other top-level outer references in the project element. Note
+		// that top-level outer references inside Aggrefs is already handled in
+		// another if-case.
 		if (var->varlevelsup == context->m_current_query_level)
 		{
-			// process outer references
 			if (var->varlevelsup == context->m_agg_levels_up)
 			{
-				// an argument of an outer aggregate
+				// If Var references the top level query inside an Aggref that also
+				// references top level query, the Aggref is moved to the derived query
+				// (see comments in Aggref if-case). Thus, these Vars reference are
+				// brought up to the top-query level.
 				var->varlevelsup = 0;
-
 				return (Node *) var;
 			}
 
+			// For other top-level references, correct their varno & varattno, since
+			// they now must refer to the target list of the derived query - whose
+			// target list may be different from the original query.
+
+			// Set varlevelsup to 0 temporarily while searching in the target list
 			var->varlevelsup = 0;
 			TargetEntry *found_tle =
 				gpdb::FindFirstMatchingMemberInTargetList((Node*) var,
@@ -1044,9 +865,9 @@ CQueryMutators::RunHavingQualMutator
 				return NULL;
 			}
 
-			var->varlevelsup = context->m_current_query_level;
-			var->varno = 1;
+			var->varno = 1;  // derived query is the only table in FROM expression
 			var->varattno = found_tle->resno;
+			var->varlevelsup = context->m_current_query_level;  // reset varlevels up
 			found_tle->resjunk = false;
 
 			return (Node*) var;
@@ -1064,9 +885,9 @@ CQueryMutators::RunHavingQualMutator
 		cte->ctequery = gpdb::MutateQueryOrExpressionTree
 									(
 									cte->ctequery,
-									(MutatorWalkerFn) CQueryMutators::RunHavingQualMutator,
+									(MutatorWalkerFn) RunExtractAggregatesMutator,
 									(void *) context,
-									0 // flags --- mutate into cte-lists
+									0 // mutate into cte-lists
 									);
 
 		context->m_current_query_level--;
@@ -1085,9 +906,9 @@ CQueryMutators::RunHavingQualMutator
 		new_sublink->testexpr =	gpdb::MutateQueryOrExpressionTree
 										(
 										old_sublink->testexpr,
-										(MutatorWalkerFn) CQueryMutators::RunHavingQualMutator,
+										(MutatorWalkerFn) RunExtractAggregatesMutator,
 										(void *) context,
-										0 // flags -- mutate into cte-lists
+										0 // mutate into cte-lists
 										);
 		context->m_current_query_level++;
 
@@ -1096,9 +917,9 @@ CQueryMutators::RunHavingQualMutator
 		new_sublink->subselect = gpdb::MutateQueryOrExpressionTree
 										(
 										old_sublink->subselect,
-										(MutatorWalkerFn) CQueryMutators::RunHavingQualMutator,
+										(MutatorWalkerFn) RunExtractAggregatesMutator,
 										(void *) context,
-										0 // flags -- mutate into cte-lists
+										0 // mutate into cte-lists
 										);
 
 		context->m_current_query_level--;
@@ -1106,7 +927,7 @@ CQueryMutators::RunHavingQualMutator
 		return (Node *) new_sublink;
 	}
 	
-	return gpdb::MutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunHavingQualMutator, context);
+	return gpdb::MutateExpressionTree(node, (MutatorWalkerFn) RunExtractAggregatesMutator, context);
 }
 
 
@@ -1278,7 +1099,7 @@ CQueryMutators::NormalizeHaving
 	SContextGrpbyPlMutator context(mp, md_accessor, derived_table_query, derived_table_query->targetList);
 
 	// fix outer references in the qual
-	new_query->jointree->quals = RunHavingQualMutator(derived_table_query->havingQual, &context);
+	new_query->jointree->quals = RunExtractAggregatesMutator(derived_table_query->havingQual, &context);
 	derived_table_query->havingQual = NULL;
 
 	ReassignSortClause(new_query, rte->subquery);

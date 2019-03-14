@@ -227,11 +227,6 @@ namespace gpdxl
 			static
 			Node *RunFixCTELevelsUpMutator(Node *node, SContextIncLevelsupMutator *context);
 
-			// traverse the project list of a groupby operator, to
-			// extract all aggregate functions in an arbitrarily complex project element,
-			static
-			Node *RunGroupByProjListMutator(Node *node, SContextGrpbyPlMutator *context);
-
 			// mutate the grouping columns, fix levels up when necessary
 			static
 			Node *RunGroupingColMutator(Node *node, SContextGrpbyPlMutator *context);
@@ -247,7 +242,7 @@ namespace gpdxl
 			// traverse the having qual to extract all aggregate functions,
 			// fix correlated vars and return the modified having qual
 			static
-			Node *RunHavingQualMutator(Node *node, SContextGrpbyPlMutator *context);
+			Node *RunExtractAggregatesMutator(Node *node, SContextGrpbyPlMutator *context);
 
 			// for a given an TE in the derived table, create a new TE to be added to the top level query
 			static
