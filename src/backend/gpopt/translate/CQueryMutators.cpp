@@ -487,26 +487,12 @@ CQueryMutators::RunGroupByProjListMutator
 		{
 			// if we find a target entry in the new derived table then return the appropriate var
 			// else investigate it to see if it needs to be added to the new derived table
-
-			// XXX this search is wrong!
-			TargetEntry *found_target_entry = gpdb::FindFirstMatchingMemberInTargetList(node, context->m_groupby_tlist);
-
-			if (NULL != found_target_entry)
+			Node *found_node = FindNodeInGroupByTargetList(node, context);
+			if (NULL != found_node)
 			{
-				found_target_entry->resjunk = false;
-				Var *new_var = gpdb::MakeVar
-						(
-								1, // varno
-								found_target_entry->resno,
-								gpdb::ExprType((Node*) found_target_entry->expr),
-								gpdb::ExprTypeMod( (Node*) found_target_entry->expr),
-								0 // query levelsup
-						);
-
-				return (Node*) new_var;
+				return found_node;
 			}
 		}
-
 
 		if (IsA(node, PercentileExpr) || IsA(node, GroupingFunc))
 		{
@@ -577,11 +563,11 @@ CQueryMutators::RunGroupByProjListMutator
 				return (Node *) var;
 			}
 			var->varlevelsup = 0;
-			TargetEntry *found_target_entry =
+			TargetEntry *found_tle =
 				gpdb::FindFirstMatchingMemberInTargetList((Node*) var,
 														  context->m_groupby_tlist);
 
-			if (NULL == found_target_entry)
+			if (NULL == found_tle)
 			{
 				// XXX Read & fix this:
 				// Consider two table r(a,b) and s(c,d) and the following query
@@ -595,8 +581,8 @@ CQueryMutators::RunGroupByProjListMutator
 			}
 			var->varlevelsup = context->m_current_query_level;
 			var->varno = 1;
-			var->varattno = found_target_entry->resno;
-			found_target_entry->resjunk = false;
+			var->varattno = found_tle->resno;
+			found_tle->resjunk = false;
 
 			return (Node*) var;
 		}
@@ -967,7 +953,7 @@ CQueryMutators::RunHavingQualMutator
 		}
 
 		// check if an entry already exists, if so no need for duplicate
-		Node *found_node = FindNodeInTargetEntries(node, context);
+		Node *found_node = FindNodeInGroupByTargetList(node, context);
 		if (NULL != found_node)
 		{
 			return found_node;
@@ -1019,7 +1005,7 @@ CQueryMutators::RunHavingQualMutator
 			context->m_agg_levels_up = agg_levels_up;
 
 			// check if an entry already exists, if so no need for duplicate
-			Node *found_node = FindNodeInTargetEntries((Node*) new_aggref, context);
+			Node *found_node = FindNodeInGroupByTargetList((Node*) new_aggref, context);
 			if (NULL != found_node)
 			{
 				return found_node;
@@ -1045,9 +1031,11 @@ CQueryMutators::RunHavingQualMutator
 			}
 
 			var->varlevelsup = 0;
-			TargetEntry *found_target_entry = gpdb::FindFirstMatchingMemberInTargetList( (Node*) var, context->m_groupby_tlist);
+			TargetEntry *found_tle =
+				gpdb::FindFirstMatchingMemberInTargetList((Node*) var,
+													  context->m_groupby_tlist);
 
-			if (NULL == found_target_entry)
+			if (NULL == found_tle)
 			{
 				// Consider two table r(a,b) and s(c,d) and the following query
 				// SELECT 1 from r LEFT JOIN s on (r.a = s.c) group by r.a having count(*) > a
@@ -1063,8 +1051,8 @@ CQueryMutators::RunHavingQualMutator
 
 			var->varlevelsup = context->m_current_query_level;
 			var->varno = 1;
-			var->varattno = found_target_entry->resno;
-			found_target_entry->resjunk = false;
+			var->varattno = found_tle->resno;
+			found_tle->resjunk = false;
 
 			return (Node*) var;
 		}
@@ -1159,16 +1147,11 @@ CQueryMutators::MakeVarInDerivedTable
 	return new_var;
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CQueryMutators::FindNodeInTargetEntries
-//
-//	@doc:
-//		Check if a matching entry already exists in the list of target
-//		entries, if yes return its corresponding var, otherwise return NULL
-//---------------------------------------------------------------------------
+
+// Check if a matching entry already exists in the list of target
+// entries, if yes return its corresponding var, otherwise return NULL
 Node *
-CQueryMutators::FindNodeInTargetEntries
+CQueryMutators::FindNodeInGroupByTargetList
 	(
 	Node *node,
 	SContextGrpbyPlMutator *context
@@ -1177,20 +1160,21 @@ CQueryMutators::FindNodeInTargetEntries
 	GPOS_ASSERT(NULL != node);
 	GPOS_ASSERT(NULL != context);
 	
-	TargetEntry *found_target_entry = gpdb::FindFirstMatchingMemberInTargetList(node, context->m_groupby_tlist);
-	if (NULL != found_target_entry)
+	TargetEntry *found_tle =
+		gpdb::FindFirstMatchingMemberInTargetList(node, context->m_groupby_tlist);
+
+	if (NULL != found_tle)
 	{
 		gpdb::GPDBFree(node);
-		Var *new_var = gpdb::MakeVar
-						(
-						1, // varno
-						found_target_entry->resno,
-						gpdb::ExprType( (Node*) found_target_entry->expr),
-						gpdb::ExprTypeMod( (Node*) found_target_entry->expr),
-						context->m_current_query_level
-						);
+		// NB: Var::varlevelsup is set to the current query level since the created
+		// Var must reference the group by targetlist at the top level.
+		Var *new_var = gpdb::MakeVar(1 /* varno */,
+									 found_tle->resno,
+									 gpdb::ExprType( (Node*) found_tle->expr),
+									 gpdb::ExprTypeMod( (Node*) found_tle->expr),
+									 context->m_current_query_level /* varlevelsup */);
 
-		found_target_entry->resjunk = false;
+		found_tle->resjunk = false;
 		return (Node*) new_var;
 	}
 

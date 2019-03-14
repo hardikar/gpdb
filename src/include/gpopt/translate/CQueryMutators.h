@@ -209,7 +209,7 @@ namespace gpdxl
 
 			// check if a matching node exists in the list of target entries
 			static
-			Node *FindNodeInTargetEntries(Node *node, SContextGrpbyPlMutator *context);
+			Node *FindNodeInGroupByTargetList(Node *node, SContextGrpbyPlMutator *context);
 
 			// increment the levels up of outer references
 			static
