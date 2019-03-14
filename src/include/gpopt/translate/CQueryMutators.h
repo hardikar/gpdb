@@ -63,14 +63,14 @@ namespace gpdxl
 				IMemoryPool *m_mp;
 
 				// MD accessor to get the function name
-				CMDAccessor *m_md_accessor;
+				CMDAccessor *m_mda;
 
 				// original query
 				// XXX I don't think this is really needed
 				Query *m_query;
 
 				// the new target list of the group by (derived) query
-				List *m_groupby_target_list;
+				List *m_groupby_tlist;
 
 				// the current query level
 				ULONG m_current_query_level;
@@ -85,15 +85,15 @@ namespace gpdxl
 				SContextGrpbyPlMutator
 					(
 					IMemoryPool *mp,
-					CMDAccessor *md_accessor,
+					CMDAccessor *mda,
 					Query *query,
-					List *groupby_target_list
+					List *groupby_tlist
 					)
-					:
+						:
 					m_mp(mp),
-					m_md_accessor(md_accessor),
+					m_mda(mda),
 					m_query(query),
-					m_groupby_target_list(groupby_target_list),
+					m_groupby_tlist(groupby_tlist),
 					m_current_query_level(0),
 					m_agg_levels_up(gpos::ulong_max),
 					m_is_mutating_agg_arg(false)
