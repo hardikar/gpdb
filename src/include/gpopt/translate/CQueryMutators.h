@@ -271,7 +271,7 @@ namespace gpdxl
 
 			// increment the levels up of outer references
 			static
-			Var *IncrLevelsUpInVar(Var *var);
+			Var *IncrLevelsUpIfOuterRef(Var *var);
 
 			// pull up having clause into a select
 			static

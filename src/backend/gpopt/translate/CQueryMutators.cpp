@@ -479,7 +479,7 @@ CQueryMutators::RunGroupByProjListMutator
 		{
 			// XXX ok this is needed -> handling outer refs in nested cases
 			// fix outer references used in the aggregates
-			return (Node *) IncrLevelsUpInVar((Var*) node);
+			return (Node *) IncrLevelsUpIfOuterRef((Var*) node);
 		}
 
 		// XXX maybe this "IF" case is not needed
@@ -993,7 +993,7 @@ CQueryMutators::RunHavingQualMutator
 		if (IsA(node, Var) && context->m_is_mutating_agg_arg)
 		{
 			// fix outer references used in the aggregates
-			return (Node *) IncrLevelsUpInVar((Var*) node);
+			return (Node *) IncrLevelsUpIfOuterRef((Var*) node);
 		}
 
 		// check if an entry already exists, if so no need for duplicate
@@ -1254,15 +1254,10 @@ CQueryMutators::FlatCopyAggref
 	return new_aggref;
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CQueryMutators::IncrLevelsUpInVar
-//
-//	@doc:
-//		Increment the levels up of outer references
-//---------------------------------------------------------------------------
+
+// Increment the levels up of outer references
 Var *
-CQueryMutators::IncrLevelsUpInVar
+CQueryMutators::IncrLevelsUpIfOuterRef
 	(
 	Var *var
 	)
