@@ -973,7 +973,7 @@ Node *
 CQueryMutators::RunHavingQualMutator
 	(
 	Node *node,
-	SContextHavingQualMutator *context
+	SContextGrpbyPlMutator *context
 	)
 {
 	if (NULL == node)
@@ -1086,8 +1086,8 @@ CQueryMutators::RunHavingQualMutator
 				// While r.a and a are equivalent, the algebrizer at this point cannot detect this.
 				// Therefore, found_target_entry will be NULL and we fall back.
 
-				// XXX Just raise here instead of this gimmick ?
-				context->m_should_fallback = true;
+				// TODO: Oct 14 2013, remove temporary fix (revert exception to assert) to avoid crash during algebrization
+				GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLError, GPOS_WSZ_LIT("No attribute"));
 				return NULL;
 			}
 
@@ -1167,7 +1167,7 @@ Var *
 CQueryMutators::MakeVarInDerivedTable
 	(
 	Node *node,
-	SContextHavingQualMutator *context
+	SContextGrpbyPlMutator *context
 	)
 {
 	GPOS_ASSERT(NULL != node);
@@ -1202,7 +1202,7 @@ Node *
 CQueryMutators::FindNodeInTargetEntries
 	(
 	Node *node,
-	SContextHavingQualMutator *context
+	SContextGrpbyPlMutator *context
 	)
 {
 	GPOS_ASSERT(NULL != node);
@@ -1329,17 +1329,10 @@ CQueryMutators::NormalizeHaving
 		}
 	}
 
-	SContextHavingQualMutator context(mp, md_accessor, num_target_entries, derived_table_query->targetList);
+	SContextGrpbyPlMutator context(mp, md_accessor, derived_table_query, derived_table_query->targetList);
 
 	// fix outer references in the qual
 	new_query->jointree->quals = RunHavingQualMutator(derived_table_query->havingQual, &context);
-
-	if (context.m_should_fallback)
-	{
-		// TODO: Oct 14 2013, remove temporary fix (revert exception to assert) to avoid crash during algebrization
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLError, GPOS_WSZ_LIT("No attribute"));
-	}
-
 	derived_table_query->havingQual = NULL;
 
 	ReassignSortClause(new_query, rte->subquery);
@@ -1828,7 +1821,6 @@ CQueryMutators::NormalizeWindowProjList
 		else
 		{
 			// normalize target list entry
-			context.m_sort_group_ref = target_entry->ressortgroupref;
 			Expr *pexprNew = (Expr*) RunWindowProjListMutator( (Node*) target_entry->expr, &context);
 			TargetEntry *new_target_entry = gpdb::MakeTargetEntry(pexprNew, ulResNoNew, target_entry->resname, target_entry->resjunk);
 			new_target_entry->ressortgroupref = target_entry->ressortgroupref;
