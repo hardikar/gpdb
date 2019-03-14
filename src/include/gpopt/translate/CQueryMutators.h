@@ -227,11 +227,6 @@ namespace gpdxl
 			static
 			Node *RunFixCTELevelsUpMutator(Node *node, SContextIncLevelsupMutator *context);
 
-			// traverse the project list of a groupby operator, to
-			// extract all aggregate functions in an arbitrarily complex project element,
-			static
-			Node *RunGroupByProjListMutator(Node *node, SContextGrpbyPlMutator *context);
-
 			// mutate the grouping columns, fix levels up when necessary
 			static
 			Node *RunGroupingColMutator(Node *node, SContextGrpbyPlMutator *context);
