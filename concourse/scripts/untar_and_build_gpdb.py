@@ -18,7 +18,7 @@ def get_assert_mode():
         assert_mode = fp.read().strip()
         return assert_mode 
 
-untar_gpdb_cmd = "mkdir -p gpdb_src && tar -xf gpdb_tarball/gpdb_src.tar.gz -C gpdb_src --strip 1"
+untar_gpdb_cmd = "mkdir -p gpdb_src && tar -xf gpdb_tarball/gpdb*_src.tar.gz -C gpdb_src --strip 1"
 exec_command(untar_gpdb_cmd)
 
 # Default build mode is to enable assert. If the user explicitly specifies

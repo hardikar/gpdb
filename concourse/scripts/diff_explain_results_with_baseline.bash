@@ -1,7 +1,5 @@
 #!/bin/bash -l
 
-set -x
-
 function _main() {
 
 	mkdir results/
@@ -29,8 +27,6 @@ function _main() {
 	cp explain_test_results.tar.gz diffs/
 	cp simple.diffs diffs/
 
-	set +x
-
 	echo "======================================================================"
 	echo "DIFF FILE: simple.diffs"
 	echo "======================================================================"
@@ -40,7 +36,6 @@ function _main() {
 	echo "======================================================================"
 	echo "SUMMARY"
 	echo "======================================================================"
-	set -x
 	gpdb_main_src/concourse/scripts/perfsummary.py --baseLog baseline_combined.out results_combined.out
 
 	return $([ ! -s simple.diffs ]);

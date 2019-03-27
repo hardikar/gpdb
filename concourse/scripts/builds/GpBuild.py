@@ -93,7 +93,7 @@ class GpBuild(GpdbBuildBase):
             if fsql.endswith('.sql') and fsql not in ['stats.sql', 'schema.sql']:
                 output_fname = 'out/{}'.format(fsql.replace('.sql', '.out'))
                 with open(output_fname, 'w') as fout:
-                    self._run_gpdb_command("psql -e -f sql/{}".format(fsql), stdout=fout, stderr=fout)
+                    self._run_gpdb_command("psql -a -f sql/{}".format(fsql), stdout=fout, stderr=fout)
                 with open(output_fname, 'r') as fout:
                     print fout.read()
 

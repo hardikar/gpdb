@@ -39,7 +39,7 @@ def create_gpadmin_user():
 def extract_explain_test_suite():
     tarfiles = glob.glob('explain_test_suite/*.tar.gz')
     if len(tarfiles) != 1:
-        print("Too many or no tar files found in explain_test_suite!")
+        print("Expected to find 1 tar file.")
         return 1
     status = subprocess.call(["tar", "xvf", tarfiles[0]])
     return status

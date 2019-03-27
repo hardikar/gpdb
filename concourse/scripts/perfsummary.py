@@ -5,15 +5,25 @@
 #
 # Usage:
 #
-# myperfsummary.py [ <log-file-name> ] [ --baseLog <base-log-file-name> ]
+# perfsummary.py [ <log-file-name> ] [ --baseLog <base-log-file-name> ]
 #
+# Log files must have queries that were executed with timing on.
+#
+# Log files with more than one query must be in the following format:
+#
+# Filename: XXXXXXXX
+#
+# Query Plan
+# XXXXXXXXXXXX
+#
+# Time: XXXX
+#
+# Filename: XXXX
 
 
 import sys
 import re
 import argparse
-
-planDiffText = { 0: "", 1: "Cost changes;", 2: "Num rows changes;", 3: "Plan changes;" }
 
 # the state of multiple test suite queries executed in a log file
 class FileState:
@@ -145,13 +155,14 @@ class FileState:
         myPlan = self.query_explain_plan_map[queryId]
         basePlan = base.query_explain_plan_map[queryId]
         # return value (0 = same, 1 = cost change, 2 = cardinality change, 3 = other change)
-        result = 0
+
+        plan_change_found = False
         cost_change_found = False
         rows_change_found = False
 
         if len(myPlan) != len(basePlan):
             # plans are different (different number of lines)
-            return 3
+            return "plan change found"
 
         for l in range(len(myPlan)):
             myLine = myPlan[l]
@@ -169,17 +180,19 @@ class FileState:
                     else:
                         myOptimizer = re.sub(r'Optimizer[ a-z]*:[ a-zA-Z0-9.]*', 'Optimizer:xxx', myLine)
                         baseOptimizer = re.sub(r'Optimizer[ a-z]*:[ a-zA-Z0-9.]*', 'Optimizer:xxx', baseLine)
-
                         if myOptimizer != baseOptimizer:
                             # lines are different even with masked-out rows and cost
-                            return 3
+                            plan_change_found = True
 
-        if cost_change_found:
-            result = 1
-        if rows_change_found:
-            result = 2
-
-        return result
+        if plan_change_found:
+            return "plan change found"
+        elif cost_change_found and rows_change_found:
+            return "cost and cardinality change found"
+        elif rows_change_found:
+            return "row change found"
+        elif cost_change_found:
+            return "cost change found"
+        return ""
 
     # print header for CSV file
     def printHeader(self, numFiles):
@@ -197,7 +210,7 @@ class FileState:
     def printComparison(self, base):
         for q in self.query_id_list:
             planDiffs = self.comparePlans(base, q)
-            print "%s, %s, %s, %s, %s, %s, %s, %s" % (q, base.query_explain_time_map[q], self.query_explain_time_map[q], base.query_exe_time_map[q], self.query_exe_time_map[q], planDiffText[planDiffs], base.query_comment_map[q], self.query_comment_map[q])
+            print "%s, %s, %s, %s, %s, %s, %s, %s" % (q, base.query_explain_time_map[q], self.query_explain_time_map[q], base.query_exe_time_map[q], self.query_exe_time_map[q], planDiffs, base.query_comment_map[q], self.query_comment_map[q])
 
             
 
