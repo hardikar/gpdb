@@ -154,7 +154,6 @@ class FileState:
     def comparePlans(self, base, queryId):
         myPlan = self.query_explain_plan_map[queryId]
         basePlan = base.query_explain_plan_map[queryId]
-        # return value (0 = same, 1 = cost change, 2 = cardinality change, 3 = other change)
 
         plan_change_found = False
         cost_change_found = False

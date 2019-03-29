@@ -3,10 +3,10 @@
 function _main() {
 
 	mkdir results/
-	tar xf explain_output/*.tar.gz -C results/ out/ --strip-components 1
+	tar xf explain_output/*.tar.gz -C  --strip-components 1 results/ out/
 
 	mkdir baseline/
-	tar xf explain_output_baseline/*.tar.gz -C baseline/ out/ --strip-components 1
+	tar xf explain_output_baseline/*.tar.gz  --strip-components 1 -C baseline/ out/
 
 	SUBEXPR='s/cost=[^ ]* //g; s/rows=[^ ]* //g; s/Time:.*$//g; s/Optimizer status:.*//g'
 	ls results/* | while read fsql; do
