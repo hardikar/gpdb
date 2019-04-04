@@ -1365,7 +1365,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTvfToRangeTblEntry
 	// func_expr to capture ids of all the PARAMs
 	ListCell *lc = NULL;
 	List *param_exprs = gpdb::ExtractNodesExpression(
-			(Node *) func_expr, T_Param, false /*descend_into_subqueries */);
+			(Node *) func_expr, T_Param, true /*descend_into_subqueries */);
 	Bitmapset  *funcparams = NULL;
 	ForEach (lc, param_exprs)
 	{
