@@ -726,6 +726,9 @@ select * from foo order by ((select min(bar.e + 1) * 2 from bar group by foo.a) 
 -- everything in the kitchen sink
 select max(b), (select foo.a * count(bar.e) from bar), (with cte as (select e, min(d) as dd from bar group by e) select max(a) * sum(dd) from cte), count(*) from foo group by foo.a, (select min(g) from jazz where foo.a = (select max(g) from jazz group by h) group by h), (with cte as (select min(g) from jazz group by h) select a from cte) order by ((select min(bar.e + 1) * 2 from bar group by foo.a) - foo.a);
 
+-- complex expression in group by & targetlist
+select b + (a+1) from foo group by b, a+1;
+
 drop table foo, bar, jazz;
 
 create table orca.t77(C952 text) WITH (compresstype=zlib,compresslevel=2,appendonly=true,blocksize=393216,checksum=true);

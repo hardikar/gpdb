@@ -735,39 +735,6 @@ CQueryMutators::RunExtractAggregatesMutator
 		return (Node *) gpdb::CopyObject(node);
 	}
 
-	if (0 == context->m_current_query_level)
-	{
-		if (IsA(node, Var) && context->m_is_mutating_agg_arg)
-		{
-			// This mutator may be run on a nested query object with aggregates on
-			// outer references. It pulls out any aggregates and moves it into the
-			// derived query (which is subquery), in effect, increasing the levels up
-			// any Var in the aggregate must now reference
-			//
-			// e.g SELECT (SELECT sum(o.o) + 1 FROM i GRP BY i.i) FROM o;
-			// becomes SELECT (SELECT x + 1 FROM (SELECT sum(o.o) GRP BY i.i)) FROM o;
-			// which means Var::varlevelup must be increased for o.o
-			return (Node *) IncrLevelsUpIfOuterRef((Var*) node);
-		}
-
-		if (!context->m_is_mutating_agg_arg)
-		{
-			// check if an entry already exists, if so no need for duplicate
-			Node *found_node = FindNodeInGroupByTargetList(node, context);
-			if (NULL != found_node)
-			{
-				return found_node;
-			}
-		}
-
-		if (IsA(node, PercentileExpr) || IsA(node, GroupingFunc))
-		{
-			// create a new entry in the derived table and return its corresponding var
-			Node *node_copy = (Node*) gpdb::CopyObject(node);
-			return (Node *) MakeVarInDerivedTable(node_copy, context);
-		}
-	}
-
 	if (IsA(node, Aggref))
 	{
 		Aggref *old_aggref = (Aggref *) node;
@@ -810,15 +777,41 @@ CQueryMutators::RunExtractAggregatesMutator
 			context->m_is_mutating_agg_arg = is_agg_old;
 			context->m_agg_levels_up = agg_levels_up;
 
+			// create a new entry in the derived table and return its corresponding var
+			return (Node *) MakeVarInDerivedTable((Node *) new_aggref, context);
+		}
+	}
+
+	if (0 == context->m_current_query_level)
+	{
+		if (IsA(node, Var) && context->m_is_mutating_agg_arg)
+		{
+			// This mutator may be run on a nested query object with aggregates on
+			// outer references. It pulls out any aggregates and moves it into the
+			// derived query (which is subquery), in effect, increasing the levels up
+			// any Var in the aggregate must now reference
+			//
+			// e.g SELECT (SELECT sum(o.o) + 1 FROM i GRP BY i.i) FROM o;
+			// becomes SELECT (SELECT x + 1 FROM (SELECT sum(o.o) GRP BY i.i)) FROM o;
+			// which means Var::varlevelup must be increased for o.o
+			return (Node *) IncrLevelsUpIfOuterRef((Var*) node);
+		}
+
+		if (IsA(node, PercentileExpr) || IsA(node, GroupingFunc))
+		{
+			// create a new entry in the derived table and return its corresponding var
+			Node *node_copy = (Node*) gpdb::CopyObject(node);
+			return (Node *) MakeVarInDerivedTable(node_copy, context);
+		}
+
+		if (!context->m_is_mutating_agg_arg)
+		{
 			// check if an entry already exists, if so no need for duplicate
-			Node *found_node = FindNodeInGroupByTargetList((Node*) new_aggref, context);
+			Node *found_node = FindNodeInGroupByTargetList(node, context);
 			if (NULL != found_node)
 			{
 				return found_node;
 			}
-
-			// create a new entry in the derived table and return its corresponding var
-			return (Node *) MakeVarInDerivedTable((Node *) new_aggref, context);
 		}
 	}
 
