@@ -1108,29 +1108,29 @@ ExecProcNode(PlanState *node)
 	ExecCdbTraceNode(node, false, result);
 #endif   /* CDB_TRACE_EXECUTOR */
 
-	/*
-	 * Eager free and squelch the subplans, unless it's a nested subplan.
-	 * In that case we cannot free or squelch, because it will be re-executed.
-	 */
-	if (TupIsNull(result))
-	{
-		ListCell *subp;
-		foreach(subp, node->subPlan)
-		{
-			SubPlanState *subplanState = (SubPlanState *)lfirst(subp);
-			Assert(subplanState != NULL &&
-				   subplanState->planstate != NULL);
-
-			bool subplanAtTopNestLevel = (node->state->currentSubplanLevel == 0);
-
-			if (subplanAtTopNestLevel)
-			{
-				ExecSquelchNode(subplanState->planstate);
-				ExecEagerFreeChildNodes(subplanState->planstate, subplanAtTopNestLevel);
-				ExecEagerFree(subplanState->planstate);
-			}
-		}
-	}
+//	/*
+//	 * Eager free and squelch the subplans, unless it's a nested subplan.
+//	 * In that case we cannot free or squelch, because it will be re-executed.
+//	 */
+//	if (TupIsNull(result))
+//	{
+//		ListCell *subp;
+//		foreach(subp, node->subPlan)
+//		{
+//			SubPlanState *subplanState = (SubPlanState *)lfirst(subp);
+//			Assert(subplanState != NULL &&
+//				   subplanState->planstate != NULL);
+//
+//			bool subplanAtTopNestLevel = (node->state->currentSubplanLevel == 0);
+//
+//			if (subplanAtTopNestLevel)
+//			{
+//				ExecSquelchNode(subplanState->planstate);
+//				ExecEagerFreeChildNodes(subplanState->planstate, subplanAtTopNestLevel);
+//				ExecEagerFree(subplanState->planstate);
+//			}
+//		}
+//	}
 
 	}
 	END_MEMORY_ACCOUNT();
