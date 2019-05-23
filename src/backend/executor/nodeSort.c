@@ -29,6 +29,7 @@
 #include "utils/faultinjector.h"
 
 static void ExecSortExplainEnd(PlanState *planstate, struct StringInfoData *buf);
+static void ExecEagerFreeSort(SortState *node);
 
 /* ----------------------------------------------------------------
  *		ExecSort
@@ -322,7 +323,7 @@ ExecSort(SortState *node)
 				ScanDirectionIsForward(dir),
 				slot);
 
-	if (TupIsNull(slot) && !node->ss.ps.delayEagerFree)
+	if (TupIsNull(slot) && !node->delayEagerFree)
 	{
 		ExecEagerFreeSort(node);
 	}
@@ -416,7 +417,7 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 	 * If eflag contains EXEC_FLAG_REWIND or EXEC_FLAG_BACKWARD or EXEC_FLAG_MARK,
 	 * then this node is not eager free safe.
 	 */
-	sortstate->ss.ps.delayEagerFree =
+	sortstate->delayEagerFree =
 		((eflags & (EXEC_FLAG_REWIND | EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)) != 0);
 
 	/*
@@ -448,7 +449,7 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 	 */
 	if (IsA(outerPlan((Plan *)node), Motion))
 	{
-		sortstate->ss.ps.delayEagerFree = true;
+		sortstate->delayEagerFree = true;
 	}
 
 	/*
@@ -486,7 +487,7 @@ ExecCountSlotsSort(Sort *node)
  *		ExecEndSort(node)
  * ----------------------------------------------------------------
  */
-void
+static void
 ExecEndSort(SortState *node)
 {
 	SO1_printf("ExecEndSort: %s\n",
@@ -705,4 +706,11 @@ ExecEagerFreeSort(SortState *node)
 		}
 
 	}
+}
+
+void
+ExecSquelchSort(SortState *node)
+{
+	ExecEagerFreeSort(node);
+	ExecSquelchNode(outerPlanState(node));
 }

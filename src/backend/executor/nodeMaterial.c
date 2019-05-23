@@ -35,6 +35,7 @@
 static void ExecMaterialExplainEnd(PlanState *planstate, struct StringInfoData *buf);
 static void ExecChildRescan(MaterialState *node, ExprContext *exprCtxt);
 static void DestroyTupleStore(MaterialState *node);
+static void ExecEagerFreeMaterial(MaterialState *node);
 
 
 /* ----------------------------------------------------------------
@@ -226,7 +227,7 @@ ExecMaterial(MaterialState *node)
 		if (TupIsNull(outerslot))
 		{
 			node->eof_underlying = true;
-			if (!node->ss.ps.delayEagerFree)
+			if (!node->delayEagerFree)
 			{
 				ExecEagerFreeMaterial(node);
 			}
@@ -249,7 +250,7 @@ ExecMaterial(MaterialState *node)
 	}
 
 
-	if (!node->ss.ps.delayEagerFree)
+	if (!node->delayEagerFree)
 	{
 		ExecEagerFreeMaterial(node);
 	}
@@ -318,7 +319,7 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 	 * If eflag contains EXEC_FLAG_REWIND or EXEC_FLAG_BACKWARD or EXEC_FLAG_MARK,
 	 * then this node is not eager free safe.
 	 */
-	matstate->ss.ps.delayEagerFree =
+	matstate->delayEagerFree =
 		((eflags & (EXEC_FLAG_REWIND | EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)) != 0);
 
 	/*
@@ -358,7 +359,7 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 	 */
 	if (IsA(outerPlan((Plan *)node), Motion))
 	{
-		matstate->ss.ps.delayEagerFree = true;
+		matstate->delayEagerFree = true;
 	}
 
 	/*
@@ -401,12 +402,18 @@ ExecCountSlotsMaterial(Material *node)
  * needs to be done earlier in order to report statistics to EXPLAIN ANALYZE.
  * Note that ExecEndMaterial() will be called again during ExecutorEnd().
  */
-void
+static void
 ExecMaterialExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 {
 	ExecEagerFreeMaterial((MaterialState*)planstate);
 }                               /* ExecMaterialExplainEnd */
 
+void
+ExecSquelchMaterial(MaterialState *node)
+{
+	ExecEagerFreeMaterial(node);
+	ExecSquelchNode(outerPlanState(node));
+}
 
 /* ----------------------------------------------------------------
  *		ExecEndMaterial

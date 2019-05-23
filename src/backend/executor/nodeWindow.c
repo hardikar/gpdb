@@ -7088,3 +7088,10 @@ ExecEagerFreeWindow(WindowState * node)
 
 	freeFrameBuffers(node);
 }
+
+void
+ExecSquelchWindow(Window *node)
+{
+	// TODO: do some eager freeing here?
+	ExecSquelchNode(outerPlanState(node));
+}

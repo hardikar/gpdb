@@ -193,7 +193,7 @@ extern Datum invoke_agg_trans_func(FmgrInfo *transfn, int numargs,
 
 extern Datum datumCopyWithMemManager(Datum oldvalue, Datum value, bool typByVal, int typLen,
 									 MemoryManagerContainer *mem_manager);
-extern void ExecEagerFreeAgg(AggState *aggstate);
+extern void ExecSquelchAgg(AggState *aggstate);
 
 static inline gpmon_packet_t * GpmonPktFromAggState(AggState *node)
 {

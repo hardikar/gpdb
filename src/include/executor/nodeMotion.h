@@ -23,7 +23,7 @@ extern TupleTableSlot *ExecMotion(MotionState *node);
 extern void ExecEndMotion(MotionState *node);
 extern void ExecReScanMotion(MotionState *node, ExprContext *exprCtxt);
 
-extern void ExecStopMotion(MotionState *node);
+extern void ExecSquelchMotion(MotionState *node);
 
 extern bool isMotionGather(const Motion *m);
 

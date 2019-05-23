@@ -191,6 +191,14 @@ ExecMotion(MotionState * node)
 {
 	Motion	   *motion = (Motion *) node->ps.plan;
 
+	/* sanity check */
+	if (node->stopRequested)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("unexpected internal error"),
+				 errmsg("Already stopped motion node is executed again, data will lost"),
+				 errhint("Likely motion node is incorrectly squelched earlier")));
+
 	/*
 	 * at the top here we basically decide: -- SENDER vs. RECEIVER and --
 	 * SORTED vs. UNSORTED
@@ -341,7 +349,7 @@ execMotionSender(MotionState * node)
 
 			if (node->stopRequested)
 			{
-				elog(gp_workfile_caching_loglevel, "Motion initiating Squelch walker");
+				elog(gp_workfile_caching_loglevel, "Motion calling Squelch on child node");
 				/* propagate stop notification to our children */
 				ExecSquelchNode(outerNode);
 				done = true;
@@ -1579,7 +1587,7 @@ ExecReScanMotion(MotionState *node, ExprContext *exprCtxt)
  * never be called again, so we *must* send the stop message now.
  */
 void
-ExecStopMotion(MotionState * node)
+ExecSquelchMotion(MotionState * node)
 {
 	Motion	   *motion;
 	AssertArg(node != NULL);

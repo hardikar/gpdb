@@ -65,7 +65,7 @@ retry:
 		if (node->intermediate_empty)
 		{
 			if (!node->ps.delayEagerFree)
-				ExecEagerFreeRecursiveUnion(node);
+				ExecSquelchRecursiveUnion(node);
 
 			return NULL;
 		}
@@ -233,7 +233,7 @@ ExecRecursiveUnionReScan(RecursiveUnionState *node, ExprContext *exprCtxt)
 }
 
 void
-ExecEagerFreeRecursiveUnion(RecursiveUnionState *node)
+ExecSquelchRecursiveUnion(RecursiveUnionState *node)
 {
 	if (node->working_table != NULL)
 		tuplestore_end(node->working_table);
@@ -244,5 +244,6 @@ ExecEagerFreeRecursiveUnion(RecursiveUnionState *node)
 	node->working_table = NULL;
 	node->intermediate_table = NULL;
 
-	ExecEagerFreeChildNodes((PlanState *) node, false);
+	ExecSquelchNode(outerPlanState(node));
+	ExecSquelchNode(innerPlanState(node));
 }

@@ -190,3 +190,10 @@ initGpmonPktForSequence(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estat
 
 	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
+
+void
+ExecSquelchSequence(SequenceState *node)
+{
+	for (int i = 0; i < node->numSubplans; i++)
+		ExecSquelchNode(node->subplans[i]);
+}

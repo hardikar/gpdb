@@ -21,7 +21,6 @@ extern MergeJoinState *ExecInitMergeJoin(MergeJoin *node, EState *estate, int ef
 extern TupleTableSlot *ExecMergeJoin(MergeJoinState *node);
 extern void ExecEndMergeJoin(MergeJoinState *node);
 extern void ExecReScanMergeJoin(MergeJoinState *node, ExprContext *exprCtxt);
-extern void ExecEagerFreeMergeJoin(MergeJoinState *node);
 
 static inline gpmon_packet_t *GpmonPktFromMergeJoinState(MergeJoinState *node)
 {

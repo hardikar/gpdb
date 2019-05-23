@@ -23,7 +23,7 @@ extern void ExecEndMaterial(MaterialState *node);
 extern void ExecMaterialMarkPos(MaterialState *node);
 extern void ExecMaterialRestrPos(MaterialState *node);
 extern void ExecMaterialReScan(MaterialState *node, ExprContext *exprCtxt);
-extern void ExecEagerFreeMaterial(MaterialState *node);
+extern void ExecSquelchHashJoin(MaterialState *node);
 
 static inline gpmon_packet_t * GpmonPktFromMaterialState(MaterialState *node)
 {

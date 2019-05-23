@@ -53,8 +53,8 @@ static bool ExecHashJoinReloadHashTable(HashJoinState *hjstate);
  *			  the other one is "outer".
  * ----------------------------------------------------------------
  */
-TupleTableSlot *				/* return: a tuple or NULL */
-ExecHashJoin(HashJoinState *node)
+static TupleTableSlot *				/* return: a tuple or NULL */
+ExecHashJoin_guts(HashJoinState *node)
 {
 	EState	   *estate;
 	PlanState  *outerNode;
@@ -231,16 +231,6 @@ ExecHashJoin(HashJoinState *node)
 		 */
 		if (node->js.jointype == JOIN_LASJ_NOTIN && hashNode->hs_hashkeys_null)
 		{
-			/*
-			 * CDB: We'll read no more from outer subtree. To keep sibling QEs
-			 * from being starved, tell source QEs not to clog up the pipeline
-			 * with our never-to-be-consumed data.
-			 */
-			ExecSquelchNode(outerNode);
-			/* end of join */
-
-			ExecEagerFreeHashJoin(node);
-
 			return NULL;
 		}
 
@@ -260,16 +250,6 @@ ExecHashJoin(HashJoinState *node)
 			&& node->js.jointype != JOIN_LASJ_NOTIN
 			&& node->hj_InnerEmpty)
 		{
-			/*
-			 * CDB: We'll read no more from outer subtree. To keep sibling QEs
-			 * from being starved, tell source QEs not to clog up the pipeline
-			 * with our never-to-be-consumed data.
-			 */
-			ExecSquelchNode(outerNode);
-			/* end of join */
-
-			ExecEagerFreeHashJoin(node);
-
 			return NULL;
 		}
 
@@ -309,10 +289,6 @@ ExecHashJoin(HashJoinState *node)
 													   &hashvalue);
 			if (TupIsNull(outerTupleSlot))
 			{
-				/* end of join */
-				if (!node->reuse_hashtable)
-					ExecEagerFreeHashJoin(node);
-
 				return NULL;
 			}
 
@@ -452,6 +428,27 @@ ExecHashJoin(HashJoinState *node)
 			}
 		}
 	}
+}
+
+TupleTableSlot *
+ExecHashJoin(HashJoinState *node)
+{
+	TupleTableSlot *result;
+
+	result = ExecHashJoin_guts(node);
+
+	if (TupIsNull(result) && !node->reuse_hashtable)
+	{
+		/*
+		 * CDB: We'll read no more from inner subtree. To keep our
+		 * sibling QEs from being starved, tell source QEs not to
+		 * clog up the pipeline with our never-to-be-consumed
+		 * data.
+		 */
+		ExecSquelchNode((PlanState *) node);
+	}
+
+	return result;
 }
 
 /* ----------------------------------------------------------------
@@ -1281,13 +1278,21 @@ initGpmonPktForHashJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estat
 	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
-void
+static void
 ExecEagerFreeHashJoin(HashJoinState *node)
 {
 	if (node->hj_HashTable != NULL && !node->hj_HashTable->eagerlyReleased)
 	{
 		ReleaseHashTable(node);
 	}
+}
+
+void
+ExecSquelchHashJoin(HashJoinState *node)
+{
+	ExecEagerFreeHashJoin(node);
+	ExecSquelchNode(outerPlanState(node));
+	ExecSquelchNode(innerPlanState(node));
 }
 
 /*

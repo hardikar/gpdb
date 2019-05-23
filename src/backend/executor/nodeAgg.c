@@ -2891,7 +2891,7 @@ count_extra_agg_slots_walker(Node *node, int *count)
 	return expression_tree_walker(node, count_extra_agg_slots_walker, (void *) count);
 }
 
-void
+static void
 ExecEagerFreeAgg(AggState *node)
 {
 	/* Close any open tuplesorts */
@@ -2938,4 +2938,11 @@ ExecEagerFreeAgg(AggState *node)
 		pfree(node->grp_firstTuple);
 		node->grp_firstTuple = NULL;
 	}
+}
+
+void
+ExecSquelchAgg(AggState *node)
+{
+	ExecEagerFreeAgg(node);
+	ExecSquelchNode(outerPlanState(node));
 }

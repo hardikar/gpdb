@@ -460,3 +460,12 @@ initGpmonPktForAppend(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 
 	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
+
+void
+ExecSquelchAppend(AppendState *node)
+{
+	int			i;
+
+	for (i = 0; i < node->as_nplans; i++)
+		ExecSquelchNode(node->appendplans[i]);
+}

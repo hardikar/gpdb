@@ -29,7 +29,7 @@ extern void ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt);
 extern void ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
 								  HashJoinTable hashtable, struct HashJoinBatchSide *batchside,
 								  MemoryContext bfCxt);
-extern void ExecEagerFreeHashJoin(HashJoinState *node);
+extern void ExecSquelchHashJoin(HashJoinState *node);
 
 static inline gpmon_packet_t * GpmonPktFromHashJoinState(HashJoinState *s)
 {
