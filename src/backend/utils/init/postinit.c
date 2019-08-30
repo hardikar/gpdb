@@ -639,11 +639,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 
 #ifdef USE_ORCA
 	/* Initialize GPOPT */
-	START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Optimizer));
-	{
-		InitGPOPT();
-	}
-	END_MEMORY_ACCOUNT();
+	InitGPOPT();
 #endif
 
 	/*
@@ -1346,11 +1342,7 @@ ShutdownPostgres(int code, Datum arg)
 	ReportOOMConsumption();
 
 #ifdef USE_ORCA
-	START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Optimizer));
-	{
-		TerminateGPOPT();
-	}
-	END_MEMORY_ACCOUNT();
+	TerminateGPOPT();
 #endif
 
 	/* Disable memory protection */
