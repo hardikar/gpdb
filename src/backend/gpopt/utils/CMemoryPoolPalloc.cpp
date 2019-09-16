@@ -13,7 +13,6 @@
 
 extern "C" {
 #include "postgres.h"
-
 #include "utils/memutils.h"
 }
 
@@ -25,12 +24,13 @@ using namespace gpos;
 
 // ctor
 CMemoryPoolPalloc::CMemoryPoolPalloc()
+	: m_cxt(NULL)
 {
-	m_cxt = AllocSetContextCreate(TopMemoryContext,
-				      "GPORCA memory pool",
-				      ALLOCSET_DEFAULT_MINSIZE,
-				      ALLOCSET_DEFAULT_INITSIZE,
-				      ALLOCSET_DEFAULT_MAXSIZE);
+	m_cxt = AllocSetContextCreate(OptimizerMemoryContext,
+								  "GPORCA memory pool",
+								  ALLOCSET_DEFAULT_MINSIZE,
+								  ALLOCSET_DEFAULT_INITSIZE,
+								  ALLOCSET_DEFAULT_MAXSIZE);
 }
 
 void *
