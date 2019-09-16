@@ -76,6 +76,7 @@
 #include "utils/syscache.h"
 #include "utils/timeout.h"
 #include "utils/tqual.h"
+#include "utils/memutils.h"
 
 #include "utils/resource_manager.h"
 #include "utils/session_state.h"
@@ -639,6 +640,12 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 
 #ifdef USE_ORCA
 	/* Initialize GPOPT */
+	OptimizerMemoryContext = AllocSetContextCreate(TopMemoryContext,
+												   "GPORCA Top-level Memory Context",
+												   ALLOCSET_DEFAULT_MINSIZE,
+												   ALLOCSET_DEFAULT_INITSIZE,
+												   ALLOCSET_DEFAULT_MAXSIZE);
+
 	InitGPOPT();
 #endif
 
@@ -1343,6 +1350,9 @@ ShutdownPostgres(int code, Datum arg)
 
 #ifdef USE_ORCA
 	TerminateGPOPT();
+
+	if (OptimizerMemoryContext != NULL)
+		MemoryContextDelete(OptimizerMemoryContext);
 #endif
 
 	/* Disable memory protection */
