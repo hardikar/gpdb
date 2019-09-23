@@ -159,7 +159,6 @@ CGPOptimizer::SerializeDXLPlan
 //		Initialize GPTOPT and dependent libraries
 //
 //---------------------------------------------------------------------------
-
 void
 CGPOptimizer::InitGPOPT ()
 {

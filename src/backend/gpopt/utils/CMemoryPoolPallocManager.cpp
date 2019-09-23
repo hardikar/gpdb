@@ -6,8 +6,8 @@
 //		CMemoryPoolPallocManager.cpp
 //
 //	@doc:
-//		CMemoryPoolPallocManager implementation that uses PostgreSQL
-//		memory contexts.
+//		MemoryPoolManager implementation that creates
+//		CMemoryPoolPalloc memory pools
 //
 //---------------------------------------------------------------------------
 

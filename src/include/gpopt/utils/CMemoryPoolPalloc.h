@@ -6,7 +6,8 @@
 //		CMemoryPoolPalloc.h
 //
 //	@doc:
-//		Bridge between PostgreSQL memory contexts and GPORCA memory pools.
+//		CMemoryPool implementation that uses PostgreSQL memory
+//		contexts.
 //
 //---------------------------------------------------------------------------
 

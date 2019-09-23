@@ -6,7 +6,7 @@
 //		CMemoryPoolPalloc.cpp
 //
 //	@doc:
-//		CMemoryPoolTracker implementation that uses PostgreSQL memory
+//		CMemoryPool implementation that uses PostgreSQL memory
 //		contexts.
 //
 //---------------------------------------------------------------------------

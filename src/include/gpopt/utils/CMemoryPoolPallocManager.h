@@ -6,7 +6,8 @@
 //		CMemoryPoolPallocManager.h
 //
 //	@doc:
-//		Bridge between PostgreSQL memory contexts and GPORCA memory pools.
+//		MemoryPoolManager implementation that creates
+//		CMemoryPoolPalloc memory pools
 //
 //---------------------------------------------------------------------------
 
@@ -36,6 +37,6 @@ namespace gpos
 	};
 }
 
-#endif // !GPDXL_CMemoryPoolPalloc_H
+#endif // !GPDXL_CMemoryPoolPallocManager_H
 
 // EOF
