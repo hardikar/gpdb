@@ -48,7 +48,8 @@ CMemoryPoolPalloc::NewImpl
 void
 CMemoryPoolPalloc::Free
 	(
-	void *ptr
+	void *ptr,
+	 CMemoryPool::EAllocationType
 	)
 {
 	pfree(ptr);

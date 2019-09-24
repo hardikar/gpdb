@@ -24,7 +24,7 @@ using namespace gpos;
 
 // ctor
 CMemoryPoolPallocManager::CMemoryPoolPallocManager(CMemoryPool *internal)
-	: CMemoryPoolManager(internal)
+	: CMemoryPoolManager(internal, CMemoryPoolPalloc::Free, CMemoryPoolPalloc::SizeOfAlloc), m_t(55)
 {
 }
 

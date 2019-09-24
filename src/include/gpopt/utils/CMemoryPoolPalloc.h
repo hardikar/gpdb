@@ -42,7 +42,7 @@ namespace gpos
 				);
 
 			// free memory
-			static void Free(void *ptr);
+			static void Free(void *ptr, CMemoryPool::EAllocationType eat);
 
 			// prepare the memory pool to be deleted
 			void TearDown();

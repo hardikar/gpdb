@@ -25,6 +25,8 @@ namespace gpos
 	{
 		private:
 
+			INT m_t;
+
 			// private no copy ctor
 			CMemoryPoolPallocManager(const CMemoryPoolPallocManager&);
 
@@ -35,9 +37,7 @@ namespace gpos
 
 			virtual CMemoryPool *NewMemoryPool();
 
-			void DeleteImpl(void* ptr, CMemoryPool::EAllocationType eat);
-
-			ULONG SizeOfAlloc(const void* ptr);
+			virtual ULONG SizeOfAlloc(const void* ptr) override;
 	};
 }
 
