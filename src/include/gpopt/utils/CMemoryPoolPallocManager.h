@@ -18,28 +18,6 @@
 
 #include "gpos/memory/CMemoryPoolManager.h"
 
-namespace gpos
-{
-	// memory pool manager that uses GPDB memory contexts
-	class CMemoryPoolPallocManager : public CMemoryPoolManager
-	{
-		private:
-
-			INT m_t;
-
-			// private no copy ctor
-			CMemoryPoolPallocManager(const CMemoryPoolPallocManager&);
-
-		public:
-
-			// ctor
-			CMemoryPoolPallocManager(CMemoryPool *internal);
-
-			virtual CMemoryPool *NewMemoryPool();
-
-			virtual ULONG SizeOfAlloc(const void* ptr) override;
-	};
-}
 
 #endif // !GPDXL_CMemoryPoolPallocManager_H
 

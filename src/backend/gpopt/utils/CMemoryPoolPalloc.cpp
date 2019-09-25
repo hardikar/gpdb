@@ -76,5 +76,11 @@ CMemoryPoolPalloc::SizeOfAlloc(const void *ptr)
 	return 0;
 }
 
+CMemoryPool *
+CMemoryPoolPalloc::NewMemoryPoolPalloc(CMemoryPool *mp)
+{
+	return GPOS_NEW(mp) CMemoryPoolPalloc();
+}
+
 
 // EOF
