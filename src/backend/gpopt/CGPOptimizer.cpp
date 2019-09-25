@@ -164,7 +164,7 @@ void
 CGPOptimizer::InitGPOPT ()
 {
 	// Use GPORCA's default allocators
-	void *gpos_memorypool_manager = NULL;
+	CMemoryPoolPallocManager *gpos_memorypool_manager = NULL;
 
 	if (optimizer_use_gpdb_allocators)
 	{
@@ -173,6 +173,7 @@ CGPOptimizer::InitGPOPT ()
 
 		gpos_memorypool_manager =
 			GPOS_NEW(internal_mp) CMemoryPoolPallocManager(internal_mp);
+		gpos_memorypool_manager->Init();
 	}
 
 	struct gpos_init_params params = {gpos_memorypool_manager, gpdb::IsAbortRequested};

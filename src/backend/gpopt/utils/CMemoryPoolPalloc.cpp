@@ -24,7 +24,7 @@ using namespace gpos;
 
 // ctor
 CMemoryPoolPalloc::CMemoryPoolPalloc()
-	: m_cxt(NULL)
+	: CMemoryPool(), m_cxt(NULL)
 {
 	m_cxt = AllocSetContextCreate(OptimizerMemoryContext,
 								  "GPORCA memory pool",
