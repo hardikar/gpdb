@@ -46,10 +46,7 @@ CMemoryPoolPalloc::NewImpl
 }
 
 void
-CMemoryPoolPalloc::Free
-	(
-	void *ptr
-	)
+CMemoryPoolPalloc::DeleteImpl(void *ptr)
 {
 	pfree(ptr);
 }
@@ -68,8 +65,9 @@ CMemoryPoolPalloc::TotalAllocatedSize() const
 	return MemoryContextGetCurrentSpace(m_cxt);
 }
 
+// get user requested size of allocation
 ULONG
-CMemoryPoolPalloc::SizeOfAlloc(const void *ptr)
+CMemoryPoolPalloc::UserSizeOfAlloc(const void *ptr)
 {
 	StandardChunkHeader *header;
 	GPOS_ASSERT(ptr != NULL);

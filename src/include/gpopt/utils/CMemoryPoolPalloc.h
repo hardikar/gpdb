@@ -42,7 +42,7 @@ namespace gpos
 				);
 
 			// free memory
-			static void Free(void *ptr);
+			static void DeleteImpl(void *ptr);
 
 			// prepare the memory pool to be deleted
 			void TearDown();
@@ -50,7 +50,8 @@ namespace gpos
 			// return total allocated size include management overhead
 			ULLONG TotalAllocatedSize() const;
 
-			static ULONG SizeOfAlloc(const void *ptr);
+			// get user requested size of allocation
+			static ULONG UserSizeOfAlloc(const void *ptr);
 
 	};
 }
