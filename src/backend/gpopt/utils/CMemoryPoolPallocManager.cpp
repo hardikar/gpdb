@@ -44,7 +44,7 @@ CMemoryPoolPallocManager::DeleteImpl(void* ptr, CMemoryPool::EAllocationType)
 ULONG
 CMemoryPoolPallocManager::SizeOfAlloc(const void* ptr)
 {
-	CMemoryPoolPalloc::SizeOfAlloc(ptr);
+	return CMemoryPoolPalloc::SizeOfAlloc(ptr);
 }
 
 
