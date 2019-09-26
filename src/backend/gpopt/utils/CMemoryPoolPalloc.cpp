@@ -71,8 +71,12 @@ CMemoryPoolPalloc::TotalAllocatedSize() const
 ULONG
 CMemoryPoolPalloc::SizeOfAlloc(const void *ptr)
 {
-	// FIGGY
-	return 0;
+	StandardChunkHeader *header;
+	GPOS_ASSERT(ptr != NULL);
+
+	header = (StandardChunkHeader *) ((char *) ptr - STANDARDCHUNKHEADERSIZE);
+
+	return header->size;
 }
 
 

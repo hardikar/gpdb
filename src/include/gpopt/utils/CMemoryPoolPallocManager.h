@@ -38,6 +38,9 @@ namespace gpos
 			void DeleteImpl(void* ptr, CMemoryPool::EAllocationType eat);
 
 			ULONG SizeOfAlloc(const void* ptr);
+
+			static
+			GPOS_RESULT Init();
 	};
 }
 

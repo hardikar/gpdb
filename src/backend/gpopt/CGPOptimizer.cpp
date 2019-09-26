@@ -162,20 +162,12 @@ CGPOptimizer::SerializeDXLPlan
 void
 CGPOptimizer::InitGPOPT ()
 {
-	// Use GPORCA's default allocators
-	CMemoryPoolPallocManager *gpos_memorypool_manager = NULL;
-
 	if (optimizer_use_gpdb_allocators)
 	{
-		void *alloc_internal = gpos::clib::Malloc(sizeof(CMemoryPoolPalloc));
-		CMemoryPool *internal_mp = new(alloc_internal) CMemoryPoolPalloc();
-
-		gpos_memorypool_manager =
-			GPOS_NEW(internal_mp) CMemoryPoolPallocManager(internal_mp);
-		gpos_memorypool_manager->Init();
+		CMemoryPoolPallocManager::Init();
 	}
 
-	struct gpos_init_params params = {gpos_memorypool_manager, gpdb::IsAbortRequested};
+	struct gpos_init_params params = {gpdb::IsAbortRequested};
 
 	gpos_init(&params);
 	gpdxl_init();

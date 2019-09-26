@@ -47,5 +47,11 @@ CMemoryPoolPallocManager::SizeOfAlloc(const void* ptr)
 	return CMemoryPoolPalloc::SizeOfAlloc(ptr);
 }
 
+GPOS_RESULT
+CMemoryPoolPallocManager::Init()
+{
+	return CMemoryPoolManager::SetupMemoryPoolManager<CMemoryPoolPallocManager, CMemoryPoolPalloc>();
+}
+
 
 // EOF
