@@ -37,9 +37,9 @@ CMemoryPoolPallocManager::NewMemoryPool()
 }
 
 void
-CMemoryPoolPallocManager::DeleteImpl(void* ptr, CMemoryPool::EAllocationType)
+CMemoryPoolPallocManager::DeleteImpl(void* ptr, CMemoryPool::EAllocationType eat)
 {
-	CMemoryPoolPalloc::DeleteImpl(ptr);
+	CMemoryPoolPalloc::DeleteImpl(ptr, eat);
 }
 
 // get user requested size of allocation

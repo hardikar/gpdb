@@ -27,6 +27,13 @@ namespace gpos
 
 			MemoryContext m_cxt;
 
+			struct SArrayAllocHeader
+			{
+				// FIGGY: this should be removed, but I'm messing up the alignment somewhere if we remove this and run a query in debug build
+				ULONG dummy_for_alginment;
+
+				ULONG m_user_size;
+			};
 		public:
 
 			// ctor
@@ -42,7 +49,7 @@ namespace gpos
 				);
 
 			// free memory
-			static void DeleteImpl(void *ptr);
+			static void DeleteImpl(void *ptr, CMemoryPool::EAllocationType eat);
 
 			// prepare the memory pool to be deleted
 			void TearDown();
