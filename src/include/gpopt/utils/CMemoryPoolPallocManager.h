@@ -31,7 +31,7 @@ namespace gpos
 		public:
 
 			// ctor
-			CMemoryPoolPallocManager(CMemoryPool *internal);
+			CMemoryPoolPallocManager(CMemoryPool *internal, EMemoryPoolType memory_pool_type);
 
 			// allocate new memorypool
 			virtual CMemoryPool *NewMemoryPool();

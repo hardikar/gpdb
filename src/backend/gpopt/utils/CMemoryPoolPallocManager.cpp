@@ -23,8 +23,9 @@ extern "C" {
 using namespace gpos;
 
 // ctor
-CMemoryPoolPallocManager::CMemoryPoolPallocManager(CMemoryPool *internal)
-	: CMemoryPoolManager(internal)
+CMemoryPoolPallocManager::CMemoryPoolPallocManager(CMemoryPool *internal, EMemoryPoolType)
+	:
+	CMemoryPoolManager(internal, EMemoryPoolExternal)
 {
 }
 
