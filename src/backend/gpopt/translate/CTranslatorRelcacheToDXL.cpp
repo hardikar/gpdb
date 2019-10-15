@@ -581,6 +581,7 @@ CTranslatorRelcacheToDXL::RetrieveRel
 	CMDColumnArray *mdcol_array = NULL;
 	IMDRelation::Ereldistrpolicy dist = IMDRelation::EreldistrSentinel;
 	ULongPtrArray *distr_cols = NULL;
+	IMdIdArray *distr_op_families = NULL;
 	CMDIndexInfoArray *md_index_info_array = NULL;
 	IMdIdArray *mdid_triggers_array = NULL;
 	ULongPtrArray *part_keys = NULL;
@@ -616,6 +617,11 @@ CTranslatorRelcacheToDXL::RetrieveRel
 		if (IMDRelation::EreldistrHash == dist)
 		{
 			distr_cols = RetrieveRelDistributionCols(mp, gp_policy, mdcol_array, max_cols);
+			distr_op_families = RetrieveRelDistributionOpFamilies(mp, gp_policy);
+		}
+		else
+		{
+			distr_op_families = GPOS_NEW(mp) IMdIdArray(mp);
 		}
 
 		convert_hash_to_random = gpdb::IsChildPartDistributionMismatched(rel);
@@ -708,6 +714,7 @@ CTranslatorRelcacheToDXL::RetrieveRel
 							dist,
 							mdcol_array,
 							distr_cols,
+							distr_op_families,
 							part_keys,
 							part_types,
 							num_leaf_partitions,
@@ -960,6 +967,25 @@ CTranslatorRelcacheToDXL::RetrieveRelDistributionCols
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return distr_cols;
+}
+
+IMdIdArray *
+CTranslatorRelcacheToDXL::RetrieveRelDistributionOpFamilies
+	(
+	CMemoryPool *mp,
+	GpPolicy *gp_policy
+	)
+{
+	IMdIdArray *distr_op_classes = GPOS_NEW(mp) IMdIdArray(mp);
+
+	Oid *opclasses = gp_policy->opclasses;
+	for (ULONG ul = 0; ul < (ULONG) gp_policy->nattrs; ul++)
+	{
+		Oid opfamily = gpdb::GetOpclassFamily(opclasses[ul]);
+		distr_op_classes->Append(GPOS_NEW(mp) CMDIdGPDB(opfamily));
+	}
+
+	return distr_op_classes;
 }
 
 //---------------------------------------------------------------------------
