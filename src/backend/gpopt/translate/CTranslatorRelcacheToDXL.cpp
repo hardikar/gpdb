@@ -1788,6 +1788,8 @@ CTranslatorRelcacheToDXL::RetrieveScOp
 
 	BOOL returns_null_on_null_input = gpdb::IsOpStrict(op_oid);
 
+	CMDIdGPDB *mdid_hash_opfamily = GPOS_NEW(mp) CMDIdGPDB(gpdb::GetCompatibleHashOpFamily(op_oid));
+
 	mdid->AddRef();
 	CMDScalarOpGPDB *md_scalar_op = GPOS_NEW(mp) CMDScalarOpGPDB
 											(
@@ -1802,7 +1804,8 @@ CTranslatorRelcacheToDXL::RetrieveScOp
 											m_mdid_inverse_opr,
 											cmp_type,
 											returns_null_on_null_input,
-											RetrieveScOpOpFamilies(mp, mdid)
+											RetrieveScOpOpFamilies(mp, mdid),
+											mdid_hash_opfamily
 											);
 	return md_scalar_op;
 }

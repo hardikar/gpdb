@@ -614,6 +614,9 @@ namespace gpdb {
 	
 	// get oids of families this operator belongs to
 	List *GetOpFamiliesForScOp(Oid opno);
+
+	// get the OID of hash equality operator(s) compatible with the given op
+	Oid GetCompatibleHashOpFamily(Oid opno);
 	
 	// get oids of op classes for the index keys
 	List *GetIndexOpFamilies(Oid index_oid);

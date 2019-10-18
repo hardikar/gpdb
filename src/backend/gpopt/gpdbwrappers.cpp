@@ -2920,6 +2920,18 @@ gpdb::GetOpFamiliesForScOp
 	return NIL;
 }
 
+// get the OID of hash equality operator(s) compatible with the given op
+Oid
+gpdb::GetCompatibleHashOpFamily(Oid opno)
+{
+	GP_WRAP_START;
+	{
+		return get_compatible_hash_opfamily(opno);
+	}
+	GP_WRAP_END;
+	return InvalidOid;
+}
+
 List *
 gpdb::GetMergeJoinOpFamilies
 	(
