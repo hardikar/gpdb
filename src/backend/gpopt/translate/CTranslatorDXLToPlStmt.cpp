@@ -1951,7 +1951,7 @@ CTranslatorDXLToPlStmt::TranslateDXLMotion
 	{
 		// translate hash expr list
 		List *hash_expr_list = NIL;
-		List *hash_expr_types_list = NIL;
+		List *hash_expr_opfamilies = NIL;
 		int numHashExprs;
 
 		if (EdxlopPhysicalMotionRedistribute == motion_dxlop->GetDXLOperator())
@@ -1963,22 +1963,23 @@ CTranslatorDXLToPlStmt::TranslateDXLMotion
 				hash_expr_list_dxlnode,
 				&child_context,
 				&hash_expr_list,
-				&hash_expr_types_list,
+				&hash_expr_opfamilies,
 				output_context
 				);
 		}
-		GPOS_ASSERT(gpdb::ListLength(hash_expr_list) == gpdb::ListLength(hash_expr_types_list));
+		GPOS_ASSERT(gpdb::ListLength(hash_expr_list) == gpdb::ListLength(hash_expr_opfamilies));
 		numHashExprs = gpdb::ListLength(hash_expr_list);
 
 		int i = 0;
-		ListCell *lc;
+		ListCell *lc, *lcoid;
 		Oid *hashFuncs = (Oid *) gpdb::GPDBAlloc(numHashExprs * sizeof(Oid));
-		foreach(lc, hash_expr_list)
+		forboth(lc, hash_expr_list, lcoid, hash_expr_opfamilies)
 		{
 			Node	   *expr = (Node *) lfirst(lc);
 			Oid typeoid = gpdb::ExprType(expr);
+			Oid opfamily = lfirst_oid(lcoid);
 
-			hashFuncs[i] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(typeoid);
+			hashFuncs[i] = gpdb::GetHashProcInOpfamily(opfamily, typeoid);
 
 			i++;
 		  }
@@ -4801,15 +4802,15 @@ CTranslatorDXLToPlStmt::TranslateHashExprList
 	const CDXLNode *hash_expr_list_dxlnode,
 	const CDXLTranslateContext *child_context,
 	List **hash_expr_out_list,
-	List **hash_expr_types_out_list,
+	List **hash_expr_opfamilies_out_list,
 	CDXLTranslateContext *output_context
 	)
 {
 	GPOS_ASSERT(NIL == *hash_expr_out_list);
-	GPOS_ASSERT(NIL == *hash_expr_types_out_list);
+	GPOS_ASSERT(NIL == *hash_expr_opfamilies_out_list);
 
 	List *hash_expr_list = NIL;
-	List *hash_expr_types_list = NIL;
+	List *hash_expr_opfamilies = NIL;
 
 	CDXLTranslationContextArray *child_contexts = GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
 	child_contexts->Append(child_context);
@@ -4820,14 +4821,8 @@ CTranslatorDXLToPlStmt::TranslateHashExprList
 		CDXLNode *hash_expr_dxlnode = (*hash_expr_list_dxlnode)[ul];
 		CDXLScalarHashExpr *hash_expr_dxlop = CDXLScalarHashExpr::Cast(hash_expr_dxlnode->GetOperator());
 
-		// the type of the hash expression in GPDB is computed as the left operand 
-		// of the equality operator of the actual hash expression type
-		const IMDType *md_type = m_md_accessor->RetrieveType(hash_expr_dxlop->MdidType());
-		const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(md_type->GetMdidForCmpType(IMDType::EcmptEq));
-		
-		const IMDId *mdid_hash_type = md_scalar_op->GetLeftMdid();
-		
-		hash_expr_types_list = gpdb::LAppendOid(hash_expr_types_list, CMDIdGPDB::CastMdid(mdid_hash_type)->Oid());
+		const IMDId *opfamily = hash_expr_dxlop->MdidOpfamily();
+		hash_expr_opfamilies = gpdb::LAppendOid(hash_expr_opfamilies, CMDIdGPDB::CastMdid(opfamily)->Oid());
 
 		GPOS_ASSERT(1 == hash_expr_dxlnode->Arity());
 		CDXLNode *expr_dxlnode = (*hash_expr_dxlnode)[0];
@@ -4850,7 +4845,7 @@ CTranslatorDXLToPlStmt::TranslateHashExprList
 
 
 	*hash_expr_out_list = hash_expr_list;
-	*hash_expr_types_out_list = hash_expr_types_list;
+	*hash_expr_opfamilies_out_list = hash_expr_opfamilies;
 
 	// cleanup
 	child_contexts->Release();
