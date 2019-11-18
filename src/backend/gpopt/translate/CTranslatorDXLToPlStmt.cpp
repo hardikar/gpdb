@@ -49,6 +49,7 @@
 #include "naucrates/md/IMDRelationExternal.h"
 
 #include "gpopt/gpdbwrappers.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpdxl;
 using namespace gpos;
@@ -1967,22 +1968,35 @@ CTranslatorDXLToPlStmt::TranslateDXLMotion
 				output_context
 				);
 		}
-		GPOS_ASSERT(gpdb::ListLength(hash_expr_list) == gpdb::ListLength(hash_expr_opfamilies));
 		numHashExprs = gpdb::ListLength(hash_expr_list);
 
 		int i = 0;
 		ListCell *lc, *lcoid;
 		Oid *hashFuncs = (Oid *) gpdb::GPDBAlloc(numHashExprs * sizeof(Oid));
-		forboth(lc, hash_expr_list, lcoid, hash_expr_opfamilies)
+
+		if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
 		{
-			Node	   *expr = (Node *) lfirst(lc);
-			Oid typeoid = gpdb::ExprType(expr);
-			Oid opfamily = lfirst_oid(lcoid);
+			GPOS_ASSERT(gpdb::ListLength(hash_expr_list) == gpdb::ListLength(hash_expr_opfamilies));
+			forboth(lc, hash_expr_list, lcoid, hash_expr_opfamilies)
+			{
+				Node	   *expr = (Node *) lfirst(lc);
+				Oid typeoid = gpdb::ExprType(expr);
+				Oid opfamily = lfirst_oid(lcoid);
+				hashFuncs[i] = gpdb::GetHashProcInOpfamily(opfamily, typeoid);
+				i++;
+			}
+		}
+		else
+		{
+			foreach(lc, hash_expr_list)
+			{
+				Node	   *expr = (Node *) lfirst(lc);
+				Oid typeoid = gpdb::ExprType(expr);
+				hashFuncs[i] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(typeoid);
+				i++;
+			}
+		}
 
-			hashFuncs[i] = gpdb::GetHashProcInOpfamily(opfamily, typeoid);
-
-			i++;
-		  }
 
 		motion->hashExprs = hash_expr_list;
 		motion->hashFuncs = hashFuncs;
@@ -4810,7 +4824,6 @@ CTranslatorDXLToPlStmt::TranslateHashExprList
 	GPOS_ASSERT(NIL == *hash_expr_opfamilies_out_list);
 
 	List *hash_expr_list = NIL;
-	List *hash_expr_opfamilies = NIL;
 
 	CDXLTranslationContextArray *child_contexts = GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
 	child_contexts->Append(child_context);
@@ -4819,10 +4832,6 @@ CTranslatorDXLToPlStmt::TranslateHashExprList
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		CDXLNode *hash_expr_dxlnode = (*hash_expr_list_dxlnode)[ul];
-		CDXLScalarHashExpr *hash_expr_dxlop = CDXLScalarHashExpr::Cast(hash_expr_dxlnode->GetOperator());
-
-		const IMDId *opfamily = hash_expr_dxlop->MdidOpfamily();
-		hash_expr_opfamilies = gpdb::LAppendOid(hash_expr_opfamilies, CMDIdGPDB::CastMdid(opfamily)->Oid());
 
 		GPOS_ASSERT(1 == hash_expr_dxlnode->Arity());
 		CDXLNode *expr_dxlnode = (*hash_expr_dxlnode)[0];
@@ -4843,6 +4852,18 @@ CTranslatorDXLToPlStmt::TranslateHashExprList
 		GPOS_ASSERT((ULONG) gpdb::ListLength(hash_expr_list) == ul + 1);
 	}
 
+	List *hash_expr_opfamilies = NIL;
+	if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
+	{
+		for (ULONG ul = 0; ul < arity; ul++)
+		{
+			CDXLNode *hash_expr_dxlnode = (*hash_expr_list_dxlnode)[ul];
+			CDXLScalarHashExpr *hash_expr_dxlop = CDXLScalarHashExpr::Cast(hash_expr_dxlnode->GetOperator());
+			const IMDId *opfamily = hash_expr_dxlop->MdidOpfamily();
+			hash_expr_opfamilies = gpdb::LAppendOid(hash_expr_opfamilies,
+													CMDIdGPDB::CastMdid(opfamily)->Oid());
+		}
+	}
 
 	*hash_expr_out_list = hash_expr_list;
 	*hash_expr_opfamilies_out_list = hash_expr_opfamilies;
