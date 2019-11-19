@@ -619,10 +619,6 @@ CTranslatorRelcacheToDXL::RetrieveRel
 			distr_cols = RetrieveRelDistributionCols(mp, gp_policy, mdcol_array, max_cols);
 			distr_op_families = RetrieveRelDistributionOpFamilies(mp, gp_policy);
 		}
-		else
-		{
-			distr_op_families = GPOS_NEW(mp) IMdIdArray(mp);
-		}
 
 		convert_hash_to_random = gpdb::IsChildPartDistributionMismatched(rel);
 
