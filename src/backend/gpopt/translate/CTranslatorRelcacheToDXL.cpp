@@ -1667,10 +1667,16 @@ CTranslatorRelcacheToDXL::RetrieveType
 	// get array type mdid
 	CMDIdGPDB *mdid_type_array = GPOS_NEW(mp) CMDIdGPDB(gpdb::GetArrayType(oid_type));
 
-	BOOL is_redistributable = gpdb::GetDefaultDistributionOpclassForType(oid_type) != InvalidOid;
+	OID distr_opfamily = gpdb::GetDefaultDistributionOpclassForType(oid_type);
+	BOOL is_redistributable = false;
+	CMDIdGPDB *mdid_distr_opfamily = NULL; // FIGGY - should this be null or 0.0.0.0?
+	if (distr_opfamily != InvalidOid)
+	{
+		mdid_distr_opfamily = GPOS_NEW(mp) CMDIdGPDB(distr_opfamily);
+		is_redistributable = true;
+	}
 
 	mdid->AddRef();
-
 	return GPOS_NEW(mp) CMDTypeGenericGPDB
 						 (
 						 mp,
@@ -1680,6 +1686,7 @@ CTranslatorRelcacheToDXL::RetrieveType
 						 is_fixed_length,
 						 length,
 						 is_passed_by_value,
+						 mdid_distr_opfamily,
 						 mdid_op_eq,
 						 mdid_op_neq,
 						 mdid_op_lt,
