@@ -1456,6 +1456,21 @@ gpdb::GetDefaultDistributionOpclassForType
 }
 
 Oid
+gpdb::GetDefaultDistributionOpfamilyForType
+	(
+	Oid typid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_type, pg_opclass */
+		return cdb_default_distribution_opfamily_for_type(typid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+Oid
 gpdb::GetHashProcInOpfamily
 	(
 	Oid opfamily,
