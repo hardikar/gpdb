@@ -1667,7 +1667,7 @@ CTranslatorRelcacheToDXL::RetrieveType
 	// get array type mdid
 	CMDIdGPDB *mdid_type_array = GPOS_NEW(mp) CMDIdGPDB(gpdb::GetArrayType(oid_type));
 
-	OID distr_opfamily = gpdb::GetDefaultDistributionOpclassForType(oid_type);
+	OID distr_opfamily = gpdb::GetDefaultDistributionOpfamilyForType(oid_type);
 	BOOL is_redistributable = false;
 	CMDIdGPDB *mdid_distr_opfamily = NULL; // FIGGY - should this be null or 0.0.0.0?
 	if (distr_opfamily != InvalidOid)
