@@ -640,14 +640,6 @@ get_compatible_hash_opfamily(Oid opno)
 		HeapTuple	tuple = &catlist->members[i]->tuple;
 		Form_pg_amop aform = (Form_pg_amop) GETSTRUCT(tuple);
 
-		/*
-		 * The given operator should be an "=" operator with same input
-		 * types. So this shouldn't happen. But if it does, let's avoid
-		 * getting even more confused.
-		 */
-		if (aform->amoplefttype != aform->amoprighttype)
-			continue;
-
 		if (aform->amopmethod == HASH_AM_OID &&
 			aform->amopstrategy == HTEqualStrategyNumber)
 		{
