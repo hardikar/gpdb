@@ -678,6 +678,7 @@ CTranslatorRelcacheToDXL::RetrieveRel
 							dist,
 							mdcol_array,
 							distr_cols,
+							distr_op_families,
 							convert_hash_to_random,
 							keyset_array,
 							md_index_info_array,
