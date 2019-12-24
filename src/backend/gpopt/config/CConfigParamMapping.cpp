@@ -16,6 +16,7 @@
 #include "postgres.h"
 
 #include "utils/guc.h"
+#include "cdb/cdbhash.h"
 
 #include "gpopt/config/CConfigParamMapping.h"
 #include "gpopt/xforms/CXform.h"

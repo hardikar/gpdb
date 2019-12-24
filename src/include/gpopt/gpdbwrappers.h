@@ -620,6 +620,9 @@ namespace gpdb {
 
 	// get the OID of hash equality operator(s) compatible with the given op
 	Oid GetCompatibleHashOpFamily(Oid opno);
+
+	// get the OID of legacy hash equality operator(s) compatible with the given op
+	Oid GetCompatibleLegacyHashOpFamily(Oid opno);
 	
 	// get oids of op classes for the index keys
 	List *GetIndexOpFamilies(Oid index_oid);

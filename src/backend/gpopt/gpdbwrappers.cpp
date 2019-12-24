@@ -49,6 +49,8 @@ extern "C" {
 		} \
 	}	\
 
+#include "naucrates/traceflags/traceflags.h"
+
 using namespace gpos;
 
 bool
@@ -2942,6 +2944,18 @@ gpdb::GetCompatibleHashOpFamily(Oid opno)
 	GP_WRAP_START;
 	{
 		return get_compatible_hash_opfamily(opno);
+	}
+	GP_WRAP_END;
+	return InvalidOid;
+}
+
+// get the OID of hash equality operator(s) compatible with the given op
+Oid
+gpdb::GetCompatibleLegacyHashOpFamily(Oid opno)
+{
+	GP_WRAP_START;
+	{
+		return get_compatible_legacy_hash_opfamily(opno);
 	}
 	GP_WRAP_END;
 	return InvalidOid;
