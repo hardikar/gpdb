@@ -11604,8 +11604,6 @@ insert into tc values (1, 'b'), (1, 'B');
 insert into tt values (1, 'b'), (1, 'B');
 -- expected fall back to the planner
 select * from tc, tt where c = v;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Operator Citext comparison in join. not supported
  a | c | b | v 
 ---+---+---+---
  1 | a | 1 | a
