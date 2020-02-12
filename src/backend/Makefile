@@ -22,6 +22,7 @@ SUBDIRS = access bootstrap catalog parser commands executor foreign \
 	replication rewrite storage tcop tsearch utils $(top_builddir)/src/timezone cdb
 
 ifeq ($(enable_orca),yes)
+SUBDIRS += gporca
 SUBDIRS += gpopt
 endif
 
@@ -253,6 +254,7 @@ endif
 	$(INSTALL_DATA) $(srcdir)/utils/misc/postgresql.conf.sample '$(DESTDIR)$(datadir)/postgresql.conf.sample'
 	$(INSTALL_DATA) $(srcdir)/access/transam/recovery.conf.sample '$(DESTDIR)$(datadir)/recovery.conf.sample'
 ifeq ($(enable_orca), yes)
+	$(MAKE) -C gporca $@ INSTLOC=$(DESTDIR)$(libdir)
 	$(MAKE) -C gpopt $@ INSTLOC=$(DESTDIR)$(libdir)
 endif
 
