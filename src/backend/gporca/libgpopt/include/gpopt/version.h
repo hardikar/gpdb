@@ -12,7 +12,8 @@
 #ifndef GPORCA_version_H
 #define GPORCA_version_H
 
-#cmakedefine GPORCA_VERSION_STRING "${GPORCA_VERSION_STRING}"
+/* FIXME */
+#define GPORCA_VERSION_STRING "0.0.0"
 
 #endif  // GPORCA_version_H
 // EOF
