@@ -666,7 +666,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 		ExplainProperty("Optimizer", "Postgres query optimizer", false, es);
 #ifdef USE_ORCA
 	else
-		ExplainPropertyStringInfo("Optimizer", es, "Pivotal Optimizer (GPORCA) version %s", OptVersion());
+		ExplainPropertyStringInfo("Optimizer", es, "Pivotal Optimizer (GPORCA)");
 #endif
 
 	/* We only list the non-default GUCs in verbose mode */

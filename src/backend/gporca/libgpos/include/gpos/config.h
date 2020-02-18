@@ -13,7 +13,7 @@
 #ifndef GPOS_config_H
 #define GPOS_config_H
 
-#include "pg_config.h"
+//#include "pg_config.h"
 
 /* Get this working for now. */
 /* Idealy we should generate this files just like pg_config.h is generated */
