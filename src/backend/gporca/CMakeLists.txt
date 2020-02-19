@@ -4,18 +4,6 @@ cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 project(gpopt LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 98)
-set(GPORCA_VERSION_MAJOR 3)
-set(GPORCA_VERSION_MINOR 92)
-set(GPORCA_VERSION_PATCH 1)
-set(GPORCA_VERSION_STRING "${GPORCA_VERSION_MAJOR}.${GPORCA_VERSION_MINOR}.${GPORCA_VERSION_PATCH}")
-
-# Whenever an ABI-breaking change is made to GPORCA, this should be incremented.
-# ABI changes include removing functions, and adding or removing function
-# parameters. Because GPORCA is a C++ library, there are also several other cases
-# that might cause ABI changes, including adding or removing class members,
-# and things that might change vtables for classes with virtual methods. If in
-# doubt, do the safe thing and increment this number.
-set(GPORCA_ABI_VERSION 3)
 
 # Default to shared libraries.
 option(BUILD_SHARED_LIBS "build shared libraries" OFF)
@@ -32,11 +20,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 endif(NOT CMAKE_BUILD_TYPE)
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-
-# Override CMAKE_SYSTEM_PROCESSOR if it has been explicitly set in a toolchain file.
-if (FORCED_CMAKE_SYSTEM_PROCESSOR)
-  set(CMAKE_SYSTEM_PROCESSOR ${FORCED_CMAKE_SYSTEM_PROCESSOR})
-endif()
 
 # Turn on compiler flags for all warnings if available.
 include(CheckCXXCompilerFlag)
@@ -94,20 +77,6 @@ endif()
 # Turn on platform-specific defines.
 set(GPOS_${CMAKE_SYSTEM_NAME} 1)
 set(GPOS_${CMAKE_SYSTEM_PROCESSOR} 1)
-
-# Autodetect bit-width if not already set by toolchain file.
-if (NOT GPOS_ARCH_BITS)
-  # Autodetect bit-width.
-  if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-    set(GPOS_ARCH_BITS 64)
-  elseif (${CMAKE_SIZEOF_VOID_P} EQUAL 4)
-    set(GPOS_ARCH_BITS 32)
-  else()
-    message(FATAL_ERROR "Could not detect 32-bit OR 64-bit architecture")
-  endif()
-endif()
-
-set (GPOS_${GPOS_ARCH_BITS}BIT 1)
 
 # Library dependencies for optimizer.
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")

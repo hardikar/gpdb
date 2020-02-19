@@ -431,9 +431,7 @@ add_orca_test(CCastTest)
 add_orca_test(CConstTblGetTest)
 add_orca_test(CScalarIsDistinctFromTest)
 
-if (GPOS_ARCH_BITS EQUAL 64)
-  add_orca_test(CSubqueryHandlerTest)
-endif()
+add_orca_test(CSubqueryHandlerTest)
 
 add_orca_test(CBindingTest)
 add_orca_test(CEngineTest)
@@ -449,9 +447,7 @@ add_orca_test(CRangeTest)
 add_orca_test(CPredicateUtilsTest)
 add_orca_test(CPartConstraintTest)
 
-if (NOT (${CMAKE_SYSTEM_NAME} MATCHES "SunOS"))
-  add_orca_test(CSearchStrategyTest)
-endif()
+add_orca_test(CSearchStrategyTest)
 
 add_orca_test(COptimizationJobsTest)
 add_orca_test(CStateMachineTest)
