@@ -18,7 +18,7 @@ set(GPORCA_VERSION_STRING "${GPORCA_VERSION_MAJOR}.${GPORCA_VERSION_MINOR}.${GPO
 set(GPORCA_ABI_VERSION 3)
 
 # Default to shared libraries.
-option(BUILD_SHARED_LIBS "build shared libraries" ON)
+option(BUILD_SHARED_LIBS "build shared libraries" OFF)
 
 # Configure CCache if available
 find_program(CCACHE_FOUND ccache)
@@ -124,24 +124,6 @@ include_directories(${XERCES_INCLUDE_DIRS})
 
 # GPOS.
 include_directories(libgpos/include)
-
-# Extra system libs needed on Solaris.
-set(GPORCA_SOLARIS_EXTRA_LIBS)
-if (${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
-  find_library(RT_LIBRARY NAMES rt librt)
-  if (${RT_LIBRARY-NOTFOUND})
-    message(WARNING "rt library not found. Linking may fail.")
-  else()
-    set(GPORCA_SOLARIS_EXTRA_LIBS "${GPORCA_SOLARIS_EXTRA_LIBS} ${RT_LIBRARY}")
-  endif()
-
-  find_library(SOCKET_LIBRARY NAMES socket libsocket)
-  if (${SOCKET_LIBRARY-NOTFOUND})
-    message(WARNING "socket library not found. Linking may fail.")
-  else()
-    set(GPORCA_SOLARIS_EXTRA_LIBS "${GPORCA_SOLARIS_EXTRA_LIBS} ${SOCKET_LIBRARY}")
-  endif()
-endif()
 
 enable_testing()
 
