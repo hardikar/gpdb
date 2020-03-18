@@ -673,6 +673,7 @@ CTranslatorRelcacheToDXL::RetrieveRel
 							dist,
 							mdcol_array,
 							distr_cols,
+							NULL, /* distr_opfamilies */
 							convert_hash_to_random,
 							keyset_array,
 							md_index_info_array,
@@ -701,6 +702,7 @@ CTranslatorRelcacheToDXL::RetrieveRel
 							dist,
 							mdcol_array,
 							distr_cols,
+							NULL, /* distr_opfamilies */
 							part_keys,
 							part_types,
 							num_leaf_partitions,
@@ -1645,6 +1647,8 @@ CTranslatorRelcacheToDXL::RetrieveType
 						 is_fixed_length,
 						 length,
 						 is_passed_by_value,
+						 NULL, /* mdid_distr_opfamily */
+						 NULL, /* mdid_legacy_distr_opfamily */
 						 mdid_op_eq,
 						 mdid_op_neq,
 						 mdid_op_lt,
@@ -1768,7 +1772,9 @@ CTranslatorRelcacheToDXL::RetrieveScOp
 											m_mdid_inverse_opr,
 											cmp_type,
 											returns_null_on_null_input,
-											RetrieveScOpOpFamilies(mp, mdid)
+											RetrieveScOpOpFamilies(mp, mdid),
+											NULL, /* mdid_hash_opfamily */
+											NULL /* mdid_legacy_hash_opfamily */
 											);
 	return md_scalar_op;
 }

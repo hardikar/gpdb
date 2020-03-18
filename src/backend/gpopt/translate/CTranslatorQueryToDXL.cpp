@@ -889,6 +889,7 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 									GPOS_NEW(m_mp) CDXLCtasStorageOptions(md_tablespace_name, ctas_commit_action, ctas_storage_options),
 									rel_distr_policy,
 									distribution_colids,
+									NULL, /* distr_opfamilies */
 									into_clause->rel->istemp,
 									has_oids,
 									rel_storage_type,

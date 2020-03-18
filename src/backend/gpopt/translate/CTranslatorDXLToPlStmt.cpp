@@ -5296,17 +5296,6 @@ CTranslatorDXLToPlStmt::TranslateHashExprList
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		CDXLNode *hash_expr_dxlnode = (*hash_expr_list_dxlnode)[ul];
-		CDXLScalarHashExpr *hash_expr_dxlop = CDXLScalarHashExpr::Cast(hash_expr_dxlnode->GetOperator());
-
-		// the type of the hash expression in GPDB is computed as the left operand 
-		// of the equality operator of the actual hash expression type
-		const IMDType *md_type = m_md_accessor->RetrieveType(hash_expr_dxlop->MdidType());
-		const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(md_type->GetMdidForCmpType(IMDType::EcmptEq));
-		
-		const IMDId *mdid_hash_type = md_scalar_op->GetLeftMdid();
-		
-		hash_expr_types_list = gpdb::LAppendOid(hash_expr_types_list, CMDIdGPDB::CastMdid(mdid_hash_type)->Oid());
-
 		GPOS_ASSERT(1 == hash_expr_dxlnode->Arity());
 		CDXLNode *expr_dxlnode = (*hash_expr_dxlnode)[0];
 
@@ -5320,8 +5309,10 @@ CTranslatorDXLToPlStmt::TranslateHashExprList
 																);
 
 		Expr *expr = m_translator_dxl_to_scalar->TranslateDXLToScalar(expr_dxlnode, &colid_var_mapping);
+		OID typeoid = gpdb::ExprType((Node *) expr);
 
 		hash_expr_list = gpdb::LAppend(hash_expr_list, expr);
+		hash_expr_types_list = gpdb::LAppendOid(hash_expr_types_list, typeoid);
 
 		GPOS_ASSERT((ULONG) gpdb::ListLength(hash_expr_list) == ul + 1);
 	}
