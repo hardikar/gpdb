@@ -1731,6 +1731,7 @@ CHistogram::MakeUnionHistogramNormalize
 			CBucket *merge_bucket = NULL;
 			CDouble result_rows(0.0);
 
+			// lower_bucket = next bucket that needs to go into the histogram
 			merge_bucket = bucket1->MakeBucketMerged
 									(
 									m_mp,

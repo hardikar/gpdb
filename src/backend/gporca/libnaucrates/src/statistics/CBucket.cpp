@@ -58,6 +58,13 @@ CBucket::CBucket
 	GPOS_ASSERT(!m_bucket_upper_bound->GetDatum()->IsNull());
 }
 
+void
+CBucket::DbgPrint() const
+{
+	CAutoTrace at(CTask::Self()->Pmp());
+	OsPrint(at.Os());
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CBucket::~CBucket
@@ -1058,14 +1065,25 @@ CBucket::MakeBucketMerged
 	GPOS_ASSERT(NULL == *bucket_new1);
 	GPOS_ASSERT(NULL == *bucket_new2);
 
+	if (this->IsSingleton() && bucket_other->Contains(this->GetLowerBound()))
+	{
+		*result_rows = rows_other;
+		return bucket_other->MakeBucketCopy(mp);
+	}
+	else if (bucket_other->IsSingleton() && this->Contains(bucket_other->GetLowerBound()))
+	{
+		*result_rows = rows;
+		return this->MakeBucketCopy(mp);
+	}
+
 	CPoint *result_lower_new = CPoint::MinPoint(this->GetLowerBound(), bucket_other->GetLowerBound());
 	CPoint *result_upper_new = CPoint::MinPoint(this->GetUpperBound(), bucket_other->GetUpperBound());
 
 	CDouble overlap = this->GetOverlapPercentage(result_upper_new);
 	CDouble distinct = this->GetNumDistinct() * overlap;
-	CDouble rows_new = rows * this->GetFrequency() * overlap;
+	CDouble frequency = this->GetFrequency() * overlap;
 
-	CDouble frequency = this->GetFrequency() * this->GetOverlapPercentage(result_upper_new);
+	CDouble rows_new = rows * this->GetFrequency() * overlap;
 	if (is_union_all)
 	{
 		CDouble rows_output = (rows_other + rows);
@@ -1077,7 +1095,25 @@ CBucket::MakeBucketMerged
 
 	BOOL is_upper_closed = result_lower_new->Equals(result_upper_new);
 
-	if (result_upper_new->IsLessThan(this->GetUpperBound()))
+
+	if (this->GetUpperBound()->Equals(bucket_other->GetUpperBound()))
+	{
+		if (this->GetLowerBound()->Equals(result_lower_new))
+		{
+			*result_rows = rows;
+			distinct = this->GetNumDistinct();
+			frequency = this->GetFrequency();
+		}
+		else
+		{
+			GPOS_ASSERT(result_lower_new->Equals(bucket_other->GetLowerBound()));
+			distinct = bucket_other->GetNumDistinct();
+			frequency = bucket_other->GetFrequency();
+			*result_rows = rows_other;
+		}
+	}
+
+	else if (result_upper_new->IsLessThan(this->GetUpperBound()))
 	{
 		// e.g [1, 150) + [50, 100)   -> [100, 150)
 		*bucket_new1 = this->MakeBucketScaleLower(mp, result_upper_new, !is_upper_closed);
