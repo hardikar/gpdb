@@ -1542,7 +1542,10 @@ CHistogram::MakeUnionAllHistogramNormalize
 			GPOS_ASSERT(bucket1->Intersects(bucket2));
 			CBucket *bucket1_new = NULL;
 			CBucket *bucket2_new = NULL;
-			CBucket *merge_bucket = bucket1->MakeBucketMerged(m_mp, bucket2, rows, rows_other, &bucket1_new, &bucket2_new);
+			CDouble result_rows(0.0);
+
+			CBucket *merge_bucket = bucket1->MakeBucketMerged(m_mp, bucket2, rows, rows_other,
+															  &bucket1_new, &bucket2_new, &result_rows);
 			new_buckets->Append(merge_bucket);
 
 			GPOS_ASSERT(NULL == bucket1_new || NULL == bucket2_new);
@@ -1654,7 +1657,7 @@ CHistogram::GetNextBucket
 	const CHistogram *histogram,
 	CBucket *new_bucket,
 	BOOL *result_bucket_is_residual,
-	ULONG *current_bucket_index
+	ULONG *result_idx
 	)
 	const
 {
@@ -1665,10 +1668,10 @@ CHistogram::GetNextBucket
 		return new_bucket;
 	}
 
-	*current_bucket_index = *current_bucket_index  + 1;
+	*result_idx = *result_idx  + 1;
 	*result_bucket_is_residual = false;
 
-	return (*histogram) [*current_bucket_index];
+	return (*histogram) [*result_idx];
 }
 
 //	construct new histogram based on union operation
@@ -1726,6 +1729,7 @@ CHistogram::MakeUnionHistogramNormalize
 			CBucket *bucket1_new = NULL;
 			CBucket *bucket2_new = NULL;
 			CBucket *merge_bucket = NULL;
+			CDouble result_rows(0.0);
 
 			merge_bucket = bucket1->MakeBucketMerged
 									(
@@ -1735,11 +1739,12 @@ CHistogram::MakeUnionHistogramNormalize
 									rows_other,
 									&bucket1_new,
 									&bucket2_new,
+									&result_rows,
 									false /* is_union_all */
 									);
 
 			// add the estimated number of rows in the merged bucket
-			num_tuples_per_bucket->Append(GPOS_NEW(m_mp) CDouble(merge_bucket->GetFrequency() * rows));
+			num_tuples_per_bucket->Append(GPOS_NEW(m_mp) CDouble(merge_bucket->GetFrequency() * result_rows));
 			histogram_buckets->Append(merge_bucket);
 
 			GPOS_ASSERT(NULL == bucket1_new || NULL == bucket2_new);
@@ -1757,8 +1762,8 @@ CHistogram::MakeUnionHistogramNormalize
 	GPOS_ASSERT_IFF(NULL == bucket1, idx1 == buckets1);
 	GPOS_ASSERT_IFF(NULL == bucket2, idx2 == buckets2);
 
-	idx1 = AddResidualUnionBucket(histogram_buckets, bucket1, rows_other, bucket1_is_residual, idx1, num_tuples_per_bucket);
-	idx2 = AddResidualUnionBucket(histogram_buckets, bucket2, rows, bucket2_is_residual, idx2, num_tuples_per_bucket);
+	idx1 = AddResidualUnionBucket(histogram_buckets, bucket1, rows, bucket1_is_residual, idx1, num_tuples_per_bucket);
+	idx2 = AddResidualUnionBucket(histogram_buckets, bucket2, rows_other, bucket2_is_residual, idx2, num_tuples_per_bucket);
 
 	CleanupResidualBucket(bucket1, bucket1_is_residual);
 	CleanupResidualBucket(bucket2, bucket2_is_residual);

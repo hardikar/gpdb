@@ -1050,6 +1050,7 @@ CBucket::MakeBucketMerged
 	CDouble rows_other,
 	CBucket **bucket_new1,
 	CBucket **bucket_new2,
+	CDouble *result_rows,
 	BOOL is_union_all
 	)
 {
@@ -1080,12 +1081,14 @@ CBucket::MakeBucketMerged
 	{
 		// e.g [1, 150) + [50, 100)   -> [100, 150)
 		*bucket_new1 = this->MakeBucketScaleLower(mp, result_upper_new, !is_upper_closed);
+		*result_rows = rows_other;
 	}
 
 	else if (result_upper_new->IsLessThan(bucket_other->GetUpperBound()))
 	{
 		// e.g [1, 100) + [50, 150)   -> [100, 150)
 		*bucket_new2 = bucket_other->MakeBucketScaleLower(mp, result_upper_new, !is_upper_closed);
+		*result_rows = rows;
 	}
 
 	result_lower_new->AddRef();
