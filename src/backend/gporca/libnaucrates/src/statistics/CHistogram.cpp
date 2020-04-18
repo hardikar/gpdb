@@ -1679,18 +1679,18 @@ CHistogram *
 CHistogram::MakeUnionHistogramNormalize
 	(
 	CDouble rows,
-	const CHistogram *other_histogram,
-	CDouble rows_other,
+	const CHistogram *histogram2,
+	CDouble rows2,
 	CDouble *num_output_rows
 	)
 	const
 {
-	GPOS_ASSERT(NULL != other_histogram);
+	GPOS_ASSERT(NULL != histogram2);
 
 	ULONG idx1 = 0; // index on buckets from this histogram
 	ULONG idx2 = 0; // index on buckets from other histogram
 	CBucket *bucket1 = (*this) [idx1];
-	CBucket *bucket2 = (*other_histogram) [idx2];
+	CBucket *bucket2 = (*histogram2) [idx2];
 
 	// flags to determine if the buckets where residue of the bucket-merge operation
 	BOOL bucket1_is_residual = false;
@@ -1717,10 +1717,10 @@ CHistogram::MakeUnionHistogramNormalize
 		else if (bucket2->IsBefore(bucket1))
 		{
 			histogram_buckets->Append(bucket2->MakeBucketCopy(m_mp));
-			num_tuples_per_bucket->Append(GPOS_NEW(m_mp) CDouble(bucket2->GetFrequency() * rows_other));
+			num_tuples_per_bucket->Append(GPOS_NEW(m_mp) CDouble(bucket2->GetFrequency() * rows2));
 			CleanupResidualBucket(bucket2, bucket2_is_residual);
 			idx2++;
-			bucket2 = (*other_histogram) [idx2];
+			bucket2 = (*histogram2) [idx2];
 			bucket2_is_residual = false;
 		}
 		else
@@ -1737,7 +1737,7 @@ CHistogram::MakeUnionHistogramNormalize
 									m_mp,
 									bucket2,
 									rows,
-									rows_other,
+									rows2,
 									&bucket1_new,
 									&bucket2_new,
 									&result_rows,
@@ -1753,36 +1753,36 @@ CHistogram::MakeUnionHistogramNormalize
 			CleanupResidualBucket(bucket2, bucket2_is_residual);
 
 			bucket1 = GetNextBucket(this, bucket1_new, &bucket1_is_residual, &idx1);
-			bucket2 = GetNextBucket(other_histogram, bucket2_new, &bucket2_is_residual, &idx2);
+			bucket2 = GetNextBucket(histogram2, bucket2_new, &bucket2_is_residual, &idx2);
 		}
 	}
 
 	const ULONG buckets1 = Buckets();
-	const ULONG buckets2 = other_histogram->Buckets();
+	const ULONG buckets2 = histogram2->Buckets();
 
 	GPOS_ASSERT_IFF(NULL == bucket1, idx1 == buckets1);
 	GPOS_ASSERT_IFF(NULL == bucket2, idx2 == buckets2);
 
 	idx1 = AddResidualUnionBucket(histogram_buckets, bucket1, rows, bucket1_is_residual, idx1, num_tuples_per_bucket);
-	idx2 = AddResidualUnionBucket(histogram_buckets, bucket2, rows_other, bucket2_is_residual, idx2, num_tuples_per_bucket);
+	idx2 = AddResidualUnionBucket(histogram_buckets, bucket2, rows2, bucket2_is_residual, idx2, num_tuples_per_bucket);
 
 	CleanupResidualBucket(bucket1, bucket1_is_residual);
 	CleanupResidualBucket(bucket2, bucket2_is_residual);
 
 	// add any leftover buckets from other histogram
-	AddBuckets(m_mp, other_histogram->m_histogram_buckets, histogram_buckets, rows_other, num_tuples_per_bucket, idx2, buckets2);
+	AddBuckets(m_mp, histogram2->m_histogram_buckets, histogram_buckets, rows2, num_tuples_per_bucket, idx2, buckets2);
 
 	// add any leftover buckets from this histogram
 	AddBuckets(m_mp, m_histogram_buckets, histogram_buckets, rows, num_tuples_per_bucket, idx1, buckets1);
 
 	// compute the total number of null values from both histograms
-	CDouble num_null_rows = std::max( (this->GetNullFreq() * rows), (other_histogram->GetNullFreq() * rows_other));
+	CDouble num_null_rows = std::max( (this->GetNullFreq() * rows), (histogram2->GetNullFreq() * rows2));
 
 	// compute the total number of distinct values (NDV) that are not captured by the buckets in both the histograms
-	CDouble num_NDV_remain = std::max(m_distinct_remaining, other_histogram->GetDistinctRemain());
+	CDouble num_NDV_remain = std::max(m_distinct_remaining, histogram2->GetDistinctRemain());
 
 	// compute the total number of rows having distinct values not captured by the buckets in both the histograms
-	CDouble NDV_remain_num_rows = std::max( (this->GetFreqRemain() * rows), (other_histogram->GetFreqRemain() * rows_other));
+	CDouble NDV_remain_num_rows = std::max( (this->GetFreqRemain() * rows), (histogram2->GetFreqRemain() * rows2));
 
 	// finally, create a normalized histogram using num_tuples_per_bucket, num_null_rows & NDV_remain_num_rows
 	GPOS_ASSERT(num_tuples_per_bucket->Size() == histogram_buckets->Size());

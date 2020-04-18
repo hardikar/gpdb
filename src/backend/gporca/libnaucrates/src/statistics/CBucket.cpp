@@ -1065,6 +1065,8 @@ CBucket::MakeBucketMerged
 	GPOS_ASSERT(NULL == *bucket_new1);
 	GPOS_ASSERT(NULL == *bucket_new2);
 
+	// merge singleton buckets if they are contained
+	// TODO: update for the union all case
 	if (this->IsSingleton() && bucket_other->Contains(this->GetLowerBound()))
 	{
 		*result_rows = rows_other;
@@ -1096,6 +1098,7 @@ CBucket::MakeBucketMerged
 	BOOL is_upper_closed = result_lower_new->Equals(result_upper_new);
 
 
+	// if they have the same upper bound, one of the buckets will be encompassed by the other
 	if (this->GetUpperBound()->Equals(bucket_other->GetUpperBound()))
 	{
 		if (this->GetLowerBound()->Equals(result_lower_new))
@@ -1112,10 +1115,12 @@ CBucket::MakeBucketMerged
 			*result_rows = rows_other;
 		}
 	}
-
+	// otherwise merge the two buckets to produce two new buckets
 	else if (result_upper_new->IsLessThan(this->GetUpperBound()))
 	{
 		// e.g [1, 150) + [50, 100)   -> [100, 150)
+		// scales bucket 1 from [1, 150} -> [100, 150)
+		// merged bucket is then mostly bucket_other, so return rows_other
 		*bucket_new1 = this->MakeBucketScaleLower(mp, result_upper_new, !is_upper_closed);
 		*result_rows = rows_other;
 	}
