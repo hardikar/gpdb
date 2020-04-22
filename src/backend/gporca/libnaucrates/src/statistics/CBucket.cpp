@@ -1154,6 +1154,29 @@ CBucket::MakeBucketSingleton
 						);
 }
 
+CBucket*
+CBucket::MakeBucketSingleton
+(
+ CMemoryPool *mp,
+ IDatum *datum,
+ CDouble freq
+ )
+{
+	GPOS_ASSERT(NULL != datum);
+
+	datum->AddRef();
+	datum->AddRef();
+
+	return GPOS_NEW(mp) CBucket
+	(
+	 GPOS_NEW(mp) CPoint(datum),
+	 GPOS_NEW(mp) CPoint(datum),
+	 true /* is_lower_closed */,
+	 true /* is_upper_closed */,
+	 freq,
+	 CDouble(1.0)
+	 );
+}
 
 // EOF
 

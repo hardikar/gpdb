@@ -848,6 +848,7 @@ CFilterStatsProcessor::MakeHistArrayCmpFilter
 
 	IDatumArray *datums = pred_stats->GetDatums();
 	datums->Sort();
+	CDouble freq(1.0/datums->Size());
 
 	// TODO: Deduplicate datums along the way!
 	// TODO: What if it's a in (1, 2, NULL)
@@ -858,17 +859,21 @@ CFilterStatsProcessor::MakeHistArrayCmpFilter
 		{
 			continue;
 		}
-		CBucket *bucket = CBucket::MakeBucketSingleton(mp, datum);
+		CBucket *bucket = CBucket::MakeBucketSingleton(mp, datum, freq);
 		histogram_buckets->Append(bucket);
 	}
 
 	CHistogram *histogram = GPOS_NEW(mp) CHistogram(mp, histogram_buckets);
 
+	CAutoTrace at(mp);
+	histogram->OsPrint(at.Os());
+
+	GPOS_ASSERT(histogram->IsValid());
 	// note column id
 	(void) filter_colids->ExchangeSet(colid);
 
-	CAutoTrace at(mp);
-	hist_before->OsPrint(at.Os());
+//	CAutoTrace at(mp);
+//	hist_before->OsPrint(at.Os());
 
 	CDouble local_scale_factor(1.0);
 	CHistogram *result_histogram = hist_before->MakeJoinHistogram(pred_stats->GetCmpType(), histogram);

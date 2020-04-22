@@ -231,6 +231,11 @@ namespace gpnaucrates
 			// create a new singleton bucket with the given datum as it lower and upper bounds
 			static
 			CBucket *MakeBucketSingleton(CMemoryPool *mp, IDatum *datum);
+
+			// create a new singleton bucket with the given datum as it lower and upper bounds
+			static
+			CBucket *MakeBucketSingleton(CMemoryPool *mp, IDatum *datum, CDouble freq);
+
 	};
 }
 
