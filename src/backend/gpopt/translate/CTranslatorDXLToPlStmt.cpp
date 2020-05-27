@@ -2235,13 +2235,15 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 
 	if (targetlist_modified)
 	{
-		// If the targetlist is modified by adding any expressions for
+		// If the targetlist is modified by adding any expressions, such as for
 		// hashFilterColIdx & hashFilterFuncs, add an additional Result node on top
 		// to project only the elements from the original targetlist.
 		// This is needed in case the Result node is created under the Hash
-		// operator which expects the targetlist of its child node to contain only
-		// elements that are to be hashed. Additional expressions here can cause
-		// issues with memtuple bindings that can lead to errors.
+		// operator (or any non-projecting node), which expects the targetlist of its
+		// child node to contain only elements that are to be hashed.
+		// We should not generate a plan where the target list of a non-projecting
+		// node such as Hash does not match its child. Additional expressions
+		// here can cause issues with memtuple bindings that can lead to errors.
 		Result *result = MakeNode(Result);
 
 		Plan *plan = &(result->plan);
@@ -2262,6 +2264,8 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 			if (ul++ >= project_list_dxlnode->Arity())
 			{
 				// done with the original targetlist, stop
+				// all expressions added after project_list_dxlnode->Arity() are
+				// not output cols, but rather hash expressions and should not be projected
 				break;
 			}
 
