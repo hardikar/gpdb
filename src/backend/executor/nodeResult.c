@@ -254,13 +254,11 @@ ExecResult(ResultState *node)
 static bool
 TupleMatchesHashFilter(ResultState *node, TupleTableSlot *resultSlot)
 {
-	// Result	   *resultNode = (Result *)node->ps.plan;
 	bool		res = true;
 	MemoryContext oldContext;
 	ExprContext *econtext = node->ps.ps_ExprContext;
 	econtext->ecxt_outertuple = resultSlot;
 
-	Assert(resultNode);
 	oldContext = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
 
 	if (node->hashFilter)
