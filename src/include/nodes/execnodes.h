@@ -1499,6 +1499,7 @@ typedef struct ResultState
 	ExprDoneCond lastSRFCond;	/* Applicable only if isSRF is true.
 								 * Represents the last done flag */
 
+	List	   *hashExprs;      /* state struct used for evaluating the hash expressions */
 	struct CdbHash *hashFilter;
 } ResultState;
 

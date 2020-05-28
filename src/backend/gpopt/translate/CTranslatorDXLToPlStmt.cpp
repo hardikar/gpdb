@@ -2164,19 +2164,22 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 		GPOS_ASSERT(0 < length);
 
 		result->numHashFilterCols = length;
-		result->hashFilterColIdx = (AttrNumber *) gpdb::GPDBAlloc(length * sizeof(AttrNumber));
+		result->hashExprs = NIL;
+		// result->hashFilterColIdx = (AttrNumber *) gpdb::GPDBAlloc(length * sizeof(AttrNumber));
 		result->hashFilterFuncs = (Oid *) gpdb::GPDBAlloc(length * sizeof(Oid));
 
 		for (ULONG ul = 0; ul < length; ul++)
 		{
 			CDXLNode *hash_expr_dxlnode = (*hash_expr_list_dxlnode)[ul];
 			CDXLNode *expr_dxlnode = (*hash_expr_dxlnode)[0];
-			const TargetEntry *target_entry;
+
+			Expr *expr;
 
 			if (EdxlopScalarIdent == expr_dxlnode->GetOperator()->GetDXLOperator())
 			{
 				ULONG colid = CDXLScalarIdent::Cast(expr_dxlnode->GetOperator())->GetDXLColRef()->Id();
-				target_entry = output_context->GetTargetEntry(colid);
+				const TargetEntry *target_entry = output_context->GetTargetEntry(colid);
+				expr = target_entry->expr;
 			}
 			else
 			{
@@ -2193,20 +2196,16 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 															m_dxl_to_plstmt_context
 															);
 				
-				Expr *expr = m_translator_dxl_to_scalar->TranslateDXLToScalar(expr_dxlnode, &colid_var_mapping);
+				expr = m_translator_dxl_to_scalar->TranslateDXLToScalar(expr_dxlnode, &colid_var_mapping);
+
 				GPOS_ASSERT(NULL != expr);
 
-				// create a target entry for the hash filter
-				CWStringConst str_unnamed_col(GPOS_WSZ_LIT("?column?"));
-				target_entry = gpdb::MakeTargetEntry(expr,
-								     gpdb::ListLength(plan->targetlist) + 1,
-								     CTranslatorUtils::CreateMultiByteCharStringFromWCString(str_unnamed_col.GetBuffer()),
-								     false /* resjunk */);
-				plan->targetlist = gpdb::LAppend(plan->targetlist, (void *) target_entry);
+				gpdb::LAppend(result->hashExprs, expr);
+
 			}
 
-			result->hashFilterColIdx[ul] = target_entry->resno;
-			result->hashFilterFuncs[ul] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(gpdb::ExprType((Node *) target_entry->expr));
+			result->hashFilterFuncs[ul] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(
+					gpdb::ExprType((Node *)expr));
 		}
 	}
 	else

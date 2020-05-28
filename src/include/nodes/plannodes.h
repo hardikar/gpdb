@@ -317,7 +317,8 @@ typedef struct Result
 	Node	   *resconstantqual;
 
 	int			numHashFilterCols;
-	AttrNumber *hashFilterColIdx;
+	List		*hashExprs;			/* list of hash expressions */
+	//AttrNumber *hashFilterColIdx;
 	Oid		   *hashFilterFuncs;
 } Result;
 

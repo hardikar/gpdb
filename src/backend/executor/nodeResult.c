@@ -61,7 +61,7 @@
 #include "executor/spi.h"
 
 static TupleTableSlot *NextInputSlot(ResultState *node);
-static bool TupleMatchesHashFilter(ResultState *node, TupleTableSlot *resultSlot);
+static bool TupleMatchesHashFilter(ResultState *node);
 
 /**
  * Returns the next valid input tuple from the left subtree
@@ -226,7 +226,8 @@ ExecResult(ResultState *node)
 
 		if (!TupIsNull(candidateOutputSlot))
 		{
-			if (TupleMatchesHashFilter(node, candidateOutputSlot))
+			econtext->ecxt_outertuple = candidateOutputSlot;
+			if (TupleMatchesHashFilter(node))
 			{
 				outputSlot = candidateOutputSlot;
 			}
@@ -252,28 +253,33 @@ ExecResult(ResultState *node)
  * Returns true if tuple matches hash filter.
  */
 static bool
-TupleMatchesHashFilter(ResultState *node, TupleTableSlot *resultSlot)
+TupleMatchesHashFilter(ResultState *node)
 {
-	Result	   *resultNode = (Result *)node->ps.plan;
+	// Result	   *resultNode = (Result *)node->ps.plan;
 	bool		res = true;
+	ExprContext *econtext = node->ps.ps_ExprContext;
 
 	Assert(resultNode);
-	Assert(!TupIsNull(resultSlot));
 
 	if (node->hashFilter)
 	{
-		int			i;
+		int			i=0;
 
 		cdbhashinit(node->hashFilter);
-		for (i = 0; i < resultNode->numHashFilterCols; i++)
+		ListCell   *hk;
+		foreach(hk, node->hashExprs)
 		{
-			int			attnum = resultNode->hashFilterColIdx[i];
-			Datum		hAttr;
-			bool		isnull;
+			ExprState  *keyexpr = (ExprState *) lfirst(hk);
+			Datum		keyval;
+			bool		isNull;
 
-			hAttr = slot_getattr(resultSlot, attnum, &isnull);
+			/*
+			 * Get the attribute value of the tuple
+			 */
+			keyval = ExecEvalExpr(keyexpr, econtext, &isNull, NULL);
 
-			cdbhash(node->hashFilter, i + 1, hAttr, isnull);
+			cdbhash(node->hashFilter, i + 1, keyval, isNull);
+			i++;
 		}
 
 		int targetSeg = cdbhashreduce(node->hashFilter);
@@ -410,6 +416,9 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 			 */
 			numSegments = getgpsegmentCount();
 		}
+
+		resstate->hashExprs = (List *) ExecInitExpr((Expr *) node->hashExprs,
+													(PlanState *) resstate);
 
 		resstate->hashFilter = makeCdbHash(numSegments, node->numHashFilterCols, node->hashFilterFuncs);
 	}
