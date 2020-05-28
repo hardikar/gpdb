@@ -3566,7 +3566,7 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 			}
 
 			rNode->numHashFilterCols = numHashAttrs;
-			rNode->hashFilterColIdx = hashAttrs;
+			// rNode->hashFilterColIdx = hashAttrs;
 			rNode->hashFilterFuncs = hashFuncs;
 
 			/* Build a partitioned flow */

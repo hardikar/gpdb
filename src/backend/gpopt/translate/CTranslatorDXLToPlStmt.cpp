@@ -2165,7 +2165,6 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 
 		result->numHashFilterCols = length;
 		result->hashExprs = NIL;
-		// result->hashFilterColIdx = (AttrNumber *) gpdb::GPDBAlloc(length * sizeof(AttrNumber));
 		result->hashFilterFuncs = (Oid *) gpdb::GPDBAlloc(length * sizeof(Oid));
 
 		for (ULONG ul = 0; ul < length; ul++)

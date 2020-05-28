@@ -321,7 +321,7 @@ _outResult(StringInfo str, const Result *node)
 	WRITE_NODE_FIELD(resconstantqual);
 
 	WRITE_INT_FIELD(numHashFilterCols);
-	WRITE_INT_ARRAY(hashFilterColIdx, node->numHashFilterCols, AttrNumber);
+	WRITE_NODE_FIELD(hashExprs);
 	WRITE_OID_ARRAY(hashFilterFuncs, node->numHashFilterCols);
 }
 

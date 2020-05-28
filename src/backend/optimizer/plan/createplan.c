@@ -6382,7 +6382,7 @@ make_result(PlannerInfo *root,
 	node->resconstantqual = resconstantqual;
 
 	node->numHashFilterCols = 0;
-	node->hashFilterColIdx = NULL;
+	node->hashExprs = NIL;
 	node->hashFilterFuncs = NULL;
 
 	return node;

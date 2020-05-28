@@ -1437,7 +1437,7 @@ _readResult(void)
 	READ_NODE_FIELD(resconstantqual);
 
 	READ_INT_FIELD(numHashFilterCols);
-	READ_INT_ARRAY(hashFilterColIdx, local_node->numHashFilterCols, AttrNumber);
+	READ_NODE_FIELD(hashExprs);
 	READ_OID_ARRAY(hashFilterFuncs, local_node->numHashFilterCols);
 
 	READ_DONE();

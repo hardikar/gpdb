@@ -265,7 +265,7 @@ _copyResult(const Result *from)
 	COPY_SCALAR_FIELD(numHashFilterCols);
 	if (from->numHashFilterCols > 0)
 	{
-		COPY_POINTER_FIELD(hashFilterColIdx, from->numHashFilterCols * sizeof(AttrNumber));
+		COPY_NODE_FIELD(hashExprs);
 		COPY_POINTER_FIELD(hashFilterFuncs, from->numHashFilterCols * sizeof(Oid));
 	}
 

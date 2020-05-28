@@ -435,10 +435,8 @@ _outResult(StringInfo str, const Result *node)
 	WRITE_NODE_FIELD(resconstantqual);
 
 	WRITE_INT_FIELD(numHashFilterCols);
-	appendStringInfoString(str, " :hashFilterColIdx");
-	for (i = 0; i < node->numHashFilterCols; i++)
-		appendStringInfo(str, " %d", node->hashFilterColIdx[i]);
-
+	WRITE_NODE_FIELD(hashExprs);
+	
 	for (i = 0; i < node->numHashFilterCols; i++)
 		appendStringInfo(str, " %u", node->hashFilterFuncs[i]);
 }
