@@ -2178,7 +2178,7 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 			{
 				ULONG colid = CDXLScalarIdent::Cast(expr_dxlnode->GetOperator())->GetDXLColRef()->Id();
 				const TargetEntry *target_entry = output_context->GetTargetEntry(colid);
-				expr = target_entry->expr;
+				expr = (Expr *) gpdb::CopyObject(target_entry->expr);
 			}
 			else
 			{
@@ -2198,11 +2198,9 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 				expr = m_translator_dxl_to_scalar->TranslateDXLToScalar(expr_dxlnode, &colid_var_mapping);
 
 				GPOS_ASSERT(NULL != expr);
-
-				gpdb::LAppend(result->hashExprs, expr);
-
 			}
 
+			result->hashExprs = gpdb::LAppend(result->hashExprs, expr);
 			result->hashFilterFuncs[ul] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(
 					gpdb::ExprType((Node *)expr));
 		}

@@ -61,7 +61,7 @@
 #include "executor/spi.h"
 
 static TupleTableSlot *NextInputSlot(ResultState *node);
-static bool TupleMatchesHashFilter(ResultState *node);
+static bool TupleMatchesHashFilter(ResultState *node, TupleTableSlot *resultSlot);
 
 /**
  * Returns the next valid input tuple from the left subtree
@@ -226,8 +226,7 @@ ExecResult(ResultState *node)
 
 		if (!TupIsNull(candidateOutputSlot))
 		{
-			econtext->ecxt_outertuple = candidateOutputSlot;
-			if (TupleMatchesHashFilter(node))
+			if (TupleMatchesHashFilter(node, candidateOutputSlot))
 			{
 				outputSlot = candidateOutputSlot;
 			}
@@ -253,13 +252,16 @@ ExecResult(ResultState *node)
  * Returns true if tuple matches hash filter.
  */
 static bool
-TupleMatchesHashFilter(ResultState *node)
+TupleMatchesHashFilter(ResultState *node, TupleTableSlot *resultSlot)
 {
 	// Result	   *resultNode = (Result *)node->ps.plan;
 	bool		res = true;
+	MemoryContext oldContext;
 	ExprContext *econtext = node->ps.ps_ExprContext;
+	econtext->ecxt_outertuple = resultSlot;
 
 	Assert(resultNode);
+	oldContext = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
 
 	if (node->hashFilter)
 	{
@@ -286,6 +288,8 @@ TupleMatchesHashFilter(ResultState *node)
 
 		res = (targetSeg == GpIdentity.segindex);
 	}
+
+	MemoryContextSwitchTo(oldContext);
 
 	return res;
 }
