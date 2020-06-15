@@ -143,7 +143,8 @@ CTranslatorDXLToPlStmt::InitTranslators()
 			{EdxlopPhysicalAppend, 					&gpopt::CTranslatorDXLToPlStmt::TranslateDXLAppend},
 			{EdxlopPhysicalMaterialize, 			&gpopt::CTranslatorDXLToPlStmt::TranslateDXLMaterialize},
 			{EdxlopPhysicalSequence, 				&gpopt::CTranslatorDXLToPlStmt::TranslateDXLSequence},
-			{EdxlopPhysicalDynamicTableScan,		&gpopt::CTranslatorDXLToPlStmt::TranslateDXLDynTblScan},
+			//{EdxlopPhysicalDynamicTableScan,		&gpopt::CTranslatorDXLToPlStmt::TranslateDXLDynTblScan},
+			{EdxlopPhysicalDynamicTableScan,		&gpopt::CTranslatorDXLToPlStmt::TranslateDXLDynExtScan},
 			{EdxlopPhysicalDynamicIndexScan,		&gpopt::CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan},
 			{EdxlopPhysicalTVF,						&gpopt::CTranslatorDXLToPlStmt::TranslateDXLTvf},
 			{EdxlopPhysicalDML,						&gpopt::CTranslatorDXLToPlStmt::TranslateDXLDml},
@@ -417,6 +418,27 @@ CTranslatorDXLToPlStmt::SetParamIds(Plan* plan)
 	plan->allParam = bitmapset;
 }
 
+void
+CTranslatorDXLToPlStmt::AssignExternalScan(ExternalScan *ext_scan, const IMDRelation *md_rel)
+{
+    const IMDRelationExternal *md_rel_ext = dynamic_cast<const IMDRelationExternal*>(md_rel);
+
+    bool isMasterOnly;
+    OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->Oid();
+	ExtTableEntry *ext_table_entry = gpdb::GetExternalTableEntry(oidRel);
+
+	ext_scan->uriList = gpdb::GetExternalScanUriList(ext_table_entry, &isMasterOnly);
+	ext_scan->fmtOptString = ext_table_entry->fmtopts;
+	ext_scan->fmtType = ext_table_entry->fmtcode;
+	ext_scan->isMasterOnly = isMasterOnly;
+	GPOS_ASSERT((IMDRelation::EreldistrMasterOnly == md_rel_ext->GetRelDistribution()) == isMasterOnly);
+	ext_scan->logErrors = ext_table_entry->logerrors;
+	ext_scan->rejLimit = md_rel_ext->RejectLimit();
+	ext_scan->rejLimitInRows = md_rel_ext->IsRejectLimitInRows();
+
+	ext_scan->encoding = ext_table_entry->encoding;
+	ext_scan->scancounter = m_external_scan_counter++;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -454,25 +476,10 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan
 	Plan *plan_return = NULL;
 	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
 	{
-		const IMDRelationExternal *md_rel_ext = dynamic_cast<const IMDRelationExternal*>(md_rel);
-		OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->Oid();
-		ExtTableEntry *ext_table_entry = gpdb::GetExternalTableEntry(oidRel);
-		bool isMasterOnly;
-		
 		// create external scan node
-		ExternalScan *ext_scan = MakeNode(ExternalScan);
+        ExternalScan *ext_scan = MakeNode(ExternalScan);
+		AssignExternalScan(ext_scan, md_rel);
 		ext_scan->scan.scanrelid = index;
-		ext_scan->uriList = gpdb::GetExternalScanUriList(ext_table_entry, &isMasterOnly);
-		ext_scan->fmtOptString = ext_table_entry->fmtopts;
-		ext_scan->fmtType = ext_table_entry->fmtcode;
-		ext_scan->isMasterOnly = isMasterOnly;
-		GPOS_ASSERT((IMDRelation::EreldistrMasterOnly == md_rel_ext->GetRelDistribution()) == isMasterOnly);
-		ext_scan->logErrors = ext_table_entry->logerrors;
-		ext_scan->rejLimit = md_rel_ext->RejectLimit();
-		ext_scan->rejLimitInRows = md_rel_ext->IsRejectLimitInRows();
-
-		ext_scan->encoding = ext_table_entry->encoding;
-		ext_scan->scancounter = m_external_scan_counter++;
 
 		plan = &(ext_scan->scan.plan);
 		plan_return = (Plan *) ext_scan;
@@ -3748,6 +3755,76 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan
 	SetParamIds(plan);
 
 	return (Plan *) dyn_seq_scan;
+}
+
+Plan *
+CTranslatorDXLToPlStmt::TranslateDXLDynExtScan
+	(
+	const CDXLNode *dyn_tbl_scan_dxlnode,
+	CDXLTranslateContext *output_context,
+	CDXLTranslationContextArray *ctxt_translation_prev_siblings
+	)
+{
+	// translate table descriptor into a range table entry
+	CDXLPhysicalDynamicTableScan *dyn_tbl_scan_dxlop = CDXLPhysicalDynamicTableScan::Cast(dyn_tbl_scan_dxlnode->GetOperator());
+
+	// translation context for column mappings in the base relation
+	CDXLTranslateContextBaseTable base_table_context(m_mp);
+
+	// add the new range table entry as the last element of the range table
+	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
+
+	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(dyn_tbl_scan_dxlop->GetDXLTableDescr(), NULL /*index_descr_dxl*/, index, &base_table_context);
+	GPOS_ASSERT(NULL != rte);
+	rte->requiredPerms |= ACL_SELECT;
+
+	m_dxl_to_plstmt_context->AddRTE(rte);
+
+	// const IMDRelationExternal *md_rel_ext = dynamic_cast<const IMDRelationExternal*>(md_rel);
+
+	// create dynamic scan node
+	DynamicExternalScan *dyn_ext_scan = MakeNode(DynamicExternalScan);
+
+	dyn_ext_scan->externalscan.scan.scanrelid = index;
+	// AssignExternalScan(dyn_ext_scan->externalscan, )
+
+	dyn_ext_scan->partIndex = dyn_tbl_scan_dxlop->GetPartIndexId();
+	dyn_ext_scan->partIndexPrintable = dyn_tbl_scan_dxlop->GetPartIndexIdPrintable();
+
+	Plan *plan = &(dyn_ext_scan->externalscan.scan.plan);
+	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
+	plan->nMotionNodes = 0;
+
+	// translate operator costs
+	TranslatePlanCosts
+		(
+		CDXLPhysicalProperties::PdxlpropConvert(dyn_tbl_scan_dxlnode->GetProperties())->GetDXLOperatorCost(),
+		&(plan->startup_cost),
+		&(plan->total_cost),
+		&(plan->plan_rows),
+		&(plan->plan_width)
+		);
+
+	GPOS_ASSERT(2 == dyn_tbl_scan_dxlnode->Arity());
+
+	// translate proj list and filter
+	CDXLNode *project_list_dxlnode = (*dyn_tbl_scan_dxlnode)[EdxltsIndexProjList];
+	CDXLNode *filter_dxlnode = (*dyn_tbl_scan_dxlnode)[EdxltsIndexFilter];
+
+	TranslateProjListAndFilter
+		(
+		project_list_dxlnode,
+		filter_dxlnode,
+		&base_table_context,	// translate context for the base table
+		NULL,			// translate_ctxt_left and pdxltrctxRight,
+		&plan->targetlist,
+		&plan->qual,
+		output_context
+		);
+
+	SetParamIds(plan);
+
+	return (Plan *) dyn_ext_scan;
 }
 
 //---------------------------------------------------------------------------

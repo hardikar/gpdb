@@ -198,6 +198,8 @@ namespace gpdxl
 			// Set InitPlanVariable in PlannedStmt
 			void SetInitPlanVariables(PlannedStmt *);
 
+            void AssignExternalScan(ExternalScan *ext_scan, const IMDRelation *md_rel);
+
 			// translate DXL table scan node into a SeqScan node
 			Plan *TranslateDXLTblScan
 				(
@@ -370,7 +372,15 @@ namespace gpdxl
 				const CDXLNode *dyn_tbl_scan_dxlnode,
 				CDXLTranslateContext *output_context,
 				CDXLTranslationContextArray *ctxt_translation_prev_siblings // translation contexts of previous siblings
-				);	
+				);
+
+			// FIGGY translate a dynamic table scan operator
+			Plan *TranslateDXLDynExtScan
+				(
+				const CDXLNode *dyn_tbl_scan_dxlnode,
+				CDXLTranslateContext *output_context,
+				CDXLTranslationContextArray *ctxt_translation_prev_siblings // translation contexts of previous siblings
+				);
 			
 			// translate a dynamic index scan operator
 			Plan *TranslateDXLDynIdxScan
