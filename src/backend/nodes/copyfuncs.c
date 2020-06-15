@@ -513,6 +513,18 @@ _copyDynamicSeqScan(const DynamicSeqScan *from)
 	return newnode;
 }
 
+static DynamicExternalScan *
+_copyDynamicExternalScan(const DynamicSeqScan *from)
+{
+	DynamicExternalScan *newnode = makeNode(DynamicExternalScan);
+
+	CopyScanFields((Scan *) from, (Scan *) newnode);
+	COPY_SCALAR_FIELD(partIndex);
+	COPY_SCALAR_FIELD(partIndexPrintable);
+
+	return newnode;
+}
+
 /*
  * _copyExternalScan
  */
@@ -5176,6 +5188,9 @@ copyObject(const void *from)
 			break;
 		case T_ExternalScan:
 			retval = _copyExternalScan(from);
+			break;
+		case T_DynamicExternalScan:
+			retval = _copyDynamicExternalScan(from);
 			break;
 		case T_IndexScan:
 			retval = _copyIndexScan(from);

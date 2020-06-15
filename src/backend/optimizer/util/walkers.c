@@ -239,6 +239,7 @@ plan_tree_walker(Node *node,
 
 		case T_SeqScan:
 		case T_DynamicSeqScan:
+		case T_DynamicExternalScan:
 		case T_ExternalScan:
 		case T_BitmapHeapScan:
 		case T_DynamicBitmapHeapScan:

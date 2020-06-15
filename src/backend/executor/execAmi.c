@@ -182,6 +182,10 @@ ExecReScan(PlanState *node)
 			ExecReScanDynamicSeqScan((DynamicSeqScanState *) node);
 			break;
 
+		case T_DynamicExternalScanState:
+			ExecReScanDynamicSeqScan((DynamicSeqScanState *) node);
+			break;
+
 		case T_DynamicIndexScanState:
 			ExecReScanDynamicIndex((DynamicIndexScanState *) node);
 			break;
@@ -666,6 +670,7 @@ ExecSquelchNode(PlanState *node)
 		case T_SeqScanState:
 		case T_IndexScanState:
 		case T_DynamicSeqScanState:
+		case T_DynamicExternalScanState:
 		case T_DynamicIndexScanState:
 		case T_IndexOnlyScanState:
 		case T_DynamicBitmapIndexScanState:

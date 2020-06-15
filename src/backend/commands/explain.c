@@ -1043,6 +1043,7 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 	{
 		case T_SeqScan:
 		case T_DynamicSeqScan:
+		case T_DynamicExternalScan:
 		case T_ExternalScan:
 		case T_DynamicIndexScan:
 		case T_ShareInputScan:
@@ -1337,6 +1338,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 		case T_DynamicSeqScan:
 			pname = sname = "Dynamic Seq Scan";
+			break;
+		case T_DynamicExternalScan:
+			pname = sname = "Dynamic External Scan";
 			break;
 		case T_ExternalScan:
 			pname = sname = "External Scan";
@@ -1638,6 +1642,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	{
 		case T_SeqScan:
 		case T_DynamicSeqScan:
+		case T_DynamicExternalScan:
 		case T_ExternalScan:
 		case T_DynamicIndexScan:
 		case T_BitmapHeapScan:
@@ -1980,6 +1985,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		}
 		case T_SeqScan:
 		case T_DynamicSeqScan:
+		case T_DynamicExternalScan:
 		case T_ExternalScan:
 		case T_ValuesScan:
 		case T_CteScan:
@@ -2944,6 +2950,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 	{
 		case T_SeqScan:
 		case T_DynamicSeqScan:
+		case T_DynamicExternalScan:
 		case T_IndexScan:
 		case T_DynamicIndexScan:
 		case T_IndexOnlyScan:

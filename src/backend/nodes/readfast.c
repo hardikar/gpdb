@@ -1585,6 +1585,18 @@ _readDynamicSeqScan(void)
 	READ_DONE();
 }
 
+static DynamicExternalScan *
+_readDynamicExternalScan(void)
+{
+	READ_LOCALS(DynamicExternalScan);
+
+	readScanInfo((Scan *)local_node);
+	READ_INT_FIELD(partIndex);
+	READ_INT_FIELD(partIndexPrintable);
+
+	READ_DONE();
+}
+
 /*
  * _readExternalScan
  */
@@ -3062,6 +3074,9 @@ readNodeBinary(void)
 				break;
 			case T_ExternalScan:
 				return_value = _readExternalScan();
+				break;
+			case T_DynamicExternalScan:
+				return_value = _readDynamicExternalScan();
 				break;
 			case T_IndexScan:
 				return_value = _readIndexScan();

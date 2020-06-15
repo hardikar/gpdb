@@ -85,6 +85,7 @@
 #include "executor/nodeBitmapAnd.h"
 #include "executor/nodeBitmapHeapscan.h"
 #include "executor/nodeBitmapIndexscan.h"
+#include "executor/nodeDynamicExternalScan.h"
 #include "executor/nodeDynamicBitmapHeapscan.h"
 #include "executor/nodeDynamicBitmapIndexscan.h"
 #include "executor/nodeBitmapOr.h"
@@ -412,6 +413,17 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			START_MEMORY_ACCOUNT(curMemoryAccountId);
 			{
 			result = (PlanState *) ExecInitDynamicSeqScan((DynamicSeqScan *) node,
+												   estate, eflags);
+			}
+			END_MEMORY_ACCOUNT();
+			break;
+
+		case T_DynamicExternalScan:
+			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, DynamicExternalScan);
+
+			START_MEMORY_ACCOUNT(curMemoryAccountId);
+			{
+			result = (PlanState *) ExecInitDynamicExternalScan((DynamicExternalScan *) node,
 												   estate, eflags);
 			}
 			END_MEMORY_ACCOUNT();
@@ -1005,6 +1017,10 @@ ExecProcNode(PlanState *node)
 			result = ExecDynamicSeqScan((DynamicSeqScanState *) node);
 			break;
 
+		case T_DynamicExternalScanState:
+			result = ExecDynamicExternalScan((DynamicExternalScanState *) node);
+			break;
+
 		case T_ExternalScanState:
 			result = ExecExternalScan((ExternalScanState *) node);
 			break;
@@ -1362,6 +1378,10 @@ ExecEndNode(PlanState *node)
 
 		case T_DynamicSeqScanState:
 			ExecEndDynamicSeqScan((DynamicSeqScanState *) node);
+			break;
+
+		case T_DynamicExternalScanState:
+			ExecEndDynamicExternalScan((DynamicExternalScanState *) node);
 			break;
 
 		case T_IndexScanState:

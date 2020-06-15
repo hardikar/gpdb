@@ -1689,6 +1689,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	 * Print number of partitioned tables scanned for dynamic scans.
 	 */
 	if (0 <= ns->totalPartTableScanned.vcnt && (T_DynamicSeqScanState == planstate->type
+												|| T_DynamicExternalScanState == planstate->type
 												|| T_DynamicIndexScanState == planstate->type))
 	{
 		/*

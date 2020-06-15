@@ -599,6 +599,16 @@ _outDynamicSeqScan(StringInfo str, const DynamicSeqScan *node)
 }
 
 static void
+_outDynamicExternalScan(StringInfo str, const DynamicSeqScan *node)
+{
+	WRITE_NODE_TYPE("DYNAMICEXTERNALSCAN");
+
+	_outScanInfo(str, (Scan *)node);
+	WRITE_INT_FIELD(partIndex);
+	WRITE_INT_FIELD(partIndexPrintable);
+}
+
+static void
 _outExternalScan(StringInfo str, const ExternalScan *node)
 {
 	WRITE_NODE_TYPE("EXTERNALSCAN");
@@ -4751,6 +4761,9 @@ _outNode(StringInfo str, const void *obj)
 				break;
 			case T_DynamicSeqScan:
 				_outDynamicSeqScan(str, obj);
+				break;
+			case T_DynamicExternalScan:
+				_outDynamicExternalScan(str, obj);
 				break;
 			case T_ExternalScan:
 				_outExternalScan(str, obj);

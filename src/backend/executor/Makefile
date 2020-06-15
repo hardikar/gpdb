@@ -37,6 +37,7 @@ OBJS += nodeExternalscan.o \
        nodeShareInputScan.o \
        nodeTableFunction.o \
        nodeDynamicSeqscan.o \
+       nodeDynamicExternalscan.o \
        nodeSequence.o \
        nodeRowTrigger.o \
        nodeAssertOp.o \

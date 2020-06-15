@@ -821,6 +821,23 @@ typedef struct ExternalScan
 
 } ExternalScan;
 
+/*
+ * DynamicExternalScan
+ *   Scan a list of external tables that will be determined at run time.
+ */
+typedef struct DynamicExternalScan
+{
+	/* Fields shared with a normal ExternalScan. Must be first! */
+	ExternalScan		externalscan;
+
+	/*
+	 * Index to arrays in EState->dynamicTableScanInfo, that contain information
+	 * about the partitiones that need to be scanned.
+	 */
+	int32 		partIndex;
+	int32 		partIndexPrintable;
+} DynamicExternalScan;
+
 /* ----------------
  *		ForeignScan node
  *

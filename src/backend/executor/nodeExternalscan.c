@@ -214,8 +214,22 @@ ExecExternalScan(ExternalScanState *node)
 ExternalScanState *
 ExecInitExternalScan(ExternalScan *node, EState *estate, int eflags)
 {
-	ExternalScanState *externalstate;
 	Relation	currentRelation;
+
+	/*
+	 * get the relation object id from the relid'th entry in the range table
+	 * and open that relation.
+	 */
+	currentRelation = ExecOpenScanExternalRelation(estate, node->scan.scanrelid);
+
+	return ExecInitExternalScanForPartition(node, estate, eflags, currentRelation);
+}
+
+ExternalScanState *
+ExecInitExternalScanForPartition(ExternalScan *node, EState *estate, int eflags,
+							Relation currentRelation)
+{
+	ExternalScanState *externalstate;
 	FileScanDesc currentScanDesc;
 
 	Assert(outerPlan(node) == NULL);

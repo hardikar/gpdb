@@ -1318,6 +1318,9 @@ _outNode(StringInfo str, void *obj)
 			case T_DynamicSeqScan:
 				_outDynamicSeqScan(str, obj);
 				break;
+			case T_DynamicExternalScan:
+				_outDynamicExternalScan(str, obj);
+				break;
 			case T_CteScan:
 				_outCteScan(str, obj);
 				break;

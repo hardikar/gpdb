@@ -348,6 +348,17 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
+		case T_DynamicExternalScan:
+			{
+				DynamicExternalScan *dynamicExternalScan = (DynamicExternalScan *) node;
+				DynamicExternalScan *newDynamicExternalScan = NULL;
+
+				FLATCOPY(newDynamicExternalScan, dynamicExternalScan, DynamicExternalScan);
+				SCANMUTATE(newDynamicExternalScan, dynamicExternalScan);
+				return (Node *) newDynamicExternalScan;
+			}
+			break;
+
 		case T_ExternalScan:
 			{
 				ExternalScan *extscan = (ExternalScan *) node;
