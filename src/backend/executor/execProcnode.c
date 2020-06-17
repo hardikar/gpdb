@@ -85,7 +85,7 @@
 #include "executor/nodeBitmapAnd.h"
 #include "executor/nodeBitmapHeapscan.h"
 #include "executor/nodeBitmapIndexscan.h"
-#include "executor/nodeDynamicExternalScan.h"
+#include "executor/nodeDynamicExternalscan.h"
 #include "executor/nodeDynamicBitmapHeapscan.h"
 #include "executor/nodeDynamicBitmapIndexscan.h"
 #include "executor/nodeBitmapOr.h"
