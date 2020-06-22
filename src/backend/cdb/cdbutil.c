@@ -704,7 +704,7 @@ cdbcomponent_getCdbComponents()
 	}
 	PG_CATCH();
 	{
-		FtsNotifyProber();
+		// FtsNotifyProber();
 
 		PG_RE_THROW();
 	}

@@ -17,6 +17,7 @@
  *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
 #include "executor/executor.h"
@@ -31,8 +32,11 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"
 #include "cdb/partitionselection.h"
+#include <catalog/pg_exttable.h>
+#include <optimizer/planmain.h>
 
 static void CleanupOnePartition(DynamicExternalScanState *node);
+static void DynamicExternalScan_SetTableOid(ScanState *scanState, Oid curRelOid);
 
 DynamicExternalScanState *
 ExecInitDynamicExternalScan(DynamicExternalScan *node, EState *estate, int eflags)
@@ -165,12 +169,42 @@ initNextTableToScan(DynamicExternalScanState *node)
 	if (attMap)
 		pfree(attMap);
 
-	DynamicScan_SetTableOid(&node->ss, *pid);
+	DynamicExternalScan_SetTableOid(&node->ss, *pid);
 	node->externalScanState = ExecInitExternalScanForPartition(&plan->externalscan, estate, node->eflags,
 													 currentRelation);
 	return true;
 }
 
+
+void
+DynamicExternalScan_SetTableOid(ScanState *scanState, Oid curRelOid)
+{
+	int			partIndex;
+	partIndex = ((DynamicExternalScan *) scanState->ps.plan)->partIndex;
+
+	Assert(NULL != scanState->ps.state->dynamicTableScanInfo);
+	Assert(partIndex <= scanState->ps.state->dynamicTableScanInfo->numScans);
+
+	scanState->ps.state->dynamicTableScanInfo->curRelOids[partIndex - 1] = curRelOid;
+
+	ExternalScan *ext_scan = &((DynamicExternalScan *) scanState->ps.plan)->externalscan;
+
+	ExtTableEntry* ext_table_entry = GetExtTableEntryIfExists(curRelOid);
+	Assert(NULL != ext_table_entry);
+
+	bool is_master_only;
+	ext_scan->uriList = create_external_scan_uri_list(ext_table_entry, &is_master_only);
+	ext_scan->fmtOptString = ext_table_entry->fmtopts;
+	ext_scan->fmtType = ext_table_entry->fmtcode;
+	ext_scan->isMasterOnly = is_master_only;
+	ext_scan->logErrors = ext_table_entry->logerrors;
+
+	ext_scan->rejLimit = ext_table_entry->rejectlimit;
+	ext_scan->rejLimitInRows = ext_table_entry->rejectlimittype;
+
+	ext_scan->encoding = ext_table_entry->encoding;
+	ext_scan->scancounter = 1;
+}
 /*
  * setPidIndex
  *   Set the pid index for the given dynamic table.
