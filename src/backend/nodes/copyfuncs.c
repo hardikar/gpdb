@@ -514,7 +514,7 @@ _copyDynamicSeqScan(const DynamicSeqScan *from)
 }
 
 static DynamicExternalScan *
-_copyDynamicExternalScan(const DynamicSeqScan *from)
+_copyDynamicExternalScan(const DynamicExternalScan *from)
 {
 	DynamicExternalScan *newnode = makeNode(DynamicExternalScan);
 

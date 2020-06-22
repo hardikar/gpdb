@@ -599,7 +599,7 @@ _outDynamicSeqScan(StringInfo str, const DynamicSeqScan *node)
 }
 
 static void
-_outDynamicExternalScan(StringInfo str, const DynamicSeqScan *node)
+_outDynamicExternalScan(StringInfo str, const DynamicExternalScan *node)
 {
 	WRITE_NODE_TYPE("DYNAMICEXTERNALSCAN");
 
