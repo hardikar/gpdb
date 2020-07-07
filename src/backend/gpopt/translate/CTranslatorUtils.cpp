@@ -127,13 +127,6 @@ CTranslatorUtils::GetTableDescr
 	// generate an MDId for the table desc.
 	OID rel_oid = rte->relid;
 
-	if (gpdb::HasExternalPartition(rel_oid))
-	{
-		// fall back to the planner for queries with partition tables that has an external table in one of its leaf
-		// partitions.
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Query over external partitions"));
-	}
-
 	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(rel_oid);
 
 	const IMDRelation *rel = md_accessor->RetrieveRel(mdid);
