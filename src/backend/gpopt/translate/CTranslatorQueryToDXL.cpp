@@ -3108,16 +3108,70 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet
 
 	CDXLLogicalGet *dxl_op = NULL;
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(dxl_table_descr->MDId());
-	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
+
+	CDXLNode *dxl_node;
+	if (gpdb::HasExternalPartition(CMDIdGPDB::CastMdid(dxl_table_descr->MDId())->Oid()))
+	{
+		// Rel is an partitioned tabled with external table leaf nodes - construct a
+		// UNION ALL of a DynamicGet & MultiExternalGet
+		CDXLColDescrArray *dxl_col_descrs = GPOS_NEW(m_mp) CDXLColDescrArray(m_mp);
+
+		// input colids from the two child Gets for Union op
+		ULongPtr2dArray *input_colids = GPOS_NEW(m_mp) ULongPtr2dArray (m_mp);
+		input_colids->Append(GPOS_NEW(m_mp) ULongPtrArray(m_mp));
+		input_colids->Append(GPOS_NEW(m_mp) ULongPtrArray(m_mp));
+
+		// First child - DynamicGet
+		for (ULONG ul = 0; ul < dxl_table_descr->Arity(); ++ul)
+		{
+			const CDXLColDescr *col_desc = dxl_table_descr->GetColumnDescrAt(ul);
+			CMDIdGPDB *mdid_type = CMDIdGPDB::CastMdid(col_desc->MdidType());
+
+			CDXLColDescr *dxl_col_descr = GPOS_NEW(m_mp) CDXLColDescr
+												(
+												m_mp,
+												GPOS_NEW(m_mp) CMDName(m_mp, col_desc->MdName()->GetMDName()),
+												col_desc->Id(),
+												ul + 1 /* attno */,
+												GPOS_NEW(m_mp) CMDIdGPDB(mdid_type->Oid()),
+												col_desc->TypeModifier(),
+												col_desc->IsDropped()
+												);
+			dxl_col_descrs->Append(dxl_col_descr);
+			(*input_colids)[0]->Append(GPOS_NEW(m_mp) ULONG(col_desc->Id()));
+		}
+
+		// Second child - MultiExternalGet - recompute Colids for the table
+		CDXLTableDescr *dxl_ext_table_descr =
+			CTranslatorUtils::GetTableDescr(m_mp, m_md_accessor, m_context->m_colid_counter,
+											rte, &m_context->m_has_distributed_tables);
+		for (ULONG ul = 0; ul < dxl_ext_table_descr->Arity(); ++ul)
+		{
+			const CDXLColDescr *col_desc = dxl_ext_table_descr->GetColumnDescrAt(ul);
+			(*input_colids)[1]->Append(GPOS_NEW(m_mp) ULONG(col_desc->Id()));
+		}
+
+		CDXLNode *dxl_node1 = GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalGet(m_mp, dxl_table_descr));
+		CDXLNode *dxl_node2 = GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalGet(m_mp, dxl_ext_table_descr));
+
+		CDXLNodeArray *children_dxlnodes = GPOS_NEW(m_mp) CDXLNodeArray(m_mp);
+		children_dxlnodes->Append(dxl_node1);
+		children_dxlnodes->Append(dxl_node2);
+
+		CDXLLogicalSetOp *dxlop = GPOS_NEW(m_mp) CDXLLogicalSetOp(m_mp, EdxlsetopUnionAll,
+																  dxl_col_descrs, input_colids, false);
+		dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxlop, children_dxlnodes);
+	}
+	else if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
 	{
 		dxl_op = GPOS_NEW(m_mp) CDXLLogicalExternalGet(m_mp, dxl_table_descr);
+		dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 	}
 	else
 	{
 		dxl_op = GPOS_NEW(m_mp) CDXLLogicalGet(m_mp, dxl_table_descr);
+		dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 	}
-
-	CDXLNode *dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 
 	// make note of new columns from base relation
 	m_var_to_colid_map->LoadTblColumns(m_query_level, rt_index, dxl_table_descr);
