@@ -56,6 +56,7 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerLogicalConstTable.o \
               CParseHandlerLogicalDelete.o \
               CParseHandlerLogicalExternalGet.o \
+              CParseHandlerLogicalMultiExternalGet.o \
               CParseHandlerLogicalGet.o \
               CParseHandlerLogicalGroupBy.o \
               CParseHandlerLogicalInsert.o \

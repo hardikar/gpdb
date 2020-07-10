@@ -1252,6 +1252,15 @@ namespace gpdxl
 				CParseHandlerBase *parse_handler_root
 				);
 
+			// construct a logical external get parse handler
+			static
+			CParseHandlerBase *CreateLogicalMultiExtGetParseHandler
+				(
+				CMemoryPool *mp,
+				CParseHandlerManager *parse_handler_mgr,
+				CParseHandlerBase *parse_handler_root
+				);
+
 			// construct a logical operator parse handler
 			static
 			CParseHandlerBase *CreateLogicalOpParseHandler

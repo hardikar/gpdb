@@ -114,6 +114,7 @@
 #include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 #include "naucrates/dxl/parser/CParseHandlerLogicalGet.h"
 #include "naucrates/dxl/parser/CParseHandlerLogicalExternalGet.h"
+#include "naucrates/dxl/parser/CParseHandlerLogicalMultiExternalGet.h"
 #include "naucrates/dxl/parser/CParseHandlerLogicalProject.h"
 #include "naucrates/dxl/parser/CParseHandlerLogicalSelect.h"
 #include "naucrates/dxl/parser/CParseHandlerLogicalJoin.h"

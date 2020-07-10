@@ -32,6 +32,7 @@ OBJS        = CDXLColDescr.o \
               CDXLLogicalConstTable.o \
               CDXLLogicalDelete.o \
               CDXLLogicalExternalGet.o \
+              CDXLLogicalMultiExternalGet.o \
               CDXLLogicalGet.o \
               CDXLLogicalGroupBy.o \
               CDXLLogicalInsert.o \

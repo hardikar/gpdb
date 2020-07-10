@@ -624,6 +624,7 @@ namespace gpdxl
 		EdxltokenLogical,
 		EdxltokenLogicalGet,
 		EdxltokenLogicalExternalGet,
+		EdxltokenLogicalMultiExternalGet,
 		EdxltokenLogicalProject,
 		EdxltokenLogicalSelect,
 		EdxltokenLogicalJoin,

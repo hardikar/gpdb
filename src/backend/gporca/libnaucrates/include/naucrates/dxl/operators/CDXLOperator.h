@@ -30,6 +30,7 @@ namespace gpdxl
 	{
 		EdxlopLogicalGet,
 		EdxlopLogicalExternalGet,
+		EdxlopLogicalMultiExternalGet,
 		EdxlopLogicalProject,
 		EdxlopLogicalSelect,
 		EdxlopLogicalJoin,

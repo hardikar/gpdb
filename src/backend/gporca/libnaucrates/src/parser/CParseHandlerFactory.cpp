@@ -217,6 +217,7 @@ CParseHandlerFactory::Init
 			{EdxltokenQuery, &CreateQueryParseHandler},
 			{EdxltokenLogicalGet, &CreateLogicalGetParseHandler},
 			{EdxltokenLogicalExternalGet, &CreateLogicalExtGetParseHandler},
+			{EdxltokenLogicalMultiExternalGet, &CreateLogicalMultiExtGetParseHandler},
 			{EdxltokenLogical, &CreateLogicalOpParseHandler},
 			{EdxltokenLogicalProject, &CreateLogicalProjParseHandler},
 			{EdxltokenLogicalSelect, &CreateLogicalSelectParseHandler},
@@ -1815,6 +1816,18 @@ CParseHandlerFactory::CreateLogicalExtGetParseHandler
 	)
 {
 	return GPOS_NEW(mp) CParseHandlerLogicalExternalGet(mp, parse_handler_mgr, parse_handler_root);
+}
+
+// creates a parse handler for parsing a logical external get operator
+CParseHandlerBase *
+CParseHandlerFactory::CreateLogicalMultiExtGetParseHandler
+	(
+	CMemoryPool *mp,
+	CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root
+	)
+{
+	return GPOS_NEW(mp) CParseHandlerLogicalMultiExternalGet(mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing a logical project operator

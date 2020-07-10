@@ -16,6 +16,7 @@
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 #include "naucrates/dxl/operators/CDXLLogicalExternalGet.h"
+#include "naucrates/dxl/operators/CDXLLogicalMultiExternalGet.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
@@ -124,6 +125,10 @@ CParseHandlerLogicalGet::EndElement
 	if (EdxltokenLogicalGet == token_type)
 	{
 		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalGet(m_mp, table_descr));
+	}
+	else if (EdxltokenLogicalMultiExternalGet == token_type)
+	{
+		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalMultiExternalGet(m_mp, table_descr));
 	}
 	else
 	{
