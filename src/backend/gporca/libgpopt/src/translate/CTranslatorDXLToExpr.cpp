@@ -138,6 +138,7 @@ CTranslatorDXLToExpr::InitTranslators()
 	{
 		{EdxlopLogicalGet,			&gpopt::CTranslatorDXLToExpr::PexprLogicalGet},
 		{EdxlopLogicalExternalGet,	&gpopt::CTranslatorDXLToExpr::PexprLogicalGet},
+		{EdxlopLogicalMultiExternalGet,	&gpopt::CTranslatorDXLToExpr::PexprLogicalGet},
 		{EdxlopLogicalTVF,			&gpopt::CTranslatorDXLToExpr::PexprLogicalTVF},
 		{EdxlopLogicalSelect, 		&gpopt::CTranslatorDXLToExpr::PexprLogicalSelect},
 		{EdxlopLogicalProject, 		&gpopt::CTranslatorDXLToExpr::PexprLogicalProject},
@@ -568,29 +569,37 @@ CTranslatorDXLToExpr::PexprLogicalGet
 	const IMDRelation *pmdrel = m_pmda->RetrieveRel(table_descr->MDId());
 	if (pmdrel->IsPartitioned())
 	{
-		GPOS_ASSERT(EdxlopLogicalGet == edxlopid);
+		if (EdxlopLogicalGet == edxlopid)
+		{
 
-		// generate a part index id
-		ULONG part_idx_id = COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal();
-		popGet = GPOS_NEW(m_mp) CLogicalDynamicGet(m_mp, pname, ptabdesc, part_idx_id);
-		CLogicalDynamicGet *popDynamicGet = CLogicalDynamicGet::PopConvert(popGet);
+			// generate a part index id
+			ULONG part_idx_id = COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal();
+			popGet = GPOS_NEW(m_mp) CLogicalDynamicGet(m_mp, pname, ptabdesc, part_idx_id);
+			CLogicalDynamicGet *popDynamicGet = CLogicalDynamicGet::PopConvert(popGet);
 
-		// get the output column references from the dynamic get
-		colref_array = popDynamicGet->PdrgpcrOutput();
+			// get the output column references from the dynamic get
+			colref_array = popDynamicGet->PdrgpcrOutput();
 
-		// if there are no indices, we only generate a dummy partition constraint because
-		// the constraint might be expensive to compute and it is not needed
-		BOOL fDummyConstraint = 0 == pmdrel->IndexCount();
-		CPartConstraint *ppartcnstr = CUtils::PpartcnstrFromMDPartCnstr
-												(
-												m_mp,
-												m_pmda,
-												popDynamicGet->PdrgpdrgpcrPart(),
-												pmdrel->MDPartConstraint(),
-												colref_array,
-												fDummyConstraint
-												);
-		popDynamicGet->SetPartConstraint(ppartcnstr);
+			// if there are no indices, we only generate a dummy partition constraint because
+			// the constraint might be expensive to compute and it is not needed
+			BOOL fDummyConstraint = 0 == pmdrel->IndexCount();
+			CPartConstraint *ppartcnstr = CUtils::PpartcnstrFromMDPartCnstr
+													(
+													m_mp,
+													m_pmda,
+													popDynamicGet->PdrgpdrgpcrPart(),
+													pmdrel->MDPartConstraint(),
+													colref_array,
+													fDummyConstraint
+													);
+			popDynamicGet->SetPartConstraint(ppartcnstr);
+		}
+		else
+		{
+			GPOS_ASSERT(EdxlopLogicalExternalGet == edxlopid);
+			popGet = GPOS_NEW(m_mp) CLogicalMultiExternalGet(m_mp, pname, ptabdesc);
+			colref_array = CLogicalGet::PopConvert(popGet)->PdrgpcrOutput();
+		}
 	}
 	else
 	{

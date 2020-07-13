@@ -33,6 +33,7 @@ OBJS        = CExpression.o \
               CLogicalDynamicGetBase.o \
               CLogicalDynamicIndexGet.o \
               CLogicalExternalGet.o \
+              CLogicalMultiExternalGet.o \
               CLogicalFullOuterJoin.o \
               CLogicalGbAgg.o \
               CLogicalGbAggDeduplicate.o \

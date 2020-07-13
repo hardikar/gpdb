@@ -108,6 +108,7 @@ namespace gpopt
 			{
 				EopLogicalGet,
 				EopLogicalExternalGet,
+				EopLogicalMultiExternalGet,
 				EopLogicalIndexGet,
 				EopLogicalBitmapTableGet,
 				EopLogicalSelect,

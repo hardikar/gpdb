@@ -3152,7 +3152,7 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet
 		}
 
 		CDXLNode *dxl_node1 = GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalGet(m_mp, dxl_table_descr));
-		CDXLNode *dxl_node2 = GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalGet(m_mp, dxl_ext_table_descr));
+		CDXLNode *dxl_node2 = GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalMultiExternalGet(m_mp, dxl_ext_table_descr));
 
 		CDXLNodeArray *children_dxlnodes = GPOS_NEW(m_mp) CDXLNodeArray(m_mp);
 		children_dxlnodes->Append(dxl_node1);

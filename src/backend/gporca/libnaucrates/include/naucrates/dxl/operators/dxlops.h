@@ -127,6 +127,7 @@
 #include "naucrates/dxl/operators/CDXLLogicalTVF.h"
 #include "naucrates/dxl/operators/CDXLLogicalGet.h"
 #include "naucrates/dxl/operators/CDXLLogicalExternalGet.h"
+#include "naucrates/dxl/operators/CDXLLogicalMultiExternalGet.h"
 #include "naucrates/dxl/operators/CDXLLogicalProject.h"
 #include "naucrates/dxl/operators/CDXLLogicalSelect.h"
 #include "naucrates/dxl/operators/CDXLLogicalJoin.h"
