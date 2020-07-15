@@ -68,7 +68,8 @@ namespace gpdxl
 			{
 				GPOS_ASSERT(NULL != dxl_op);
 				GPOS_ASSERT(EdxlopLogicalGet == dxl_op->GetDXLOperator() ||
-							EdxlopLogicalExternalGet == dxl_op->GetDXLOperator());
+							EdxlopLogicalExternalGet == dxl_op->GetDXLOperator() ||
+							EdxlopLogicalMultiExternalGet == dxl_op->GetDXLOperator());
 
 				return dynamic_cast<CDXLLogicalGet*>(dxl_op);
 			}

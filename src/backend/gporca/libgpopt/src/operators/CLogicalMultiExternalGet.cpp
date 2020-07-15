@@ -152,7 +152,7 @@ CLogicalMultiExternalGet::PxfsCandidates
 	const
 {
 	CXformSet *xform_set = GPOS_NEW(mp) CXformSet(mp);
-	(void) xform_set->ExchangeSet(CXform::ExfExternalGet2ExternalScan);
+	(void) xform_set->ExchangeSet(CXform::ExfMultiExternalGet2MultiExternalScan);
 
 	return xform_set;
 }

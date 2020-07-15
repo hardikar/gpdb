@@ -596,7 +596,7 @@ CTranslatorDXLToExpr::PexprLogicalGet
 		}
 		else
 		{
-			GPOS_ASSERT(EdxlopLogicalExternalGet == edxlopid);
+			GPOS_ASSERT(EdxlopLogicalMultiExternalGet == edxlopid);
 			popGet = GPOS_NEW(m_mp) CLogicalMultiExternalGet(m_mp, pname, ptabdesc);
 			colref_array = CLogicalGet::PopConvert(popGet)->PdrgpcrOutput();
 		}

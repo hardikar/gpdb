@@ -94,6 +94,7 @@ OBJS        = CExpression.o \
               CPhysicalDynamicScan.o \
               CPhysicalDynamicTableScan.o \
               CPhysicalExternalScan.o \
+              CPhysicalMultiExternalScan.o \
               CPhysicalFilter.o \
               CPhysicalFullMergeJoin.o \
               CPhysicalHashAgg.o \

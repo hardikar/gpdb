@@ -661,6 +661,7 @@ CDXLTokens::Init
 			{EdxltokenLogical, GPOS_WSZ_LIT("LogicalOp")},
 			{EdxltokenLogicalGet, GPOS_WSZ_LIT("LogicalGet")},
 			{EdxltokenLogicalExternalGet, GPOS_WSZ_LIT("LogicalExternalGet")},
+			{EdxltokenLogicalMultiExternalGet, GPOS_WSZ_LIT("LogicalMultiExternalGet")},
 			{EdxltokenLogicalProject, GPOS_WSZ_LIT("LogicalProject")},
 			{EdxltokenLogicalSelect, GPOS_WSZ_LIT("LogicalSelect")},
 			{EdxltokenLogicalJoin, GPOS_WSZ_LIT("LogicalJoin")},
