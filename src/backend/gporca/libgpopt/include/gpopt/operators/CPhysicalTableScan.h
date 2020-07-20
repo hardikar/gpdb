@@ -91,7 +91,8 @@ namespace gpopt
 			{
 				GPOS_ASSERT(NULL != pop);
 				GPOS_ASSERT(EopPhysicalTableScan == pop->Eopid() ||
-							EopPhysicalExternalScan == pop->Eopid());
+							EopPhysicalExternalScan == pop->Eopid() ||
+							EopPhysicalMultiExternalScan == pop->Eopid());
 
 				return reinterpret_cast<CPhysicalTableScan*>(pop);
 			}

@@ -86,6 +86,7 @@ namespace gpdxl
 		EdxltokenPhysicalBitmapTableScan,
 		EdxltokenPhysicalDynamicBitmapTableScan,
 		EdxltokenPhysicalExternalScan,
+		EdxltokenPhysicalMultiExternalScan,
 		EdxltokenPhysicalIndexScan,
 		EdxltokenPhysicalIndexOnlyScan,
 		EdxltokenPhysicalHashJoin,

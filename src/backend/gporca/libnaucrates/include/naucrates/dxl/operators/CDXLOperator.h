@@ -132,6 +132,7 @@ namespace gpdxl
 		EdxlopPhysicalBitmapTableScan,
 		EdxlopPhysicalDynamicBitmapTableScan,
 		EdxlopPhysicalExternalScan,
+		EdxlopPhysicalMultiExternalScan,
 		EdxlopPhysicalIndexScan,
 		EdxlopPhysicalIndexOnlyScan,
 		EdxlopScalarBitmapIndexProbe,

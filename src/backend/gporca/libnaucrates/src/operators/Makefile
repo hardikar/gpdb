@@ -63,6 +63,7 @@ OBJS        = CDXLColDescr.o \
               CDXLPhysicalDynamicIndexScan.o \
               CDXLPhysicalDynamicTableScan.o \
               CDXLPhysicalExternalScan.o \
+              CDXLPhysicalMultiExternalScan.o \
               CDXLPhysicalGatherMotion.o \
               CDXLPhysicalHashJoin.o \
               CDXLPhysicalIndexOnlyScan.o \
