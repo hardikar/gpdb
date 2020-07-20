@@ -108,6 +108,7 @@ CDXLTokens::Init
 			{EdxltokenPhysicalBitmapTableScan, GPOS_WSZ_LIT("BitmapTableScan")},
 			{EdxltokenPhysicalDynamicBitmapTableScan, GPOS_WSZ_LIT("DynamicBitmapTableScan")},
 			{EdxltokenPhysicalExternalScan, GPOS_WSZ_LIT("ExternalScan")},
+			{EdxltokenPhysicalMultiExternalScan, GPOS_WSZ_LIT("MultiExternalScan")},
 			{EdxltokenPhysicalIndexScan, GPOS_WSZ_LIT("IndexScan")},
 			{EdxltokenPhysicalIndexOnlyScan, GPOS_WSZ_LIT("IndexOnlyScan")},
 			{EdxltokenScalarBitmapIndexProbe, GPOS_WSZ_LIT("BitmapIndexProbe")},

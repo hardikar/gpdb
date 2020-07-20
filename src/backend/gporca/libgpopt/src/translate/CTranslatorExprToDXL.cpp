@@ -356,7 +356,8 @@ CTranslatorExprToDXL::CreateDXLNode
 {
 	GPOS_ASSERT(NULL != pexpr);
 	ULONG ulOpId =  (ULONG) pexpr->Pop()->Eopid();
-	if (COperator::EopPhysicalTableScan == ulOpId || COperator::EopPhysicalExternalScan == ulOpId)
+	if (COperator::EopPhysicalTableScan == ulOpId || COperator::EopPhysicalExternalScan == ulOpId ||
+		COperator::EopPhysicalMultiExternalScan == ulOpId)
 	{
 		CDXLNode *dxlnode = PdxlnTblScan(pexpr, NULL /*pcrsOutput*/, colref_array, pdrgpdsBaseTables, NULL /* pexprScalarCond */, NULL /* cost info */);
 		CTranslatorExprToDXLUtils::SetStats(m_mp, m_pmda, dxlnode, pexpr->Pstats(), fRoot);
@@ -471,6 +472,10 @@ CTranslatorExprToDXL::PdxlnTblScan
 	if (COperator::EopPhysicalTableScan == op_id)
 	{
 		pdxlopTS = GPOS_NEW(m_mp) CDXLPhysicalTableScan(m_mp, table_descr);
+	}
+	else if (COperator::EopPhysicalMultiExternalScan == op_id)
+	{
+		pdxlopTS = GPOS_NEW(m_mp) CDXLPhysicalMultiExternalScan(m_mp, table_descr);
 	}
 	else
 	{
