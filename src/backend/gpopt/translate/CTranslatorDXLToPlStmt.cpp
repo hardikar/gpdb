@@ -618,7 +618,7 @@ CTranslatorDXLToPlStmt::TranslateDXLMultiExternalTblScan
 			&(plan->plan_width)
 			);
 
-		gpdb::LAppend(append->appendplans, ext_scan);
+		append->appendplans = gpdb::LAppend(append->appendplans, ext_scan);
 	}
 
 	CDXLNode *project_list_dxlnode = (*tbl_scan_dxlnode)[EdxltsIndexProjList];

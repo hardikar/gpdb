@@ -98,6 +98,13 @@ InsertPidIntoDynamicTableScanInfo(EState *estate, int32 index, Oid partOid, int3
 {
 	DynamicTableScanInfo *dynamicTableScanInfo = estate->dynamicTableScanInfo;
 
+	Relation relation = heap_open(partOid, AccessShareLock);
+	if (RelationIsExternal(relation))
+	{
+		return;
+	}
+	heap_close(relation, AccessShareLock);
+
 	Assert(dynamicTableScanInfo != NULL);
 
 	/* It's 1 based indexing */

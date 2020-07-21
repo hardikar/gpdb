@@ -117,7 +117,7 @@ static int
 static void parruleord_open_gap(Oid partid, int16 level, Oid parent,
 					int16 ruleord, int16 stopkey, bool closegap);
 static bool has_external_partition(List *rules);
-static void collect_external_partitions(List *rules, List *extparts);
+static void collect_external_partitions(List *rules, List **extparts);
 
 /*
  * Hash keys are null-terminated C strings assumed to be stably
@@ -509,7 +509,7 @@ rel_get_external_partitions(Oid relid)
 		return NIL;
 
 	List *extparts = NIL;
-	collect_external_partitions(n->rules, extparts);
+	collect_external_partitions(n->rules, &extparts);
 	return extparts;
 }
 
@@ -9039,7 +9039,7 @@ has_external_partition(List *rules) {
  * external partition table
  */
 static void
-collect_external_partitions(List *rules, List *extparts) {
+collect_external_partitions(List *rules, List **extparts) {
 	if (rules == NULL)
 	{
 		return;
@@ -9053,7 +9053,7 @@ collect_external_partitions(List *rules, List *extparts) {
 
 		if (RelationIsExternal(rel))
 		{
-			lappend_oid(extparts, rel->rd_id);
+			*extparts = lappend_oid(*extparts, rel->rd_id);
 		}
 		if (rule->children)
 		{
