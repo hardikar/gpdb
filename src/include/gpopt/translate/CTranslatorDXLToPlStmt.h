@@ -206,6 +206,14 @@ namespace gpdxl
 				CDXLTranslationContextArray *ctxt_translation_prev_siblings // translation contexts of previous siblings
 				);
 
+			// translate DXL table scan node into a SeqScan node
+			Plan *TranslateDXLMultiExternalTblScan
+				(
+				const CDXLNode *tbl_scan_dxlnode,
+				CDXLTranslateContext *output_context,
+				CDXLTranslationContextArray *ctxt_translation_prev_siblings // translation contexts of previous siblings
+				);
+
 			// translate DXL index scan node into a IndexScan node
 			Plan *TranslateDXLIndexScan
 				(
