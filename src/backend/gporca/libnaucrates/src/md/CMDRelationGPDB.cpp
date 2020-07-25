@@ -48,7 +48,8 @@ CMDRelationGPDB::CMDRelationGPDB
 	IMdIdArray *mdid_triggers_array,
 	IMdIdArray *mdid_check_constraint_array,
 	IMDPartConstraint *mdpart_constraint,
-	BOOL has_oids
+	BOOL has_oids,
+	IMdIdArray *external_partitions
 	)
 	:
 	m_mp(mp),
@@ -74,7 +75,8 @@ CMDRelationGPDB::CMDRelationGPDB
 	m_system_columns(0),
 	m_colpos_nondrop_colpos_map(NULL),
 	m_attrno_nondrop_col_pos_map(NULL),
-	m_nondrop_col_pos_array(NULL)
+	m_nondrop_col_pos_array(NULL),
+	m_external_partitions(external_partitions)
 {
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(NULL != mdcol_array);
@@ -154,6 +156,7 @@ CMDRelationGPDB::~CMDRelationGPDB()
 	CRefCount::SafeRelease(m_colpos_nondrop_colpos_map);
 	CRefCount::SafeRelease(m_attrno_nondrop_col_pos_map);
 	CRefCount::SafeRelease(m_nondrop_col_pos_array);
+	CRefCount::SafeRelease(m_external_partitions);
 }
 
 //---------------------------------------------------------------------------
@@ -701,6 +704,19 @@ CMDRelationGPDB::MDPartConstraint() const
 	return m_mdpart_constraint;
 }
 
+// external partitions (for partitioned tables)
+IMdIdArray *
+CMDRelationGPDB::GetExternalPartitions() const
+{
+	return m_external_partitions;
+}
+
+// external partitions (for partitioned tables)
+BOOL
+CMDRelationGPDB::HasExternalPartitions() const
+{
+	return (NULL != GetExternalPartitions() && GetExternalPartitions()->Size() > 0);
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -822,6 +838,13 @@ CMDRelationGPDB::Serialize
 	if (NULL != m_mdpart_constraint)
 	{
 		m_mdpart_constraint->Serialize(xml_serializer);
+	}
+
+	if (HasExternalPartitions())
+	{
+		SerializeMDIdList(xml_serializer, m_external_partitions,
+						  CDXLTokens::GetDXLTokenStr(EdxltokenRelExternalPartitions),
+						  CDXLTokens::GetDXLTokenStr(EdxltokenRelExternalPartition));
 	}
 
 	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), 

@@ -56,6 +56,7 @@ CParseHandlerMDRelation::CParseHandlerMDRelation
 	m_key_sets_arrays(NULL),
 	m_part_constraint(NULL),
 	m_opfamilies_parse_handler(NULL),
+	m_external_partitions_parse_handler(NULL),
 	m_level_with_default_part_array(NULL)
 {
 }
@@ -113,6 +114,21 @@ CParseHandlerMDRelation::StartElement
 		m_parse_handler_mgr->ActivateParseHandler(m_opfamilies_parse_handler);
 		this->Append(m_opfamilies_parse_handler);
 		m_opfamilies_parse_handler->startElement(element_uri, element_local_name, element_qname, attrs);
+
+		return;
+	}
+
+	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenRelExternalPartitions), element_local_name))
+	{
+		// parse handler for external_partitions
+		m_external_partitions_parse_handler =
+			CParseHandlerFactory::GetParseHandler(m_mp,
+												  CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
+												  m_parse_handler_mgr,
+												  this);
+		m_parse_handler_mgr->ActivateParseHandler(m_external_partitions_parse_handler);
+		this->Append(m_external_partitions_parse_handler);
+		m_external_partitions_parse_handler->startElement(element_uri, element_local_name, element_qname, attrs);
 
 		return;
 	}
@@ -276,6 +292,13 @@ CParseHandlerMDRelation::EndElement
 		distr_opfamilies->AddRef();
 	}
 
+	IMdIdArray *external_partitions = NULL;
+	if (NULL != m_external_partitions_parse_handler)
+	{
+		external_partitions = dynamic_cast<CParseHandlerMetadataIdList*>(m_external_partitions_parse_handler)->GetMdIdArray();
+		external_partitions->AddRef();
+	}
+
 	m_imd_obj = GPOS_NEW(m_mp) CMDRelationGPDB
 								(
 									m_mp,
@@ -296,7 +319,8 @@ CParseHandlerMDRelation::EndElement
 									mdid_triggers_array,
 									mdid_check_constraint_array,
 									m_part_constraint,
-									m_has_oids
+									m_has_oids,
+									external_partitions
 								);
 
 	// deactivate handler

@@ -222,6 +222,10 @@ namespace gpmd
 			// part constraint
 			virtual
 			IMDPartConstraint *MDPartConstraint() const = 0;
+
+			// external partitions (for partitioned tables)
+			virtual
+			IMdIdArray *GetExternalPartitions() const = 0;
 			
 			// relation distribution policy as a string value
 			static
