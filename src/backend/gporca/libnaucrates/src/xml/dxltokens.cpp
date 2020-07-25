@@ -569,6 +569,9 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenOpfamily, GPOS_WSZ_LIT("Opfamily")},
 		{EdxltokenOpfamilies, GPOS_WSZ_LIT("Opfamilies")},
 
+		{EdxltokenRelExternalPartitions, GPOS_WSZ_LIT("ExternalPartitions")},
+		{EdxltokenRelExternalPartition, GPOS_WSZ_LIT("ExternalPartition")},
+
 		{EdxltokenPartitions, GPOS_WSZ_LIT("Partitions")},
 		{EdxltokenPartition, GPOS_WSZ_LIT("Partition")},
 

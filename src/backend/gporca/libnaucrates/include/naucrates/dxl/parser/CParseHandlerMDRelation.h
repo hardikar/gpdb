@@ -82,6 +82,9 @@ protected:
 	// distribution opfamilies parse handler
 	CParseHandlerBase *m_opfamilies_parse_handler;
 
+	// distribution opfamilies parse handler
+	CParseHandlerBase *m_external_partitions_parse_handler;
+
 	// levels that include default partitions
 	ULongPtrArray *m_level_with_default_part_array;
 
