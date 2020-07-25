@@ -480,6 +480,9 @@ enum Edxltoken
 	EdxltokenRelDistrOpclasses,
 	EdxltokenRelDistrOpclass,
 
+	EdxltokenRelExternalPartitions,
+	EdxltokenRelExternalPartition,
+
 	EdxltokenExtRelRejLimit,
 	EdxltokenExtRelRejLimitInRows,
 	EdxltokenExtRelFmtErrRel,

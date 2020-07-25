@@ -566,6 +566,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	BOOL has_oids = false;
 	BOOL is_partitioned = false;
 	IMDRelation *md_rel = NULL;
+	IMdIdArray *external_partitions = NULL;
 
 
 	GPOS_TRY
@@ -629,6 +630,11 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 		is_temporary = (rel->rd_rel->relpersistence == RELPERSISTENCE_TEMP);
 		has_oids = rel->rd_rel->relhasoids;
 
+		if (gpdb::HasExternalPartition(oid))
+		{
+			external_partitions = RetrieveRelExternalPartitions(mp, oid);
+		}
+
 		GPOS_DELETE_ARRAY(attno_mapping);
 		gpdb::CloseRelation(rel);
 	}
@@ -648,6 +654,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	// returns NULL for non-partitioned tables
 	BOOL construct_full_partcnstr_expr =
 		(md_index_info_array->Size() > 0 ||
+		 (external_partitions != NULL && external_partitions->Size() > 0) ||
 		 IMDRelation::ErelstorageExternal == rel_storage_type);
 
 	CMDPartConstraintGPDB *mdpart_constraint = RetrievePartConstraintForRel(
@@ -676,7 +683,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 			distr_cols, distr_op_families, part_keys, part_types,
 			num_leaf_partitions, convert_hash_to_random, keyset_array,
 			md_index_info_array, mdid_triggers_array, check_constraint_mdids,
-			mdpart_constraint, has_oids);
+			mdpart_constraint, has_oids, external_partitions);
 	}
 
 	return md_rel;
@@ -923,6 +930,23 @@ CTranslatorRelcacheToDXL::RetrieveRelDistributionOpFamilies(CMemoryPool *mp,
 	}
 
 	return distr_op_classes;
+}
+
+IMdIdArray *
+CTranslatorRelcacheToDXL::RetrieveRelExternalPartitions(CMemoryPool *mp,
+														OID rel_oid)
+{
+	IMdIdArray *external_partitions = GPOS_NEW(mp) IMdIdArray(mp);
+
+	List *extparts_list = gpdb::GetExternalPartitions(rel_oid);
+	ListCell *lc;
+	foreach (lc, extparts_list)
+	{
+		OID ext_rel_oid = lfirst_oid(lc);
+		external_partitions->Append(GPOS_NEW(mp) CMDIdGPDB(ext_rel_oid));
+	}
+
+	return external_partitions;
 }
 
 //---------------------------------------------------------------------------

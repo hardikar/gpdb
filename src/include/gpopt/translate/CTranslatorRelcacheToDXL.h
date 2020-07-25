@@ -347,6 +347,9 @@ private:
 	static IMdIdArray *RetrieveRelDistributionOpFamilies(CMemoryPool *mp,
 														 GpPolicy *policy);
 
+	static IMdIdArray *RetrieveRelExternalPartitions(CMemoryPool *mp,
+													 OID rel_oid);
+
 	// for non-leaf partition tables return the number of child partitions
 	// else return 1
 	static ULONG RetrieveNumChildPartitions(OID rel_oid);
