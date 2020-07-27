@@ -304,6 +304,8 @@ bool IsLeafPartition(Oid oid);
 // partition table has an external partition
 bool HasExternalPartition(Oid oid);
 
+List *GetExternalPartitions(Oid oid);
+
 // find the oid of the root partition given partition oid belongs to
 Oid GetRootPartition(Oid oid);
 
