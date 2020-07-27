@@ -119,6 +119,7 @@
 // physical ops
 #include "gpopt/operators/CPhysicalTableScan.h"
 #include "gpopt/operators/CPhysicalExternalScan.h"
+#include "gpopt/operators/CPhysicalMultiExternalScan.h"
 #include "gpopt/operators/CPhysicalIndexScan.h"
 #include "gpopt/operators/CPhysicalBitmapTableScan.h"
 #include "gpopt/operators/CPhysicalFilter.h"

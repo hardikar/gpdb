@@ -225,7 +225,10 @@ namespace gpmd
 
 			// external partitions (for partitioned tables)
 			virtual
-			IMdIdArray *GetExternalPartitions() const = 0;
+			IMdIdArray *GetExternalPartitions() const
+			{
+				return NULL;
+			}
 			
 			// relation distribution policy as a string value
 			static

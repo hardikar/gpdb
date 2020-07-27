@@ -384,6 +384,17 @@ namespace gpopt
 
 			// translate a dynamic index scan
 			CDXLNode *PdxlnDynamicIndexScan(CExpression *pexprDIS, CColRefArray *colref_array, CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions, BOOL *pfDML);
+
+			// translate a multi external scan to multiple external scans
+			CDXLNode *PdxlnMultiExternalScan
+				(
+				CExpression *pexprTblScan,
+				CColRefSet *pcrsOutput,
+				CColRefArray *colref_array,
+				CDistributionSpecArray *pdrgpdsBaseTables,
+				CExpression *pexprScalarCond,
+				CDXLPhysicalProperties *dxl_properties
+				);
 			
 			// translate a const table get into a result node
 			CDXLNode *PdxlnResultFromConstTableGet(CExpression *pexprCTG, CColRefArray *colref_array, CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions, BOOL *pfDML);
