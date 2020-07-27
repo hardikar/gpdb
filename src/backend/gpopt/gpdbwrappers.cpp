@@ -1034,6 +1034,20 @@ gpdb::HasExternalPartition
 	return false;
 }
 
+List *
+gpdb::GetExternalPartitions
+	(
+	Oid oid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_partition, pg_partition_rule */
+		return rel_get_external_partitions(oid);
+	}
+	GP_WRAP_END;
+	return false;
+}
 
 bool
 gpdb::IsLeafPartition
