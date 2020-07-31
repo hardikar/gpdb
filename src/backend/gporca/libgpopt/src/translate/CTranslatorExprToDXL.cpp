@@ -1366,7 +1366,6 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 	return pdxlnDIS;
 }
 
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorExprToDXL::PdxlnDynamicIndexScan

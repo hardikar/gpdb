@@ -66,6 +66,7 @@
 #include "gpopt/operators/CLogicalIntersectAll.h"
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalExternalGet.h"
+#include "gpopt/operators/CLogicalMultiExternalGet.h"
 #include "gpopt/operators/CLogicalIndexGet.h"
 #include "gpopt/operators/CLogicalDynamicIndexGet.h"
 #include "gpopt/operators/CLogicalBitmapTableGet.h"

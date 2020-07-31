@@ -3,16 +3,16 @@
 //	Copyright (C) 2012 EMC Corp.
 //
 //	@filename:
-//		CXformDynamicGet2DynamicTableScan.h
+//		CXformExpandDynamicGet2DynamicWithExternalPartitions.h
 //
 //	@doc:
 //		Transform DynamicGet to DynamicTableScan
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CXformDynamicGet2DynamicTableScan_H
-#define GPOPT_CXformDynamicGet2DynamicTableScan_H
+#ifndef GPOPT_CXformExpandDynamicGetWithExternalPartitions_H
+#define GPOPT_CXformExpandDynamicGetWithExternalPartitions_H
 
 #include "gpos/base.h"
-#include "gpopt/xforms/CXformImplementation.h"
+#include "gpopt/xforms/CXformExploration.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CExpressionHandle.h"
 
@@ -22,25 +22,25 @@ using namespace gpos;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CXformDynamicGet2DynamicTableScan
+//		CXformExpandDynamicGetWithExternalPartitions
 //
 //	@doc:
 //		Transform DynamicGet to DynamicTableScan
 //
 //---------------------------------------------------------------------------
-class CXformDynamicGet2DynamicTableScan : public CXformImplementation
+class CXformExpandDynamicGetWithExternalPartitions : public CXformExploration
 {
 private:
 	// private copy ctor
-	CXformDynamicGet2DynamicTableScan(
-		const CXformDynamicGet2DynamicTableScan &);
+	CXformExpandDynamicGetWithExternalPartitions(
+		const CXformExpandDynamicGetWithExternalPartitions &);
 
 public:
 	// ctor
-	explicit CXformDynamicGet2DynamicTableScan(CMemoryPool *mp);
+	explicit CXformExpandDynamicGetWithExternalPartitions(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformDynamicGet2DynamicTableScan()
+	virtual ~CXformExpandDynamicGetWithExternalPartitions()
 	{
 	}
 
@@ -48,14 +48,14 @@ public:
 	virtual EXformId
 	Exfid() const
 	{
-		return ExfDynamicGet2DynamicTableScan;
+		return ExfExpandDynamicGetWithExternalPartitions;
 	}
 
 	// return a string for xform name
 	virtual const CHAR *
 	SzId() const
 	{
-		return "CXformDynamicGet2DynamicTableScan";
+		return "CXformExpandDynamicGetWithExternalPartitions";
 	}
 
 	// compute xform promise for a given expression handle
@@ -68,7 +68,7 @@ public:
 		CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
 
 		const IMDRelation *relation = mda->RetrieveRel(ptabdesc->MDId());
-		if (relation->HasExternalPartitions() && !popGet->IsPartial())
+		if (relation->HasExternalPartitions() && popGet->IsPartial())
 		{
 			return CXform::ExfpNone;
 		}
@@ -79,11 +79,11 @@ public:
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 				   CExpression *pexpr) const;
 
-};	// class CXformDynamicGet2DynamicTableScan
+};	// class CXformExpandDynamicGetWithExternalPartitions
 
 }  // namespace gpopt
 
 
-#endif	// !GPOPT_CXformDynamicGet2DynamicTableScan_H
+#endif	// !GPOPT_CXformExpandDynamicGetWithExternalPartitions_H
 
 // EOF
