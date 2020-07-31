@@ -36,6 +36,7 @@ OBJS        = CDecorrelator.o \
               CXformExpandNAryJoinMinCard.o \
               CXformExploration.o \
               CXformExternalGet2ExternalScan.o \
+              CXformMultiExternalGet2MultiExternalScan.o \
               CXformFactory.o \
               CXformGbAgg2Apply.o \
               CXformGbAgg2HashAgg.o \

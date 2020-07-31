@@ -160,6 +160,7 @@ namespace gpopt
 				EopLogicalPartitionSelector,
 				EopLogicalAssert,
 				EopLogicalMaxOneRow,
+				EopLogicalMultiExternalGet,
 				
 				EopScalarCmp,
 				EopScalarIsDistinctFrom,
@@ -275,6 +276,7 @@ namespace gpopt
 				
 				EopLogicalDynamicBitmapTableGet,
 				EopPhysicalDynamicBitmapTableScan,
+				EopPhysicalMultiExternalScan,
 
 				EopSentinel
 			};
