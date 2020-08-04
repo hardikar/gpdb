@@ -229,6 +229,12 @@ namespace gpmd
 			{
 				return NULL;
 			}
+
+			// contains any external partitions (for partitioned tables only)
+			BOOL HasExternalPartitions() const
+			{
+				return (NULL != GetExternalPartitions() && GetExternalPartitions()->Size() > 0);
+			}
 			
 			// relation distribution policy as a string value
 			static

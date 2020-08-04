@@ -711,13 +711,6 @@ CMDRelationGPDB::GetExternalPartitions() const
 	return m_external_partitions;
 }
 
-// external partitions (for partitioned tables)
-BOOL
-CMDRelationGPDB::HasExternalPartitions() const
-{
-	return (NULL != GetExternalPartitions() && GetExternalPartitions()->Size() > 0);
-}
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CMDRelationGPDB::Serialize

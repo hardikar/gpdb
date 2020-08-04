@@ -314,9 +314,6 @@ namespace gpmd
 			virtual
 			IMdIdArray *GetExternalPartitions() const;
 
-			// external partitions (for partitioned tables)
-			BOOL HasExternalPartitions() const;
-
 #ifdef GPOS_DEBUG
 			// debug print of the metadata relation
 			virtual 
