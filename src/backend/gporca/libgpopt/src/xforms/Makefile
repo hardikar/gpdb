@@ -25,6 +25,7 @@ OBJS        = CDecorrelator.o \
               CXformDelete2DML.o \
               CXformDifference2LeftAntiSemiJoin.o \
               CXformDifferenceAll2LeftAntiSemiJoin.o \
+              CXformExpandDynamicGetWithExternalPartitions.o \
               CXformDynamicGet2DynamicTableScan.o \
               CXformDynamicIndexGet2DynamicIndexScan.o \
               CXformEagerAgg.o \

@@ -180,6 +180,8 @@
 #include "gpopt/xforms/CXformMaxOneRow2Assert.h"
 #include "gpopt/xforms/CXformRemoveSubqDistinct.h"
 
+#include "gpopt/xforms/CXformExpandDynamicGetWithExternalPartitions.h"
+
 #endif // !GPOPT_xforms_H
 
 // EOF
