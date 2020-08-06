@@ -3570,10 +3570,10 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintForRel
 
 	// don't retrieve part constraints if there are no indices
 	// and no default partitions at any level
-	if (!has_index && NIL == default_levels_rel)
-	{
-		return NULL;
-	}
+//	if (!has_index && NIL == default_levels_rel)
+//	{
+//		return NULL;
+//	}
 
 	List *part_keys = gpdb::GetPartitionAttrs(rel_oid);
 	const ULONG num_of_levels = gpdb::ListLength(part_keys);
@@ -3595,15 +3595,15 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintForRel
 
 	CMDPartConstraintGPDB *mdpart_constraint = NULL;
 
-	if (!has_index)
-	{
-		// if there are no indices then we don't need to construct the partition constraint
-		// expression since ORCA is never going to use it.
-		// only send the default partition information.
-		default_levels_derived->AddRef();
-		mdpart_constraint = GPOS_NEW(mp) CMDPartConstraintGPDB(mp, default_levels_derived, is_unbounded, NULL);
-	}
-	else
+//	if (!has_index)
+//	{
+//		// if there are no indices then we don't need to construct the partition constraint
+//		// expression since ORCA is never going to use it.
+//		// only send the default partition information.
+//		default_levels_derived->AddRef();
+//		mdpart_constraint = GPOS_NEW(mp) CMDPartConstraintGPDB(mp, default_levels_derived, is_unbounded, NULL);
+//	}
+//	else
 	{
 		CDXLColDescrArray *dxl_col_descr_array = GPOS_NEW(mp) CDXLColDescrArray(mp);
 		const ULONG num_columns = mdcol_array->Size();
