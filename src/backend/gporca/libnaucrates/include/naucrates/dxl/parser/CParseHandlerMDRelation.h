@@ -88,6 +88,9 @@ protected:
 	// is part constraint unbounded
 	BOOL m_part_constraint_unbounded;
 
+	// is part constraint complete with part constraint expr
+	BOOL m_part_constraint_contains_expr;
+
 	// helper function to parse main relation attributes: name, id,
 	// distribution policy and keys
 	void ParseRelationAttributes(const Attributes &attrs,

@@ -96,12 +96,15 @@ CParseHandlerMDRelation::StartElement(const XMLCh *const element_uri,
 				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 				EdxltokenPartConstraintUnbounded, EdxltokenRelation);
 
-		CParseHandlerMDIndexInfoList *pphMdlIndexInfo =
-			dynamic_cast<CParseHandlerMDIndexInfoList *>((*this)[1]);
-		// relcache translator will send partition constraint expression only when a partitioned relation has indices
-		if (pphMdlIndexInfo->GetMdIndexInfoArray()->Size() > 0)
+		m_part_constraint_contains_expr =
+			!CDXLOperatorFactory::ExtractConvertAttrValueToBool(
+				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+				EdxltokenPartConstraintExprAbsent, EdxltokenRelation,
+				true /* is_optional */, false /* default_value */);
+
+		if (m_part_constraint_contains_expr)
 		{
-			// parse handler for part constraints
+			// parse handler for part constraints expr
 			CParseHandlerBase *pphPartConstraint =
 				CParseHandlerFactory::GetParseHandler(
 					m_mp, CDXLTokens::XmlstrToken(EdxltokenScalar),
@@ -230,11 +233,12 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 				 CDXLTokens::XmlstrToken(EdxltokenPartConstraint),
 				 element_local_name))
 	{
-		// relcache translator will send partition constraint expression only when a partitioned relation has indices
-		if (pphMdlIndexInfo->GetMdIndexInfoArray()->Size() > 0)
+		if (m_part_constraint_contains_expr)
 		{
 			CParseHandlerScalarOp *pphPartCnstr =
 				dynamic_cast<CParseHandlerScalarOp *>((*this)[Length() - 1]);
+			if (NULL == pphPartCnstr)
+				return;
 			CDXLNode *pdxlnPartConstraint = pphPartCnstr->CreateDXLNode();
 			pdxlnPartConstraint->AddRef();
 			m_part_constraint = GPOS_NEW(m_mp) CMDPartConstraintGPDB(

@@ -523,6 +523,7 @@ enum Edxltoken
 	EdxltokenCheckConstraints,
 	EdxltokenCheckConstraint,
 	EdxltokenPartConstraint,
+	EdxltokenPartConstraintExprAbsent,
 	EdxltokenDefaultPartition,
 	EdxltokenPartConstraintUnbounded,
 
