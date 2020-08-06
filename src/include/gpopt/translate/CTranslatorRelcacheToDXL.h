@@ -280,7 +280,7 @@ private:
 	// retrieve part constraint for relation
 	static CMDPartConstraintGPDB *RetrievePartConstraintForRel(
 		CMemoryPool *mp, CMDAccessor *md_accessor, OID rel_oid,
-		CMDColumnArray *mdcol_array, BOOL has_index);
+		CMDColumnArray *mdcol_array, BOOL construct_full_expr);
 
 	// retrieve part constraint from a GPDB node
 	static CMDPartConstraintGPDB *RetrievePartConstraintFromNode(
