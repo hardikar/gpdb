@@ -16,6 +16,7 @@
 #include "gpopt/operators/CLogicalUnionAll.h"
 #include "gpopt/operators/CLogicalMultiExternalGet.h"
 #include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 
@@ -81,64 +82,93 @@ CXformExpandDynamicGetWithExternalPartitions::Transform
 
 	CMemoryPool *mp = pxfctxt->Pmp();
 
-	// create/extract components for alternative
-//	CName *pname = GPOS_NEW(mp) CName(mp, popGet->Name());
-	CColRef2dArray *pdrgpdrgpcrPart = popGet->PdrgpdrgpcrPart();
+	// Iterate over all the External Scans to determine partial scan contraints
+	CColRef2dArray *pdrgpdrgpcrPartKeys = popGet->PdrgpdrgpcrPart();
+	CColRefArray *pdrgpcrOutput = popGet->PdrgpcrOutput();
 
-	CColRefArray *pdrgpcrGet = popGet->PdrgpcrOutput();
-	GPOS_ASSERT(NULL != pdrgpcrGet);
-	pdrgpcrGet->AddRef();
+	// capture constraints of all external and remaining (non-external) scans in
+	// ppartcnstrCovered & ppartcnstrRest respectively
+	CPartConstraint *ppartcnstrCovered = NULL;
+	CPartConstraint *ppartcnstrRest = NULL;
 
-	pdrgpcrGet->AddRef();
-	ptabdesc->AddRef();
-	// popGet->Ppartcnstr()->AddRef();
-	// popGet->PpartcnstrRel()->AddRef();
+	IMdIdArray *external_part_mdids = relation->GetExternalPartitions();
+	for (ULONG ul = 0; ul < external_part_mdids->Size(); ul++)
+	{
+		// FIXME: Implement static partition selection here
+
+		IMDId *extpart_mdid = (*external_part_mdids)[ul];
+		const IMDRelation *extpart = mda->RetrieveRel(extpart_mdid);
+
+		CPartConstraint *ppartcnstr =
+			CUtils::PpartcnstrFromMDPartCnstr(mp, mda, pdrgpdrgpcrPartKeys,
+											  extpart->MDPartConstraint(),
+											  pdrgpcrOutput);
+		GPOS_ASSERT(NULL != ppartcnstr);
+
+		CPartConstraint *ppartcnstrNewlyCovered =
+			CXformUtils::PpartcnstrDisjunction(mp, ppartcnstrCovered, ppartcnstr);
+
+		if (NULL == ppartcnstrNewlyCovered)
+		{
+			// FIXME: Can this happen here?
+			ppartcnstr->Release();
+			continue;
+		}
+		CRefCount::SafeRelease(ppartcnstrCovered);
+		ppartcnstrCovered = ppartcnstrNewlyCovered;
+	}
+	CPartConstraint *ppartcnstrRel = CUtils::PpartcnstrFromMDPartCnstr(mp, mda,
+																	   popGet->PdrgpdrgpcrPart(),
+																	   relation->MDPartConstraint(),
+																	   popGet->PdrgpcrOutput());
+	ppartcnstrRest = ppartcnstrRel->PpartcnstrRemaining(mp, ppartcnstrCovered);
+
+	// Create new partial DynamicGet node (copying from the previous node)
 
 	// FIXME: is this the best way to copy an expr?
-	// This is eerily similar to CXformSelect2PartialDynamicIndexGet::PexprSelectOverDynamicGet()
+	// Also this is similar to CXformSelect2PartialDynamicIndexGet::PexprSelectOverDynamicGet()
+
+	// use dummy colref_mapping to preserve the same columns
 	UlongToColRefMap *colref_mapping = GPOS_NEW(mp) UlongToColRefMap(mp);
 	CLogicalDynamicGet *popPartialDynamicGet =
 		(CLogicalDynamicGet *) popGet->PopCopyWithRemappedColumns(mp, colref_mapping, false /*must_exist*/);
 	colref_mapping->Release();
 
 	popPartialDynamicGet->SetSecondaryScanId(COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal());
-
-	// FIXME: Get the correct part contraints for the DTS & External Scans
-	CPartConstraint *ppartcnstrPartialDynamicGet =
-		CUtils::PpartcnstrFromMDPartCnstr(mp, mda, pdrgpdrgpcrPart, relation->MDPartConstraint(), pdrgpcrGet);
-	// popGet->Ppartcnstr()->PpartcnstrCopyWithRemappedColumns(mp, colref_mapping, false /*must_exist*/);
-	popPartialDynamicGet->SetPartConstraint(ppartcnstrPartialDynamicGet);
+	popPartialDynamicGet->SetPartConstraint(ppartcnstrRest);
 	popPartialDynamicGet->SetPartial();
 
-	// create alternative expression
-	CExpression *pexprAlt = GPOS_NEW(mp) CExpression (mp, popPartialDynamicGet);
-	IMdIdArray *external_partoids = relation->GetExternalPartitions();
+	CExpression *pexprPartialDynamicGet = GPOS_NEW(mp) CExpression (mp, popPartialDynamicGet);
+
+
+	// Create new MultiExternalGet node capturing all the external scans
+	CName *pnameMEG = GPOS_NEW(mp) CName(mp, popGet->Name());
+	CColRefArray *pdrgpcrNew = CUtils::PdrgpcrCopy(mp, popGet->PdrgpcrOutput());
+	CLogicalMultiExternalGet *popMultiExternalGet =
+		GPOS_NEW(mp) CLogicalMultiExternalGet(mp, pnameMEG,
+											  popGet->Ptabdesc(),
+											  popGet->ScanId(),
+											  pdrgpcrNew);
+	CExpression *pexprMultiExternalGet = GPOS_NEW(mp) CExpression(mp, popMultiExternalGet);
 
 	CColRef2dArray *pdrgpdrgpcrInput = GPOS_NEW(mp) CColRef2dArray(mp);
+
+	popPartialDynamicGet->PdrgpcrOutput()->AddRef();
+	pdrgpdrgpcrInput->Append(popPartialDynamicGet->PdrgpcrOutput());
+	popMultiExternalGet->PdrgpcrOutput()->AddRef();
+	pdrgpdrgpcrInput->Append(popMultiExternalGet->PdrgpcrOutput());
+
 	CExpressionArray *pdrgpexprInput = GPOS_NEW(mp) CExpressionArray(mp);
-
-	pdrgpdrgpcrInput->Append(pdrgpcrGet);
-	pdrgpexprInput->Append(pexprAlt);
-
-	for (ULONG ul = 0; ul < external_partoids->Size(); ul++)
-	{
-		// FIXME: Implement static partition selection here
-	}
-
-
-	CName *pnameMEG = GPOS_NEW(mp) CName(mp, popGet->Name());
-	CColRefArray *pdrgpcrNew = CUtils::PdrgpcrCopy(mp, pdrgpcrGet);
-
-	CLogicalMultiExternalGet *pop =
-		GPOS_NEW(mp) CLogicalMultiExternalGet(mp, pnameMEG, popGet->Ptabdesc(), popGet->ScanId(), pdrgpcrNew);
-	CExpression *pexprMultiExternalGet = GPOS_NEW(mp) CExpression(mp, pop);
-
-	pdrgpdrgpcrInput->Append(pdrgpcrNew);
+	pdrgpexprInput->Append(pexprPartialDynamicGet);
 	pdrgpexprInput->Append(pexprMultiExternalGet);
 
+	popGet->PdrgpcrOutput()->AddRef();
 	CExpression *pexprResult =
 		GPOS_NEW(mp) CExpression(mp,
-								 GPOS_NEW(mp) CLogicalUnionAll(mp, pdrgpcrGet, pdrgpdrgpcrInput, popGet->ScanId()),
+								 GPOS_NEW(mp) CLogicalUnionAll(mp,
+															   popGet->PdrgpcrOutput(),
+															   pdrgpdrgpcrInput,
+															   popGet->ScanId()),
 								 pdrgpexprInput);
 
 	// add alternative to transformation result

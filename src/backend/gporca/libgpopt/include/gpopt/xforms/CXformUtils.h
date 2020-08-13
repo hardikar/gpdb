@@ -468,15 +468,6 @@ namespace gpopt
 				CExpression **ppexprResidual,
 				CExpressionArray *pdrgpexprResidualNew
 				);
-
-			// compute a disjunction of two part constraints
-			static
-			CPartConstraint *PpartcnstrDisjunction
-				(
-				CMemoryPool *mp,
-				CPartConstraint *ppartcnstrOld,
-				CPartConstraint *ppartcnstrNew
-				);
 			
 			// construct a bitmap index path expression for the given predicate coming
 			// from a condition without outer references
@@ -976,6 +967,15 @@ namespace gpopt
 				(
 				CMemoryPool *mp,
 				CExpression *pexpr
+				);
+
+			// compute a disjunction of two part constraints
+			static
+			CPartConstraint *PpartcnstrDisjunction
+				(
+				CMemoryPool *mp,
+				CPartConstraint *ppartcnstrOld,
+				CPartConstraint *ppartcnstrNew
 				);
 
 			// find a set of partial index combinations
