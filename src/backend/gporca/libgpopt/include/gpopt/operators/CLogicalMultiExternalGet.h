@@ -12,7 +12,7 @@
 #define GPOPT_CLogicalMultiExternalGet_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CLogicalGet.h"
+#include "gpopt/operators/CLogicalDynamicGetBase.h"
 
 namespace gpopt
 {
@@ -30,7 +30,7 @@ namespace gpopt
 	//		Logical external get operator
 	//
 	//---------------------------------------------------------------------------
-	class CLogicalMultiExternalGet : public CLogicalGet
+	class CLogicalMultiExternalGet : public CLogicalDynamicGetBase
 	{
 
 		private:
@@ -48,14 +48,8 @@ namespace gpopt
 				(
 				CMemoryPool *mp,
 				const CName *pnameAlias,
-				CTableDescriptor *ptabdesc
-				);
-
-			CLogicalMultiExternalGet
-				(
-				CMemoryPool *mp,
-				const CName *pnameAlias,
 				CTableDescriptor *ptabdesc,
+				ULONG scan_id,
 				CColRefArray *pdrgpcrOutput
 				);
 
@@ -98,6 +92,30 @@ namespace gpopt
 			{
 				GPOS_ASSERT(!"CLogicalMultiExternalGet has no children");
 				return NULL;
+			}
+
+			// sensitivity to order of inputs
+			virtual BOOL FInputOrderSensitive() const
+			{
+				GPOS_ASSERT(!"Unexpected function call of FInputOrderSensitive");
+				return false;
+			}
+
+			// derive statistics
+			virtual
+			IStatistics *PstatsDerive
+						(
+						CMemoryPool *mp,
+						CExpressionHandle &exprhdl,
+						IStatisticsArray *stats_ctxt
+						)
+						const;
+
+			// stat promise
+			virtual
+			EStatPromise Esp(CExpressionHandle &) const
+			{
+				return CLogical::EspHigh;
 			}
 
 			//-------------------------------------------------------------------------------------

@@ -100,7 +100,8 @@ namespace gpopt
 				CMemoryPool *mp,
 				const CName *pnameAlias,
 				CTableDescriptor *ptabdesc,
-				ULONG scan_id
+				ULONG scan_id,
+				CColRefArray *pdrgpcrOutput
 				);
 
 			// dtor

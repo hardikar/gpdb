@@ -89,7 +89,7 @@ CLogicalDynamicGet::CLogicalDynamicGet
 	ULONG ulPartIndex
 	)
 	:
-	CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex)
+	CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex, NULL /* pdrgpcrOutput*/)
 {
 }
 

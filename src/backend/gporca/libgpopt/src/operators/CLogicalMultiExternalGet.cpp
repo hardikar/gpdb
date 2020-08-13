@@ -21,6 +21,7 @@
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/metadata/CName.h"
 
+#include "naucrates/statistics/CStatistics.h"
 
 using namespace gpopt;
 
@@ -38,25 +39,7 @@ CLogicalMultiExternalGet::CLogicalMultiExternalGet
 	CMemoryPool *mp
 	)
 	:
-	CLogicalGet(mp)
-{}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CLogicalMultiExternalGet::CLogicalMultiExternalGet
-//
-//	@doc:
-//		Ctor
-//
-//---------------------------------------------------------------------------
-CLogicalMultiExternalGet::CLogicalMultiExternalGet
-	(
-	CMemoryPool *mp,
-	const CName *pnameAlias,
-	CTableDescriptor *ptabdesc
-	)
-	:
-	CLogicalGet(mp, pnameAlias, ptabdesc)
+	CLogicalDynamicGetBase(mp)
 {}
 
 //---------------------------------------------------------------------------
@@ -72,11 +55,13 @@ CLogicalMultiExternalGet::CLogicalMultiExternalGet
 	CMemoryPool *mp,
 	const CName *pnameAlias,
 	CTableDescriptor *ptabdesc,
+	ULONG scan_id,
 	CColRefArray *pdrgpcrOutput
 	)
 	:
-	CLogicalGet(mp, pnameAlias, ptabdesc, pdrgpcrOutput)
+	CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, scan_id, pdrgpcrOutput)
 {}
+
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -133,7 +118,7 @@ CLogicalMultiExternalGet::PopCopyWithRemappedColumns
 	CTableDescriptor *ptabdesc = Ptabdesc();
 	ptabdesc->AddRef();
 
-	return GPOS_NEW(mp) CLogicalMultiExternalGet(mp, pnameAlias, ptabdesc, pdrgpcrOutput);
+	return GPOS_NEW(mp) CLogicalMultiExternalGet(mp, pnameAlias, ptabdesc, ScanId(), pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------
@@ -155,6 +140,25 @@ CLogicalMultiExternalGet::PxfsCandidates
 	(void) xform_set->ExchangeSet(CXform::ExfMultiExternalGet2MultiExternalScan);
 
 	return xform_set;
+}
+
+IStatistics *
+CLogicalMultiExternalGet::PstatsDerive
+	(
+	CMemoryPool *mp,
+	CExpressionHandle &exprhdl,
+	IStatisticsArray * // not used
+	)
+	const
+{
+	// requesting stats on distribution columns to estimate data skew
+	IStatistics *pstatsTable = PstatsBaseTable(mp, exprhdl, m_ptabdesc, m_pcrsDist);
+
+	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp, m_pdrgpcrOutput);
+	CUpperBoundNDVs *upper_bound_NDVs = GPOS_NEW(mp) CUpperBoundNDVs(pcrs, pstatsTable->Rows());
+	CStatistics::CastStats(pstatsTable)->AddCardUpperBound(upper_bound_NDVs);
+
+	return pstatsTable;
 }
 
 // EOF

@@ -127,13 +127,12 @@ CXformExpandDynamicGetWithExternalPartitions::Transform
 
 
 	CName *pnameMEG = GPOS_NEW(mp) CName(mp, popGet->Name());
+	CColRefArray *pdrgpcrNew = CUtils::PdrgpcrCopy(mp, pdrgpcrGet);
 
 	CLogicalMultiExternalGet *pop =
-		GPOS_NEW(mp) CLogicalMultiExternalGet(mp, pnameMEG, popGet->Ptabdesc());
+		GPOS_NEW(mp) CLogicalMultiExternalGet(mp, pnameMEG, popGet->Ptabdesc(), popGet->ScanId(), pdrgpcrNew);
 	CExpression *pexprMultiExternalGet = GPOS_NEW(mp) CExpression(mp, pop);
 
-	CColRefArray *pdrgpcrNew = pop->PdrgpcrOutput();
-	pdrgpcrNew->AddRef();
 	pdrgpdrgpcrInput->Append(pdrgpcrNew);
 	pdrgpexprInput->Append(pexprMultiExternalGet);
 

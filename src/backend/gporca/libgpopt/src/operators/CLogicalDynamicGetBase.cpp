@@ -106,7 +106,6 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase
 	m_pcrsDist = CLogical::PcrsDist(mp, m_ptabdesc, m_pdrgpcrOutput);
 }
 
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CLogicalDynamicGetBase::CLogicalDynamicGetBase
@@ -120,14 +119,15 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase
 	CMemoryPool *mp,
 	const CName *pnameAlias,
 	CTableDescriptor *ptabdesc,
-	ULONG scan_id
+	ULONG scan_id,
+	CColRefArray *pdrgpcrOutput
 	)
 	:
 	CLogical(mp),
 	m_pnameAlias(pnameAlias),
 	m_ptabdesc(ptabdesc),
 	m_scan_id(scan_id),
-	m_pdrgpcrOutput(NULL),
+	m_pdrgpcrOutput(pdrgpcrOutput),
 	m_ulSecondaryScanId(scan_id),
 	m_is_partial(false),
 	m_part_constraint(NULL),
@@ -137,8 +137,11 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase
 	GPOS_ASSERT(NULL != ptabdesc);
 	GPOS_ASSERT(NULL != pnameAlias);
 	
-	// generate a default column set for the table descriptor
-	m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, m_ptabdesc->Pdrgpcoldesc(), UlOpId(), m_ptabdesc->MDId());
+	// generate a default column set for the table descriptor if not passed in
+	if (NULL == m_pdrgpcrOutput)
+	{
+		m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, m_ptabdesc->Pdrgpcoldesc(), UlOpId(), m_ptabdesc->MDId());
+	}
 	m_pdrgpdrgpcrPart = PdrgpdrgpcrCreatePartCols(mp, m_pdrgpcrOutput, m_ptabdesc->PdrgpulPart());
 	
 	// generate a constraint "true"
