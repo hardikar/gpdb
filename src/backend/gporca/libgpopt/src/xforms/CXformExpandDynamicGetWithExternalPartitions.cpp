@@ -125,12 +125,15 @@ CXformExpandDynamicGetWithExternalPartitions::Transform
 		// FIXME: Implement static partition selection here
 	}
 
-	CColRefArray *pdrgpcrNew = CUtils::PdrgpcrCopy(mp, pdrgpcrGet);
+
 	CName *pnameMEG = GPOS_NEW(mp) CName(mp, popGet->Name());
 
-	CExpression *pexprMultiExternalGet =
-		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CLogicalMultiExternalGet(mp, pnameMEG, popGet->Ptabdesc(), pdrgpcrNew));
+	CLogicalMultiExternalGet *pop =
+		GPOS_NEW(mp) CLogicalMultiExternalGet(mp, pnameMEG, popGet->Ptabdesc());
+	CExpression *pexprMultiExternalGet = GPOS_NEW(mp) CExpression(mp, pop);
 
+	CColRefArray *pdrgpcrNew = pop->PdrgpcrOutput();
+	pdrgpcrNew->AddRef();
 	pdrgpdrgpcrInput->Append(pdrgpcrNew);
 	pdrgpexprInput->Append(pexprMultiExternalGet);
 
