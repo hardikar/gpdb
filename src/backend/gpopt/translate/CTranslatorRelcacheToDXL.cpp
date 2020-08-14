@@ -673,9 +673,11 @@ CTranslatorRelcacheToDXL::RetrieveRel
 
 	mdid->AddRef();
 
+	CMDPartConstraintGPDB *mdpart_constraint = NULL;
 	if (IMDRelation::ErelstorageExternal == rel_storage_type)
 	{
 		ExtTableEntry *extentry = gpdb::GetExternalTableEntry(oid);
+		mdpart_constraint = RetrievePartConstraintForRel(mp, md_accessor, oid, mdcol_array, md_index_info_array->Size() > 0 /*has_index*/);
 
 		md_rel = GPOS_NEW(mp) CMDRelationExternalGPDB
 							(
@@ -691,6 +693,7 @@ CTranslatorRelcacheToDXL::RetrieveRel
 							md_index_info_array,
 							mdid_triggers_array,
 							check_constraint_mdids,
+							mdpart_constraint,
 							extentry->rejectlimit,
 							('r' == extentry->rejectlimittype),
 							NULL /* it's sufficient to pass NULL here since ORCA
@@ -702,8 +705,6 @@ CTranslatorRelcacheToDXL::RetrieveRel
 	}
 	else
 	{
-		CMDPartConstraintGPDB *mdpart_constraint = NULL;
-
 		// retrieve the part constraints if relation is partitioned
 		if (is_partitioned)
 			mdpart_constraint = RetrievePartConstraintForRel(mp, md_accessor, oid, mdcol_array, md_index_info_array->Size() > 0 /*has_index*/);
@@ -3566,7 +3567,16 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintForRel
 {
 	// get the part constraints
 	List *default_levels_rel = NIL;
-	Node *node = gpdb::GetRelationPartContraints(rel_oid, &default_levels_rel);
+	Node *node;
+	if (gpdb::IsLeafPartition(rel_oid))
+	{
+		node = gpdb::GetLeafPartContraints(rel_oid, &default_levels_rel);
+	}
+	else
+	{
+		GPOS_ASSERT(gpdb::RelPartIsRoot(rel_oid));
+		node = gpdb::GetRelationPartContraints(rel_oid, &default_levels_rel);
+	}
 
 	// don't retrieve part constraints if there are no indices
 	// and no default partitions at any level
@@ -3594,6 +3604,12 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintForRel
 	}
 
 	CMDPartConstraintGPDB *mdpart_constraint = NULL;
+
+	// FIXME: Deal with default partitions
+	if (gpdb::IsLeafPartition(rel_oid))
+	{
+		is_unbounded = false;
+	}
 
 //	if (!has_index)
 //	{

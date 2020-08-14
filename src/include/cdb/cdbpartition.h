@@ -122,6 +122,9 @@ all_partition_relids(PartitionNode *pn);
 extern Node *
 get_relation_part_constraints(Oid rootOid, List **defaultLevels);
 
+extern Node *
+get_leaf_part_constraints(Oid partoid, List **defaultLevels);
+
 extern List *
 all_prule_relids(PartitionRule *prule);
 

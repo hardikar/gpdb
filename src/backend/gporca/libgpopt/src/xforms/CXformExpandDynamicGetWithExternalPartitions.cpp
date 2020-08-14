@@ -99,6 +99,7 @@ CXformExpandDynamicGetWithExternalPartitions::Transform
 		IMDId *extpart_mdid = (*external_part_mdids)[ul];
 		const IMDRelation *extpart = mda->RetrieveRel(extpart_mdid);
 
+		GPOS_ASSERT(NULL != extpart->MDPartConstraint());
 		CPartConstraint *ppartcnstr =
 			CUtils::PpartcnstrFromMDPartCnstr(mp, mda, pdrgpdrgpcrPartKeys,
 											  extpart->MDPartConstraint(),

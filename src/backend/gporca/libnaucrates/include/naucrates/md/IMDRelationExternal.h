@@ -102,13 +102,6 @@ namespace gpmd
 				return (CHAR) 0;
 			}
 
-			// part constraint
-			virtual
-			IMDPartConstraint *MDPartConstraint() const
-			{
-				return NULL;
-			}
-
 			// reject limit
 			virtual
 			INT RejectLimit() const = 0;

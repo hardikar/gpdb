@@ -242,6 +242,9 @@ namespace gpdb {
 	// part constraint expression tree
 	Node *GetRelationPartContraints(Oid rel_oid, List **default_levels);
 
+	// part constraint expression tree for a leaf partition
+	Node *GetLeafPartContraints(Oid rel_oid, List **default_levels);
+
 	// get the cast function for the specified source and destination types
 	bool GetCastFunc(Oid src_oid, Oid dest_oid, bool *is_binary_coercible, Oid *cast_fn_oid, CoercionPathType *pathtype);
 	
