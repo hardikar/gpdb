@@ -130,14 +130,16 @@ CXformExpandDynamicGetWithExternalPartitions::Transform
 	// Also this is similar to CXformSelect2PartialDynamicIndexGet::PexprSelectOverDynamicGet()
 
 	// use dummy colref_mapping to preserve the same columns
-	UlongToColRefMap *colref_mapping = GPOS_NEW(mp) UlongToColRefMap(mp);
+	CName *pnameDG = GPOS_NEW(mp) CName(mp, popGet->Name());
 	CLogicalDynamicGet *popPartialDynamicGet =
-		(CLogicalDynamicGet *) popGet->PopCopyWithRemappedColumns(mp, colref_mapping, false /*must_exist*/);
-	colref_mapping->Release();
-
-	popPartialDynamicGet->SetSecondaryScanId(COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal());
-	popPartialDynamicGet->SetPartConstraint(ppartcnstrRest);
-	popPartialDynamicGet->SetPartial();
+		GPOS_NEW(mp) CLogicalDynamicGet(mp, pnameDG, popGet->Ptabdesc(),
+										popGet->ScanId(),
+										popGet->PdrgpcrOutput(),
+										popGet->PdrgpdrgpcrPart(),
+										COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal(),
+										true, /* is_partial */
+										ppartcnstrRest,
+										ppartcnstrRel);
 
 	CExpression *pexprPartialDynamicGet = GPOS_NEW(mp) CExpression (mp, popPartialDynamicGet);
 
