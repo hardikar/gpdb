@@ -363,10 +363,13 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 				{
 					if (!list_member_oid(selparts->partOids, rule->parchildrelid))
 					{
-						selparts->partOids = lappend_oid(selparts->partOids, rule->parchildrelid);
 						int			scanId = eval_propagation_expression(node, rule->parchildrelid);
 
-						selparts->scanIds = lappend_int(selparts->scanIds, scanId);
+						if (scanId > 0)
+						{
+							selparts->partOids = lappend_oid(selparts->partOids, rule->parchildrelid);
+							selparts->scanIds = lappend_int(selparts->scanIds, scanId);
+						}
 					}
 				}
 			}
