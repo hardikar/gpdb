@@ -1087,7 +1087,6 @@ relation_open(Oid relationId, LOCKMODE lockmode)
 
 	if (!RelationIsValid(r))
 	{
-		elog(INFO, "foo");
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_TABLE),
 				 errmsg("relation not found (OID %u)", relationId),
