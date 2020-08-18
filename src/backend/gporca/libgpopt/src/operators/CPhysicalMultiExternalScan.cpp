@@ -31,12 +31,18 @@ using namespace gpopt;
 CPhysicalMultiExternalScan::CPhysicalMultiExternalScan
 	(
 	CMemoryPool *mp,
-	const CName *pnameAlias,
+	BOOL is_partial,
 	CTableDescriptor *ptabdesc,
-	CColRefArray *pdrgpcrOutput
+	ULONG ulOriginOpId,
+	const CName *pnameAlias,
+	ULONG scan_id,
+	CColRefArray *pdrgpcrOutput,
+	CColRef2dArray *pdrgpdrgpcrParts,
+	ULONG ulSecondaryScanId,
+	CPartConstraint *ppartcnstr,
+	CPartConstraint *ppartcnstrRel
 	)
-	:
-	CPhysicalTableScan(mp, pnameAlias, ptabdesc, pdrgpcrOutput)
+	: CPhysicalDynamicScan(mp, is_partial, ptabdesc, ulOriginOpId, pnameAlias, scan_id, pdrgpcrOutput, pdrgpdrgpcrParts, ulSecondaryScanId, ppartcnstr, ppartcnstrRel)
 {
 	// if this table is master only, then keep the original distribution spec.
 	if (IMDRelation::EreldistrMasterOnly == ptabdesc->GetRelDistribution())

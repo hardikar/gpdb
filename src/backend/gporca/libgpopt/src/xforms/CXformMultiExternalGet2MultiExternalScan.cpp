@@ -88,12 +88,13 @@ CXformMultiExternalGet2MultiExternalScan::Transform
 	// extract components for alternative
 	CName *pname = GPOS_NEW(mp) CName(mp, popGet->Name());
 
-	CTableDescriptor *ptabdesc = popGet->Ptabdesc();
-	ptabdesc->AddRef();
-
 	CColRefArray *pdrgpcrOutput = popGet->PdrgpcrOutput();
 	GPOS_ASSERT(NULL != pdrgpcrOutput);
 
+	popGet->Ptabdesc()->AddRef();
+	popGet->PdrgpdrgpcrPart()->AddRef();
+	popGet->Ppartcnstr()->AddRef();
+	popGet->PpartcnstrRel()->AddRef();
 	pdrgpcrOutput->AddRef();
 
 	// create alternative expression
@@ -101,7 +102,18 @@ CXformMultiExternalGet2MultiExternalScan::Transform
 		GPOS_NEW(mp) CExpression
 			(
 			mp,
-			GPOS_NEW(mp) CPhysicalMultiExternalScan(mp, pname, ptabdesc, pdrgpcrOutput)
+			GPOS_NEW(mp) CPhysicalMultiExternalScan(mp,
+													popGet->IsPartial(),
+													popGet->Ptabdesc(),
+													popGet->UlOpId(),
+													pname,
+													popGet->ScanId(),
+													pdrgpcrOutput,
+													popGet->PdrgpdrgpcrPart(),
+													popGet->UlSecondaryScanId(),
+													popGet->Ppartcnstr(),
+													popGet->PpartcnstrRel()
+													)
 			);
 
 	// add alternative to transformation result

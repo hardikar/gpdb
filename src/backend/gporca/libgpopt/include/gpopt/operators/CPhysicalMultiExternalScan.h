@@ -12,7 +12,7 @@
 #define GPOPT_CPhysicalMultiExternalScan_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPhysicalTableScan.h"
+#include "gpopt/operators/CPhysicalDynamicScan.h"
 
 namespace gpopt
 {
@@ -25,7 +25,7 @@ namespace gpopt
 	//		External scan operator
 	//
 	//---------------------------------------------------------------------------
-	class CPhysicalMultiExternalScan : public CPhysicalTableScan
+	class CPhysicalMultiExternalScan : public CPhysicalDynamicScan
 	{
 
 		private:
@@ -36,7 +36,20 @@ namespace gpopt
 		public:
 
 			// ctor
-			CPhysicalMultiExternalScan(CMemoryPool *, const CName *, CTableDescriptor *, CColRefArray *);
+			CPhysicalMultiExternalScan
+			(
+			CMemoryPool *mp,
+			BOOL is_partial,
+			CTableDescriptor *ptabdesc,
+			ULONG ulOriginOpId,
+			const CName *pnameAlias,
+			ULONG scan_id,
+			CColRefArray *pdrgpcrOutput,
+			CColRef2dArray *pdrgpdrgpcrParts,
+			ULONG ulSecondaryScanId,
+			CPartConstraint *ppartcnstr,
+			CPartConstraint *ppartcnstrRel
+			);
 
 			// ident accessors
 			virtual
@@ -55,6 +68,22 @@ namespace gpopt
 			// match function
 			virtual
 			BOOL Matches(COperator *) const;
+
+					// statistics derivation during costing
+			virtual
+			IStatistics *PstatsDerive
+				(
+				CMemoryPool *, // mp
+				CExpressionHandle &, // exprhdl
+				CReqdPropPlan *, // prpplan
+				IStatisticsArray * //stats_ctxt
+				)
+				const
+			{
+				GPOS_ASSERT(!"stats derivation during costing for table scan is invalid");
+
+				return NULL;
+			}
 
 			//-------------------------------------------------------------------------------------
 			// Derived Plan Properties

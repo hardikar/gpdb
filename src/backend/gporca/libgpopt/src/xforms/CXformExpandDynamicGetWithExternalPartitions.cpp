@@ -147,11 +147,14 @@ CXformExpandDynamicGetWithExternalPartitions::Transform
 	// Create new MultiExternalGet node capturing all the external scans
 	CName *pnameMEG = GPOS_NEW(mp) CName(mp, popGet->Name());
 	CColRefArray *pdrgpcrNew = CUtils::PdrgpcrCopy(mp, popGet->PdrgpcrOutput());
+	ptabdesc->AddRef();
 	CLogicalMultiExternalGet *popMultiExternalGet =
 		GPOS_NEW(mp) CLogicalMultiExternalGet(mp, pnameMEG,
-											  popGet->Ptabdesc(),
+											  ptabdesc,
 											  popGet->ScanId(),
 											  pdrgpcrNew);
+	popMultiExternalGet->SetSecondaryScanId(COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal());
+	popMultiExternalGet->SetPartial();
 	CExpression *pexprMultiExternalGet = GPOS_NEW(mp) CExpression(mp, popMultiExternalGet);
 
 	CColRef2dArray *pdrgpdrgpcrInput = GPOS_NEW(mp) CColRef2dArray(mp);
