@@ -155,6 +155,7 @@ CXformExpandDynamicGetWithExternalPartitions::Transform
 											  pdrgpcrNew);
 	popMultiExternalGet->SetSecondaryScanId(COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal());
 	popMultiExternalGet->SetPartial();
+	popMultiExternalGet->SetPartConstraint(ppartcnstrCovered);
 	CExpression *pexprMultiExternalGet = GPOS_NEW(mp) CExpression(mp, popMultiExternalGet);
 
 	CColRef2dArray *pdrgpdrgpcrInput = GPOS_NEW(mp) CColRef2dArray(mp);
