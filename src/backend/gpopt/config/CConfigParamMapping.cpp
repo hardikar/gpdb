@@ -476,6 +476,9 @@ CConfigParamMapping::PackConfigParamInBitset(
 	// enable using opfamilies in distribution specs for GPDB 6
 	traceflag_bitset->ExchangeSet(EopttraceConsiderOpfamiliesForDistribution);
 
+	// enable external partitioned tables
+	traceflag_bitset->ExchangeSet(EopttraceEnableExternalPartitionedTables);
+
 	return traceflag_bitset;
 }
 
