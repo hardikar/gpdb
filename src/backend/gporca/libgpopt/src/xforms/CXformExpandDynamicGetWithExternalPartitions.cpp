@@ -17,6 +17,8 @@
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/xforms/CXformUtils.h"
 
+#include "gpopt/exception.h"
+
 using namespace gpopt;
 
 
@@ -102,6 +104,20 @@ CXformExpandDynamicGetWithExternalPartitions::Transform(
 		mp, mda, popGet->PdrgpdrgpcrPart(), relation->MDPartConstraint(),
 		popGet->PdrgpcrOutput());
 	ppartcnstrRest = ppartcnstrRel->PpartcnstrRemaining(mp, ppartcnstrCovered);
+
+	// PpartcnstrRemaining() returns NULL if ppartcnstrCovered has no constraint
+	// on the first level and contraints on higher levels are bounded (see
+	// CPartConstraint::FCanNegate()), which is the case for external partitions
+	// on multi-level partitioned tables,
+	// FIXME: Support multi-level external partitions
+	if (ppartcnstrRest == NULL)
+	{
+		// FIXME: Just return here instead? OR fall back earlier in the translator?
+		GPOS_RAISE(
+			gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
+			GPOS_WSZ_LIT(
+				"Query over external partitions in multi-level partitioned table"));
+	}
 
 	// Create new partial DynamicGet node with part constraints from ppartcnstrRest
 	CName *pnameDG = GPOS_NEW(mp) CName(mp, popGet->Name());
