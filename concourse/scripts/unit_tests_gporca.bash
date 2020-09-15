@@ -3,7 +3,7 @@ set -exo pipefail
 
 GPDB_SRC_PATH=${GPDB_SRC_PATH:=gpdb_src}
 
-function build_xerces()
+function build_xerces
 {
     OUTPUT_DIR="gpdb_src/gpAux/ext/${BLD_ARCH}"
     mkdir -p xerces_patch/concourse
@@ -12,7 +12,7 @@ function build_xerces()
     rm -rf build
 }
 
-function test_orca()
+function test_orca
 {
     if [ -n "${SKIP_UNITTESTS}" ]; then
         return
@@ -24,19 +24,11 @@ function test_orca()
     popd
 }
 
-function _main() {
+function _main
+{
   mkdir gpdb_src/gpAux/ext
-
-  case "${TEST_OS}" in
-    centos|ubuntu|sles)
-      build_xerces
-      test_orca
-      ;;
-    *)
-      echo "only centos, ubuntu, sles run orca unit tests"
-      false
-      ;;
-  esac
+  build_xerces
+  test_orca
 }
 
 _main "$@"

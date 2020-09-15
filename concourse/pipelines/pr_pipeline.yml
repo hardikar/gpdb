@@ -137,7 +137,4 @@ jobs:
         image: gpdb7-centos7-build
         input_mapping:
           gpdb_src: gpdb_pr
-          bin_gpdb: gpdb_artifacts
-        params:
-          TEST_OS: centos
-        timeout: 5h
+        timeout: 1h
