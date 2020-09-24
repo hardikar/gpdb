@@ -6,7 +6,7 @@
 //		CXformMultiExternalGet2MultiExternalScan.h
 //
 //	@doc:
-//		Transform ExternalGet to ExternalScan
+//		Transform MultiExternalGet to MultiExternalScan
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CXformMultiExternalGet2MultiExternalScan_H
 #define GPOPT_CXformMultiExternalGet2MultiExternalScan_H
@@ -23,7 +23,7 @@ using namespace gpos;
 //		CXformMultiExternalGet2MultiExternalScan
 //
 //	@doc:
-//		Transform ExternalGet to ExternalScan
+//		Transform MultiExternalGet to MultiExternalScan
 //
 //---------------------------------------------------------------------------
 class CXformMultiExternalGet2MultiExternalScan : public CXformImplementation

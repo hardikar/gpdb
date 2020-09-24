@@ -3,10 +3,12 @@
 //	Copyright (C) 2012 EMC Corp.
 //
 //	@filename:
-//		CXformExpandDynamicGet2DynamicWithExternalPartitions.h
+//		CXformExpandDynamicGetWithExternalPartitions.h
 //
 //	@doc:
-//		Transform DynamicGet to DynamicTableScan
+//  	Transform DynamicGet to a UNION ALL of a DynamicGet without External
+//  	partitions and a MultiExternalGet that encapsulates all the external
+//  	partitions.
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CXformExpandDynamicGetWithExternalPartitions_H
 #define GPOPT_CXformExpandDynamicGetWithExternalPartitions_H
@@ -25,8 +27,9 @@ using namespace gpos;
 //		CXformExpandDynamicGetWithExternalPartitions
 //
 //	@doc:
-//		Transform DynamicGet to DynamicTableScan
-//
+//  	Transform DynamicGet to a UNION ALL of a DynamicGet without External
+//  	partitions and a MultiExternalGet that encapsulates all the external
+//  	partitions.
 //---------------------------------------------------------------------------
 class CXformExpandDynamicGetWithExternalPartitions : public CXformExploration
 {
@@ -68,11 +71,25 @@ public:
 		CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
 
 		const IMDRelation *relation = mda->RetrieveRel(ptabdesc->MDId());
-		if (relation->HasExternalPartitions() && popGet->IsPartial())
+		if (relation->HasExternalPartitions())
 		{
-			return CXform::ExfpNone;
+			if (popGet->IsPartial())
+			{
+				// Prevent unneccesary re-execution of this xform once a
+				// DynamicGet has already been split. In such a case, a
+				// Partitial DynamicGet is produced, and any indexes or external
+				// partitions are handled separately.
+				return CXform::ExfpNone;
+			}
+
+			// Run the xform only on a non-partial DynamicGet with external
+			// partitions
+			return CXform::ExfpHigh;
 		}
-		return CXform::ExfpHigh;
+
+		// No need to run this xform if the relation being scanned does not
+		// contain external partitions
+		return CXform::ExfpNone;
 	}
 
 	// actual transform
