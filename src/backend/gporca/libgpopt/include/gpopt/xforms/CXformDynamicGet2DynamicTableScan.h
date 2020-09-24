@@ -70,6 +70,10 @@ public:
 		const IMDRelation *relation = mda->RetrieveRel(ptabdesc->MDId());
 		if (relation->HasExternalPartitions() && !popGet->IsPartial())
 		{
+			// In case the relation has any external partition tables, they must
+			// first be extracted into partial scans and a MulitExternalGet by
+			// CXformExpandDynamicGetWithExternalPartitions, before this
+			// DynamicGet can be implemented as a DynamicTableScan
 			return CXform::ExfpNone;
 		}
 		return CXform::ExfpHigh;

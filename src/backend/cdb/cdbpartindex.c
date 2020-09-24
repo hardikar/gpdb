@@ -1005,8 +1005,8 @@ get_relation_part_constraints(Oid rootOid, List **defaultLevels)
 }
 
 /*
- * get_relation_part_constraints
- *  return the part constraints for a partitioned table given the oid of the root
+ * get_leaf_part_constraints
+ *  return the leaf part constraints for a partitioned table given its oid
  */
 Node *
 get_leaf_part_constraints(Oid partOid, List **defaultLevels)

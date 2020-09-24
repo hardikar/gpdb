@@ -6,7 +6,8 @@
 //		CPhysicalMultiExternalScan.h
 //
 //	@doc:
-//		External scan operator
+//  	External scan operator for multiple tables sharing a common
+//  	column layout
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CPhysicalMultiExternalScan_H
 #define GPOPT_CPhysicalMultiExternalScan_H
@@ -16,14 +17,8 @@
 
 namespace gpopt
 {
-//---------------------------------------------------------------------------
-//	@class:
-//		CPhysicalMultiExternalScan
-//
-//	@doc:
-//		External scan operator
-//
-//---------------------------------------------------------------------------
+// External scan operator for multiple tables sharing a common column layout.
+// Currently only used for external leaf partitions in a partitioned table.
 class CPhysicalMultiExternalScan : public CPhysicalDynamicScan
 {
 private:

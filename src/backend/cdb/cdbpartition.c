@@ -9004,7 +9004,8 @@ findPartitionNodeEntry(PartitionNode *partitionNode, Oid partOid)
  * external partition table
  */
 static bool
-has_external_partition(PartitionNode *pn) {
+has_external_partition(PartitionNode *pn)
+{
 	if (pn == NULL)
 	{
 		return false;
@@ -9072,8 +9073,8 @@ collect_external_partitions(PartitionNode *pn, List **extparts) {
 		{
 			*extparts = lappend_oid(*extparts, rel->rd_id);
 		}
-		collect_external_partitions(rule->children, extparts);
 		heap_close(rel, NoLock);
+		collect_external_partitions(rule->children, extparts);
 	}
 	if (pn->default_part)
 	{

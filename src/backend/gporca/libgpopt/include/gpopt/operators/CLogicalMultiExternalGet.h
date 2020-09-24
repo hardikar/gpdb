@@ -6,7 +6,8 @@
 //		CLogicalMultiExternalGet.h
 //
 //	@doc:
-//		Logical external get operator
+//  	Logical external get operator for multiple tables sharing a common
+//  	column layout
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CLogicalMultiExternalGet_H
 #define GPOPT_CLogicalMultiExternalGet_H
@@ -21,14 +22,8 @@ class CTableDescriptor;
 class CName;
 class CColRefSet;
 
-//---------------------------------------------------------------------------
-//	@class:
-//		CLogicalMultiExternalGet
-//
-//	@doc:
-//		Logical external get operator
-//
-//---------------------------------------------------------------------------
+// Logical external get operator for multiple tables sharing a common column layout
+// Currently only used for external leaf partitions in a partitioned table.
 class CLogicalMultiExternalGet : public CLogicalDynamicGetBase
 {
 private:

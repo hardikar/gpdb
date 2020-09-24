@@ -94,6 +94,7 @@ CXformExpandDynamicGetWithExternalPartitions::Transform(
 		if (NULL == ppartcnstrNewlyCovered)
 		{
 			// FIXME: Can this happen here?
+			CRefCount::SafeRelease(ppartcnstr);
 			continue;
 		}
 		CRefCount::SafeRelease(ppartcnstrCovered);
