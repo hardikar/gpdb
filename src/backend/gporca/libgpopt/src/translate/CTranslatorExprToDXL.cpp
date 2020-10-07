@@ -4746,14 +4746,17 @@ CTranslatorExprToDXL::PdxlnPartitionSelectorExpand(
 			 pexprChild->Pop()->Eopid()) &&
 			"Inlining predicates only allowed in DynamicTableScan, DynamicIndexScan and DynamicBitmapTableScan");
 
-	CPhysicalPartitionSelector *popSelector =
-		CPhysicalPartitionSelector::PopConvert(pexpr->Pop());
-	const ULONG ulLevels = popSelector->UlPartLevels();
-
 	// translate child
 	CDXLNode *child_dxlnode = PdxlnPartitionSelectorChild(
 		pexprChild, pexprScalarCond, dxl_properties, colref_array,
 		pdrgpdsBaseTables, pulNonGatherMotions, pfDML);
+
+	return child_dxlnode;
+#if 0
+
+	CPhysicalPartitionSelector *popSelector =
+		CPhysicalPartitionSelector::PopConvert(pexpr->Pop());
+	const ULONG ulLevels = popSelector->UlPartLevels();
 
 	// project list
 	IMDId *mdid = popSelector->MDId();
@@ -4820,6 +4823,7 @@ CTranslatorExprToDXL::PdxlnPartitionSelectorExpand(
 #endif
 
 	return pdxlnSequence;
+#endif
 }
 
 //---------------------------------------------------------------------------
