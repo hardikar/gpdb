@@ -1425,6 +1425,7 @@ CTranslatorExprToDXL::PdxlnMultiExternalScan(
 			multi_extscan->Ptabdesc()->GetExecuteAsUserId());
 
 		// Each scan shares the same col descriptors as the parent partitioned table
+		// FIXME: Dropped columns break the assumption above. Handle it correctly.
 		CColumnDescriptorArray *multi_extscan_col_desc =
 			multi_extscan->Ptabdesc()->Pdrgpcoldesc();
 		for (ULONG ul = 0; ul < multi_extscan_col_desc->Size(); ul++)
