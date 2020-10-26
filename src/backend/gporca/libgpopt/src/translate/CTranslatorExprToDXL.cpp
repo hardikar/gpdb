@@ -559,11 +559,6 @@ CTranslatorExprToDXL::PdxlnTblScan(CExpression *pexprTblScan,
 	{
 		pdxlopTS = GPOS_NEW(m_mp) CDXLPhysicalTableScan(m_mp, table_descr);
 	}
-	else if (COperator::EopPhysicalMultiExternalScan == op_id)
-	{
-		pdxlopTS =
-			GPOS_NEW(m_mp) CDXLPhysicalMultiExternalScan(m_mp, table_descr);
-	}
 	else
 	{
 		GPOS_ASSERT(COperator::EopPhysicalExternalScan == op_id);
