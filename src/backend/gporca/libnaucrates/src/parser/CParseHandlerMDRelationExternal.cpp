@@ -90,10 +90,6 @@ CParseHandlerMDRelationExternal::StartElement(
 				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 				EdxltokenPartConstraintUnbounded, EdxltokenRelation);
 
-		//		CParseHandlerMDIndexInfoList *pphMdlIndexInfo = dynamic_cast<CParseHandlerMDIndexInfoList*>((*this)[1]);
-		//		// relcache translator will send partition constraint expression only when a partitioned relation has indices
-		//		if (pphMdlIndexInfo->GetMdIndexInfoArray()->Size() > 0)
-		//		{
 		// parse handler for part constraints
 		CParseHandlerBase *pphPartConstraint =
 			CParseHandlerFactory::GetParseHandler(
@@ -101,7 +97,6 @@ CParseHandlerMDRelationExternal::StartElement(
 				m_parse_handler_mgr, this);
 		m_parse_handler_mgr->ActivateParseHandler(pphPartConstraint);
 		this->Append(pphPartConstraint);
-		//		}
 
 		return;
 	}
