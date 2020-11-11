@@ -130,7 +130,7 @@ class GpStart(GpTestCase):
         self.subject.logger.info.assert_any_call('Starting Master instance in admin mode')
         self.subject.logger.info.assert_any_call('Master Started...')
 
-        self.assertEquals(self.mock_gplog_log_to_file_only.call_count, 0)
+        self.assertEqual(self.mock_gplog_log_to_file_only.call_count, 0)
 
     def test_skip_checksum_validation_succeeds(self):
         sys.argv = ["gpstart", "-a", "--skip-heap-checksum-validation"]
@@ -194,8 +194,8 @@ class GpStart(GpTestCase):
         up, down = gpstart._prepare_segment_start()
 
         # The master and standby should not be accounted for in these lists.
-        self.assertItemsEqual(up, [primary1, mirror0])
-        self.assertItemsEqual(down, [primary0, mirror1])
+        self.assertCountEqual(up, [primary1, mirror0])
+        self.assertCountEqual(down, [primary0, mirror1])
 
     @patch("gppylib.commands.pg.PgControlData.run")
     @patch("gppylib.commands.pg.PgControlData.get_value", return_value="2")
@@ -348,7 +348,7 @@ class GpStart(GpTestCase):
 
 def os_exists_check(arg):
     # Skip file related checks
-    if 'pg_log' in arg:
+    if 'log' in arg:
         return True
     elif 'postmaster.pid' in arg or '.s.PGSQL' in arg:
         return False

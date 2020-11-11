@@ -174,6 +174,8 @@ recoverTM(void)
 	*shmDtmStarted = true;
 	elog(LOG, "DTM Started");
 
+	SendPostmasterSignal(PMSIGNAL_DTM_RECOVERED);
+
 	/*
 	 * dtx recovery process won't exit, so signal postmaster to launch
 	 * bg workers that depend on dtx recovery.
@@ -475,7 +477,7 @@ ReplayRedoFromUtilityMode(void)
 
 	GetRedoFileName(path);
 
-	fd = open(path, O_RDONLY, 0);
+	fd = OpenTransientFile(path, O_RDONLY | PG_BINARY);
 	if (fd < 0)
 	{
 		/* UNDONE: Distinquish "not found" from other errors. */
@@ -499,7 +501,7 @@ ReplayRedoFromUtilityMode(void)
 				 (int) sizeof(TMGXACT_UTILITY_MODE_REDO), read_len);
 		else if (errno != 0)
 		{
-			close(fd);
+			CloseTransientFile(fd);
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("error reading DTM redo file: %m")));
@@ -519,7 +521,7 @@ ReplayRedoFromUtilityMode(void)
 
 	elog(DTM_DEBUG5, "Processed %d entries from DTM redo file",
 		 entries);
-	close(fd);
+	CloseTransientFile(fd);
 }
 
 static void
@@ -544,7 +546,8 @@ UtilityModeCloseDtmRedoFile(void)
 		return;
 	}
 	elog(DTM_DEBUG3, "Closing DTM redo file");
-	close(redoFileFD);
+	CloseTransientFile(redoFileFD);
+	redoFileFD = -1;
 }
 
 void
@@ -560,7 +563,7 @@ UtilityModeFindOrCreateDtmRedoFile(void)
 	}
 	GetRedoFileName(path);
 
-	redoFileFD = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	redoFileFD = OpenTransientFile(path, O_RDWR | O_CREAT | PG_BINARY);
 	if (redoFileFD < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
@@ -759,7 +762,7 @@ DtxRecoveryMain(Datum main_arg)
 	BackgroundWorkerUnblockSignals();
 
 	/* Connect to postgres */
-	BackgroundWorkerInitializeConnection(DB_FOR_COMMON_ACCESS, NULL);
+	BackgroundWorkerInitializeConnection(DB_FOR_COMMON_ACCESS, NULL, 0);
 
 	/*
 	 * Do dtx recovery process.  It is possible that *shmDtmStarted is true
@@ -802,10 +805,12 @@ DtxRecoveryMain(Datum main_arg)
 		/* Find orphaned prepared transactions and abort them. */
 		AbortOrphanedPreparedTransactions();
 
+		/* GPDB_12_MERGE_FIXME: Create a new WaitEventIPC member for this? */
 		rc = WaitLatch(&MyProc->procLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
 					   frequent_check_times > 0 ?
-					   5 * 1000L : gp_dtx_recovery_interval * 1000L);
+					   5 * 1000L : gp_dtx_recovery_interval * 1000L,
+					   0);
 		ResetLatch(&MyProc->procLatch);
 
 		/* emergency bailout if postmaster has died */

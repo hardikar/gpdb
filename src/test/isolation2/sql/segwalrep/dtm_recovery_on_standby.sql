@@ -1,7 +1,5 @@
 -- Validate that standby performs DTM recovery upon promotion.
 
-include: helpers/server_helpers.sql;
-
 -- Check that are starting with a clean slate, standby must be in sync
 -- with master.
 select application_name, state, sync_state from pg_stat_replication;
@@ -86,17 +84,17 @@ returns text as $$
     master = rv[1] # role = 'p'
     try:
         cmd = 'rm -rf %s.dtm_recovery && cp -R %s %s.dtm_recovery' % (standby['datadir'], standby['datadir'], standby['datadir'])
-	remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
         cmd = 'gpinitstandby -ar -P %d' % master['port']
-	remove_output += subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        remove_output += subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
         cmd = 'export PGPORT=%d; gpinitstandby -a -s %s -S %s -P %d' % (master['port'], standby['hostname'], standby['datadir'], standby['port'])
         init_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         plpy.info(e.output)
-	raise
+        raise
 
     return remove_output + "\n" + init_output
-$$ language plpythonu;
+$$ language plpython3u;
 
 -- start_ignore
 select reinitialize_standby();

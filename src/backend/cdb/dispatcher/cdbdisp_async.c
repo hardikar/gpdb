@@ -1,9 +1,14 @@
-
 /*-------------------------------------------------------------------------
  *
  * cdbdisp_async.c
  *	  Functions for asynchronous implementation of dispatching
  *	  commands to QExecutors.
+ *
+ * GPDB_12_MERGE_FIXME: We should switch to using WaitEventSetWait() instead
+ * of straight poll() in this file. WaitEventSetWait() would report the status
+ * using the new wait event infrastructure, so that it would show up as a
+ * separate state in pg_stat_activity. It's also potentially more efficient.
+ *
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
@@ -235,7 +240,7 @@ cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds)
 			}
 			else if (ret < 0)
 			{
-				pqHandleSendFailure(conn);
+				/* error message should be set up already */
 				char	   *msg = PQerrorMessage(conn);
 
 				qeResult->stillRunning = false;
@@ -910,7 +915,17 @@ processResults(CdbDispatchResult *dispatchResult)
 		}
 
 		if (segdbDesc->conn->wrote_xlog)
+		{
 			MarkTopTransactionWriteXLogOnExecutor();
+
+			/*
+			 * Reset the worte_xlog here. Since if the received pgresult not process
+			 * the xlog write message('x' message sends from QE in ReadyForQuery),
+			 * the value may still refer to previous dispatch statement. Which may
+			 * always mark current top transaction has wrote xlog on executor.
+			 */
+			segdbDesc->conn->wrote_xlog = false;
+		}
 
 		/*
 		 * Attach the PGresult object to the CdbDispatchResult object.

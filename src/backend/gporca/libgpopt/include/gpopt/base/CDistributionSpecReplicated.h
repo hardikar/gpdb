@@ -6,7 +6,7 @@
 //		CDistributionSpecReplicated.h
 //
 //	@doc:
-//		Description of a replicated distribution; 
+//		Description of a replicated distribution;
 //		Can be used as required or derived property;
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CDistributionSpecReplicated_H
@@ -19,74 +19,68 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDistributionSpecReplicated
-	//
-	//	@doc:
-	//		Class for representing replicated distribution specification.
-	//
-	//---------------------------------------------------------------------------
-	class CDistributionSpecReplicated : public CDistributionSpec
+//---------------------------------------------------------------------------
+//	@class:
+//		CDistributionSpecReplicated
+//
+//	@doc:
+//		Class for representing replicated distribution specification.
+//
+//---------------------------------------------------------------------------
+class CDistributionSpecReplicated : public CDistributionSpec
+{
+private:
+public:
+	CDistributionSpecReplicated(const CDistributionSpecReplicated &) = delete;
+
+	// ctor
+	CDistributionSpecReplicated() = default;
+
+	// accessor
+	EDistributionType
+	Edt() const override
 	{
-		private:
+		return CDistributionSpec::EdtReplicated;
+	}
 
-			// private copy ctor
-			CDistributionSpecReplicated(const CDistributionSpecReplicated &);
-			
-		public:
-			// ctor
-			CDistributionSpecReplicated()
-			{}
-			
-			// accessor
-			virtual 
-			EDistributionType Edt() const
-			{
-				return CDistributionSpec::EdtReplicated;
-			}
-			
-			// does this distribution satisfy the given one
-			virtual 
-			BOOL FSatisfies(const CDistributionSpec *pds) const;
-			
-			// append enforcers to dynamic array for the given plan properties
-			virtual
-			void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl, CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr, CExpression *pexpr);
+	// does this distribution satisfy the given one
+	BOOL FSatisfies(const CDistributionSpec *pds) const override;
 
-			// return distribution partitioning type
-			virtual
-			EDistributionPartitioningType Edpt() const
-			{
-				return EdptNonPartitioned;
-			}
+	// append enforcers to dynamic array for the given plan properties
+	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,
+						 CExpression *pexpr) override;
 
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const
-			{
-				return os << "REPLICATED ";
-			}
-			
-			// conversion function
-			static
-			CDistributionSpecReplicated *PdsConvert
-				(
-				CDistributionSpec *pds
-				)
-			{
-				GPOS_ASSERT(NULL != pds);
-				GPOS_ASSERT(EdtReplicated == pds->Edt());
+	// return distribution partitioning type
+	EDistributionPartitioningType
+	Edpt() const override
+	{
+		return EdptNonPartitioned;
+	}
 
-				return dynamic_cast<CDistributionSpecReplicated*>(pds);
-			}
+	// print
+	IOstream &
+	OsPrint(IOstream &os) const override
+	{
+		return os << "REPLICATED ";
+	}
 
-	}; // class CDistributionSpecReplicated
+	// conversion function
+	static CDistributionSpecReplicated *
+	PdsConvert(CDistributionSpec *pds)
+	{
+		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(EdtReplicated == pds->Edt());
 
-}
+		return dynamic_cast<CDistributionSpecReplicated *>(pds);
+	}
 
-#endif // !GPOPT_CDistributionSpecReplicated_H
+};	// class CDistributionSpecReplicated
+
+}  // namespace gpopt
+
+#endif	// !GPOPT_CDistributionSpecReplicated_H
 
 // EOF

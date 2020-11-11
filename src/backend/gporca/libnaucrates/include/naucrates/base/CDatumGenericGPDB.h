@@ -20,179 +20,143 @@
 
 namespace gpnaucrates
 {
-
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDatumGenericGPDB
-	//
-	//	@doc:
-	//		GPDB-specific generic datum representation
-	//
-	//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//	@class:
+//		CDatumGenericGPDB
+//
+//	@doc:
+//		GPDB-specific generic datum representation
+//
+//---------------------------------------------------------------------------
 class CDatumGenericGPDB : public IDatumGeneric
 {
+private:
+	// memory pool
+	CMemoryPool *m_mp;
 
-	private:
+	// size in bytes
+	ULONG m_size;
 
-		// memory pool
-		CMemoryPool *m_mp;
+	// a pointer to datum value
+	BYTE *m_bytearray_value;
 
-		// size in bytes
-		ULONG m_size;
+	// is null
+	BOOL m_is_null;
 
-		// a pointer to datum value
-		BYTE *m_bytearray_value;
+	// type information
+	IMDId *m_mdid;
 
-		// is null
-		BOOL m_is_null;
+	INT m_type_modifier;
 
-		// type information
-		IMDId *m_mdid;
+	// long int value used for statistic computation
+	LINT m_stats_comp_val_int;
 
-		INT m_type_modifier;
+	// double value used for statistic computation
+	CDouble m_stats_comp_val_double;
 
-		// long int value used for statistic computation
-		LINT m_stats_comp_val_int;
+public:
+	CDatumGenericGPDB(const CDatumGenericGPDB &) = delete;
 
-		// double value used for statistic computation
-		CDouble m_stats_comp_val_double;
+	// ctor
+	CDatumGenericGPDB(CMemoryPool *mp, IMDId *mdid, INT type_modifier,
+					  const void *src, ULONG size, BOOL is_null,
+					  LINT stats_comp_val_int, CDouble stats_comp_val_double);
 
-		// private copy ctor
-		CDatumGenericGPDB(const CDatumGenericGPDB &);
+	// dtor
+	~CDatumGenericGPDB() override;
 
-	public:
+	// accessor of metadata type id
+	IMDId *MDId() const override;
 
-		// ctor
-		CDatumGenericGPDB
-				(
-						CMemoryPool *mp,
-						IMDId *mdid,
-						INT type_modifier,
-						const void *src,
-						ULONG size,
-						BOOL is_null,
-						LINT stats_comp_val_int,
-						CDouble stats_comp_val_double
-				);
+	INT TypeModifier() const override;
 
-		// dtor
-		virtual
-		~CDatumGenericGPDB();
+	// accessor of size
+	ULONG Size() const override;
 
-		// accessor of metadata type id
-		virtual
-		IMDId *MDId() const;
+	// accessor of is null
+	BOOL IsNull() const override;
 
-		virtual
-		INT TypeModifier() const;
+	// return string representation
+	const CWStringConst *GetStrRepr(CMemoryPool *mp) const override;
 
-		// accessor of size
-		virtual
-		ULONG Size() const;
+	// hash function
+	ULONG HashValue() const override;
 
-		// accessor of is null
-		virtual
-		BOOL IsNull() const;
+	// match function for datums
+	BOOL Matches(const IDatum *datum) const override;
 
-		// return string representation
-		virtual
-		const CWStringConst *GetStrRepr(CMemoryPool *mp) const;
+	// copy datum
+	IDatum *MakeCopy(CMemoryPool *mp) const override;
 
-		// hash function
-		virtual
-		ULONG HashValue() const;
+	// print function
+	IOstream &OsPrint(IOstream &os) const override;
 
-		// match function for datums
-		virtual
-		BOOL Matches(const IDatum *datum) const;
+	// accessor to bytearray, creates a copy
+	virtual BYTE *MakeCopyOfValue(CMemoryPool *mp, ULONG *pulLength) const;
 
-		// copy datum
-		virtual
-		IDatum *MakeCopy(CMemoryPool *mp) const;
-		
-		// print function
-		virtual
-		IOstream &OsPrint(IOstream &os) const;
+	// statistics related APIs
 
-		// accessor to bytearray, creates a copy
-		virtual
-		BYTE *MakeCopyOfValue(CMemoryPool *mp, ULONG *pulLength) const;
+	// can datum be mapped to a double
+	BOOL IsDatumMappableToDouble() const override;
 
-		// statistics related APIs
+	// map to double for stats computation
+	CDouble
+	GetDoubleMapping() const override
+	{
+		GPOS_ASSERT(IsDatumMappableToDouble());
 
-		// can datum be mapped to a double
-		virtual
-		BOOL IsDatumMappableToDouble() const;
+		return m_stats_comp_val_double;
+	}
 
-		// map to double for stats computation
-		virtual
-		CDouble GetDoubleMapping() const
-		{
-			GPOS_ASSERT(IsDatumMappableToDouble());
+	// can datum be mapped to LINT
+	BOOL IsDatumMappableToLINT() const override;
 
-			return m_stats_comp_val_double;
-		}
+	// map to LINT for statistics computation
+	LINT
+	GetLINTMapping() const override
+	{
+		GPOS_ASSERT(IsDatumMappableToLINT());
 
-		// can datum be mapped to LINT
-		virtual
-		BOOL IsDatumMappableToLINT() const;
+		return m_stats_comp_val_int;
+	}
 
-		// map to LINT for statistics computation
-		virtual
-		LINT GetLINTMapping() const
-		{
-			GPOS_ASSERT(IsDatumMappableToLINT());
+	// byte array representation of datum
+	const BYTE *GetByteArrayValue() const override;
 
-			return m_stats_comp_val_int;
-		}
+	// stats equality
+	BOOL StatsAreEqual(const IDatum *datum) const override;
 
-		// byte array representation of datum
-		virtual
-		const BYTE *GetByteArrayValue() const;
+	// does the datum need to be padded before statistical derivation
+	BOOL NeedsPadding() const override;
 
-		// stats equality
-		virtual
-		BOOL StatsAreEqual(const IDatum *datum) const;
+	// return the padded datum
+	IDatum *MakePaddedDatum(CMemoryPool *mp, ULONG col_len) const override;
 
-		// does the datum need to be padded before statistical derivation
-		virtual
-		BOOL NeedsPadding() const;
+	// does datum support like predicate
+	BOOL
+	SupportsLikePredicate() const override
+	{
+		return true;
+	}
 
-		// return the padded datum
-		virtual
-		IDatum *MakePaddedDatum(CMemoryPool *mp, ULONG col_len) const;
+	// return the default scale factor of like predicate
+	CDouble GetLikePredicateScaleFactor() const override;
 
-		// does datum support like predicate
-		virtual
-		BOOL SupportsLikePredicate() const
-		{
-			return true;
-		}
+	// default selectivity of the trailing wildcards
+	virtual CDouble GetTrailingWildcardSelectivity(const BYTE *pba,
+												   ULONG ulPos) const;
 
-		// return the default scale factor of like predicate
-		virtual
-		CDouble GetLikePredicateScaleFactor() const;
+	// selectivities needed for LIKE predicate statistics evaluation
+	static const CDouble DefaultFixedCharSelectivity;
+	static const CDouble DefaultCharRangeSelectivity;
+	static const CDouble DefaultAnyCharSelectivity;
+	static const CDouble DefaultCdbRanchorSelectivity;
+	static const CDouble DefaultCdbRolloffSelectivity;
 
-		// default selectivity of the trailing wildcards
-		virtual
-		CDouble GetTrailingWildcardSelectivity(const BYTE *pba, ULONG ulPos) const;
-
-		// selectivities needed for LIKE predicate statistics evaluation
-		static
-		const CDouble DefaultFixedCharSelectivity;
-		static
-		const CDouble DefaultCharRangeSelectivity;
-		static
-		const CDouble DefaultAnyCharSelectivity;
-		static
-		const CDouble DefaultCdbRanchorSelectivity;
-		static
-		const CDouble DefaultCdbRolloffSelectivity;
-
-	}; // class CDatumGenericGPDB
-}
+};	// class CDatumGenericGPDB
+}  // namespace gpnaucrates
 
 
-#endif // !GPNAUCRATES_CDatumGenericGPDB_H
+#endif	// !GPNAUCRATES_CDatumGenericGPDB_H
 
 // EOF

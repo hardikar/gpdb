@@ -9,33 +9,25 @@
 
 namespace gpopt
 {
-	class CDistributionSpecHashedNoOp : public CDistributionSpecHashed
+class CDistributionSpecHashedNoOp : public CDistributionSpecHashed
+{
+public:
+	CDistributionSpecHashedNoOp(CExpressionArray *pdrgpexr);
+
+	EDistributionType Edt() const override;
+
+	BOOL Matches(const CDistributionSpec *pds) const override;
+
+	const CHAR *
+	SzId() const override
 	{
-		public:
-			CDistributionSpecHashedNoOp
-			(
-			CExpressionArray *pdrgpexr
-			);
+		return "HASHED NO-OP";
+	}
 
-			virtual EDistributionType Edt() const;
-
-			virtual BOOL Matches(const CDistributionSpec *pds) const;
-
-			virtual const CHAR *SzId() const
-			{
-				return "HASHED NO-OP";
-			}
-
-			virtual void
-			AppendEnforcers
-			(
-			CMemoryPool *mp,
-			CExpressionHandle &exprhdl,
-			CReqdPropPlan *prpp,
-			CExpressionArray *pdrgpexpr,
-			CExpression *pexpr
-			);
-	};
-}
+	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,
+						 CExpression *pexpr) override;
+};
+}  // namespace gpopt
 
 #endif

@@ -700,13 +700,15 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 		}
 		if (nfds == -1)
 		{
+			int save_errno = errno;
 			if (errno == EINTR || errno == EAGAIN)
 			{
-				elog(DEBUG2, "select failed on curl_multi_fdset (maxfd %d) (%d - %s)", maxfd, errno, strerror(errno));
+				elog(DEBUG2, "select failed on curl_multi_fdset (maxfd %d) (%d - %s)", maxfd,
+					 save_errno, strerror(save_errno));
 				continue;
 			}
 			elog(ERROR, "internal error: select failed on curl_multi_fdset (maxfd %d) (%d - %s)",
-				 maxfd, errno, strerror(errno));
+				 maxfd, save_errno, strerror(save_errno));
 		}
 		else if (nfds == 0)
 		{
@@ -1195,7 +1197,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	 */
 	if (IS_GPFDISTS_URI(url))
 	{
-		Insist(PointerIsValid(DataDir));
+		Assert(PointerIsValid(DataDir));
 		elog(LOG,"trying to load certificates from %s", DataDir);
 
 		/* curl will save its last error in curlErrorBuffer */
@@ -1212,7 +1214,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 
 			if (!is_file_exists(extssl_cer_full))
 				ereport(ERROR,
-						(errcode(errcode_for_file_access()),
+						(errcode_for_file_access(),
 						 errmsg("could not open certificate file \"%s\": %m",
 								extssl_cer_full)));
 
@@ -1233,7 +1235,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 
 			if (!is_file_exists(extssl_key_full))
 				ereport(ERROR,
-						(errcode(errcode_for_file_access()),
+						(errcode_for_file_access(),
 						 errmsg("could not open private key file \"%s\": %m",
 								extssl_key_full)));
 
@@ -1248,7 +1250,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 
 			if (!is_file_exists(extssl_cas_full))
 				ereport(ERROR,
-						(errcode(errcode_for_file_access()),
+						(errcode_for_file_access(),
 						 errmsg("could not open private key file \"%s\": %m",
 								extssl_cas_full)));
 

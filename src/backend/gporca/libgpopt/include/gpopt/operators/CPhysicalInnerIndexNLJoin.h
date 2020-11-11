@@ -16,96 +16,91 @@
 
 namespace gpopt
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CPhysicalInnerIndexNLJoin
+//
+//	@doc:
+//		Inner index nested-loops join operator
+//
+//---------------------------------------------------------------------------
+class CPhysicalInnerIndexNLJoin : public CPhysicalInnerNLJoin
+{
+private:
+	// columns from outer child used for index lookup in inner child
+	CColRefArray *m_pdrgpcrOuterRefs;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPhysicalInnerIndexNLJoin
-	//
-	//	@doc:
-	//		Inner index nested-loops join operator
-	//
-	//---------------------------------------------------------------------------
-	class CPhysicalInnerIndexNLJoin : public CPhysicalInnerNLJoin
+	// a copy of the original join predicate that has been pushed down to the inner side
+	CExpression *m_origJoinPred;
+
+public:
+	CPhysicalInnerIndexNLJoin(const CPhysicalInnerIndexNLJoin &) = delete;
+
+	// ctor
+	CPhysicalInnerIndexNLJoin(CMemoryPool *mp, CColRefArray *colref_array,
+							  CExpression *origJoinPred);
+
+	// dtor
+	~CPhysicalInnerIndexNLJoin() override;
+
+	// ident accessors
+	EOperatorId
+	Eopid() const override
 	{
+		return EopPhysicalInnerIndexNLJoin;
+	}
 
-		private:
+	// return a string for operator name
+	const CHAR *
+	SzId() const override
+	{
+		return "CPhysicalInnerIndexNLJoin";
+	}
 
-			// columns from outer child used for index lookup in inner child
-			CColRefArray *m_pdrgpcrOuterRefs;
+	// match function
+	BOOL Matches(COperator *pop) const override;
 
-			// private copy ctor
-			CPhysicalInnerIndexNLJoin(const CPhysicalInnerIndexNLJoin &);
+	// outer column references accessor
+	CColRefArray *
+	PdrgPcrOuterRefs() const
+	{
+		return m_pdrgpcrOuterRefs;
+	}
 
-		public:
+	// compute required distribution of the n-th child
+	CDistributionSpec *PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CDistributionSpec *pdsRequired,
+								   ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulOptReq) const override;
 
-			// ctor
-			CPhysicalInnerIndexNLJoin(CMemoryPool *mp, CColRefArray *colref_array);
+	// execution order of children
+	EChildExecOrder
+	Eceo() const override
+	{
+		// we optimize inner (right) child first to be able to match child hashed distributions
+		return EceoRightToLeft;
+	}
 
-			// dtor
-			virtual
-			~CPhysicalInnerIndexNLJoin();
+	// conversion function
+	static CPhysicalInnerIndexNLJoin *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(EopPhysicalInnerIndexNLJoin == pop->Eopid());
 
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopPhysicalInnerIndexNLJoin;
-			}
+		return dynamic_cast<CPhysicalInnerIndexNLJoin *>(pop);
+	}
 
-			 // return a string for operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CPhysicalInnerIndexNLJoin";
-			}
+	CExpression *
+	OrigJoinPred()
+	{
+		return m_origJoinPred;
+	}
 
-			// match function
-			virtual
-			BOOL Matches(COperator *pop) const;
+};	// class CPhysicalInnerIndexNLJoin
 
-			// outer column references accessor
-			CColRefArray *PdrgPcrOuterRefs() const
-			{
-				return m_pdrgpcrOuterRefs;
-			}
+}  // namespace gpopt
 
-			// compute required distribution of the n-th child
-			virtual
-			CDistributionSpec *PdsRequired
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				CDistributionSpec *pdsRequired,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				)
-				const;
-
-			// execution order of children
-			virtual
-			EChildExecOrder Eceo() const
-			{
-				// we optimize inner (right) child first to be able to match child hashed distributions
-				return EceoRightToLeft;
-			}
-
-			// conversion function
-			static
-			CPhysicalInnerIndexNLJoin *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(EopPhysicalInnerIndexNLJoin == pop->Eopid());
-
-				return dynamic_cast<CPhysicalInnerIndexNLJoin*>(pop);
-			}
-
-	}; // class CPhysicalInnerIndexNLJoin
-
-}
-
-#endif // !GPOPT_CPhysicalInnerIndexNLJoin_H
+#endif	// !GPOPT_CPhysicalInnerIndexNLJoin_H
 
 // EOF

@@ -46,7 +46,6 @@
 #include "unittest/gpos/error/CMiniDumperTest.h"
 
 #include "unittest/gpos/io/COstreamBasicTest.h"
-#include "unittest/gpos/io/COstreamFileTest.h"
 #include "unittest/gpos/io/COstreamStringTest.h"
 #include "unittest/gpos/io/CFileTest.h"
 
@@ -64,8 +63,7 @@
 using namespace gpos;
 
 // static array of all known unittest routines
-static gpos::CUnittest rgut[] =
-{
+static gpos::CUnittest rgut[] = {
 	// common
 	GPOS_UNITTEST_STD(CAutoPTest),
 	GPOS_UNITTEST_STD(CAutoRefTest),
@@ -98,7 +96,6 @@ static gpos::CUnittest rgut[] =
 	// io
 	GPOS_UNITTEST_STD(COstreamBasicTest),
 	GPOS_UNITTEST_STD(COstreamStringTest),
-	GPOS_UNITTEST_STD(COstreamFileTest),
 	GPOS_UNITTEST_STD(CFileTest),
 
 	// memory
@@ -131,12 +128,9 @@ static ULONG tests_failed = 0;
 //
 //---------------------------------------------------------------------------
 static void *
-PvExec
-	(
-	void *pv
-	)
+PvExec(void *pv)
 {
-	CMainArgs *pma = (CMainArgs*) pv;
+	CMainArgs *pma = (CMainArgs *) pv;
 	tests_failed = CUnittest::Driver(pma);
 
 	return NULL;
@@ -151,16 +145,13 @@ PvExec
 //		time being
 //
 //---------------------------------------------------------------------------
-INT main
-	(
-	INT iArgs,
-	const CHAR **rgszArgs
-	)
-{	
+INT
+main(INT iArgs, const CHAR **rgszArgs)
+{
 	// setup args for unittest params
 	CMainArgs ma(iArgs, rgszArgs, "cuU:xT:");
 
-	struct gpos_init_params init_params = { NULL };
+	struct gpos_init_params init_params = {NULL};
 	gpos_init(&init_params);
 
 	GPOS_ASSERT(iArgs >= 0);
@@ -189,4 +180,3 @@ INT main
 
 
 // EOF
-

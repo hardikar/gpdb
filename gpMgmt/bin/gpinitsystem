@@ -536,42 +536,7 @@ CHK_MULTI_HOME () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	LOG_MSG "[INFO]:-Commencing multi-home checks, please wait..." 1
 
-	# For MPP-12043 we need a way to sort that we can't get with the sort command
-	# so we'll use a little command line python script.
-
-read -d '' HOSTNAME_SORTER <<"END_PYTHON_CODE"
-import sys, re
-
-standard_host_re = re.compile(r'([a-zA-Z]+)((\\d+)(-(\\d+))?)')
-
-def standard_host_cmp(h1, h2):
-	m1 = standard_host_re.match(h1)
-	m2 = standard_host_re.match(h2)
-
-	if not m1 or not m2:
-		if h1 == h2:
-		        return 0
-		elif h1 < h2:
-		        return -1
-		else:
-		        return 1
-	else:
-		if m1.group(1) <= m2.group(1):
-			if not int(m1.group(3)) == int(m2.group(3)):
-				return int(m1.group(3)) - int(m2.group(3))
-			elif m1.group(5):
-				return int(m1.group(5)) - int(m2.group(5))
-			else:
-				return 0
-		else:
-			return 1
-
-hl = sys.stdin.readlines()
-for h in sorted(hl,cmp=standard_host_cmp):
-        print h,
-END_PYTHON_CODE
-
-	MACHINE_LIST=(`$CAT $MACHINE_LIST_FILE|python -c "$HOSTNAME_SORTER"`)
+	MACHINE_LIST=(`$CAT $MACHINE_LIST_FILE`)
 	M_HOST_ARRAY=()
 	MCOUNT=0
 	for MHOST in ${MACHINE_LIST[@]}
@@ -1245,12 +1210,12 @@ CREATE_QD_DB () {
 		LOG_MSG "[INFO]:-Setting Master instance check point segments"
 
 		LOG_MSG "[INFO]:-Setting Master instance content id"
-		SED_PG_CONF ${GP_DIR}/$PG_CONF "$CONTENT_ID_TXT" "gp_contentid=-1" 0
-		ERROR_CHK $? "set gp_contentid=-1 in ${GP_DIR}/$PG_CONF" 1
+		SED_PG_CONF ${GP_DIR}/$PG_CONF "$CONTENT_ID_TXT" "gp_contentid=$GP_CONTENT" 0
+		ERROR_CHK $? "set gp_contentid=$GP_CONTENT in ${GP_DIR}/$PG_CONF" 1
 
 		LOG_MSG "[INFO]:-Setting Master instance db id"
-		SED_PG_CONF ${GP_DIR}/$PG_INTERNAL_CONF "$DBID_TXT" "gp_dbid=1" 0
-		ERROR_CHK $? "set gp_dbid=1 in ${GP_DIR}/$PG_INTERNAL_CONF" 1
+		SED_PG_CONF ${GP_DIR}/$PG_INTERNAL_CONF "$DBID_TXT" "gp_dbid=$GP_DBID" 0
+		ERROR_CHK $? "set gp_dbid=$GP_DBID in ${GP_DIR}/$PG_INTERNAL_CONF" 1
 
 		if [  x"" != x"$PG_CONF_ADD_FILE" ]; then
 				LOG_MSG "[INFO]:-Processing additional configuration parameters"
@@ -1267,8 +1232,8 @@ CREATE_QD_DB () {
 		LOG_MSG "[INFO]:-Creating gpssh configuration file"
 		BUILD_GPSSH_CONF $GP_DIR
 		LOG_MSG "[INFO]:-Starting the Master in admin mode" 1
-		export PGPORT=$GP_PORT;$PG_CTL -w -l $GP_DIR/pg_log/startup.log -D $GP_DIR -o "-i -p $GP_PORT -c gp_role=utility \
-		-m" start >> /dev/null 2>&1
+		export PGPORT=$GP_PORT;$PG_CTL -w -l $GP_DIR/log/startup.log -D $GP_DIR -o "-i -p $GP_PORT -c gp_role=utility \
+		-m" start >> ${LOG_FILE} 2>&1
 		RET_TEXT="`$PG_CTL status -D $GP_DIR`"
 		RUNNING=`$ECHO $RET_TEXT|$EGREP -c "not running|neither"`
 		if [ $RUNNING -ne 0 ]; then
@@ -1306,7 +1271,7 @@ UPDATE_GPCONFIG () {
 		U_ROLE=$8
 
 		U_DB=$DEFAULTDB
-		CHK_COUNT=`env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -X -A -t -c "SELECT count(*) FROM $GP_CONFIG_TBL WHERE content=${U_CONTENT} AND preferred_role='${U_ROLE}';" 2>/dev/null` >> $LOG_FILE 2>&1
+		CHK_COUNT=`env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -X -A -t -c "SELECT count(*) FROM $GP_CONFIG_TBL WHERE content=${U_CONTENT} AND preferred_role='${U_ROLE}';" 2>>${LOG_FILE}` >> $LOG_FILE 2>&1
 		ERROR_CHK $? "obtain psql count Master $GP_CONFIG_TBL" 2
 		if [ $CHK_COUNT -eq 0 ]; then
 				LOG_MSG "[INFO]:-Adding $U_CONTENT on $U_HOSTNAME, path $U_DIR to Master gp_segment_configuration"
@@ -1421,7 +1386,7 @@ REGISTER_MIRRORS () {
 		for I in "${QE_MIRROR_ARRAY_SORTED_ON_CONTENT_ID[@]}"
 		do
 			SET_VAR $I
-			dbid=`env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "${DEFAULTDB}" -X -A -t -c "select pg_catalog.gp_add_segment_mirror(${GP_CONTENT}::int2, '${GP_HOSTNAME}', '${GP_HOSTADDRESS}', ${GP_PORT}, '${GP_DIR}');" 2>/dev/null` >> $LOG_FILE 2>&1
+			dbid=`env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "${DEFAULTDB}" -X -A -t -c "select pg_catalog.gp_add_segment_mirror(${GP_CONTENT}::int2, '${GP_HOSTNAME}', '${GP_HOSTADDRESS}', ${GP_PORT}, '${GP_DIR}');" 2>>${LOG_FILE}` >> $LOG_FILE 2>&1
 			ERROR_CHK $? "failed to register mirror for contentid=${GP_CONTENT}" 2
 			MIRRORS_UPDATED_DBID=(${MIRRORS_UPDATED_DBID[@]} ${GP_HOSTNAME}~${GP_HOSTADDRESS}~${GP_PORT}~${GP_DIR}~${dbid}~${GP_CONTENT})
 		done
@@ -1559,7 +1524,7 @@ FORCE_FTS_PROBE () {
             break
         fi
 
-        $PSQL -p $GP_PORT -d "$DEFAULTDB" -c "select gp_request_fts_probe_scan()" >> /dev/null 2>&1
+        $PSQL -p $GP_PORT -d "$DEFAULTDB" -c "select gp_request_fts_probe_scan()" >> ${LOG_FILE} 2>&1
     done
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
@@ -1568,7 +1533,7 @@ SCAN_LOG () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	LOG_MSG "[INFO]:-Scanning utility log file for any warning messages" 1
 	SCAN_STRING="\[WARN\]|invalid|warning:|fatal|error"
-	if [ `$EGREP -i -w "$SCAN_STRING" $LOG_FILE|$GREP -v "\[INFO\]"|$GREP -v "[Start|End] Function ERROR_CHK"|$GREP -v "WARNING: enabling \"trust\" authentication for local connections"|$GREP -v "to the list of known hosts"|$GREP -v "LOG"|$WC -w` -ne 0 ];then
+	if [ `$EGREP -i -w "$SCAN_STRING" $LOG_FILE|$GREP -v "\[INFO\]"|$GREP -v "[Start|End] Function ERROR_CHK"|$GREP -v "warning: enabling \"trust\" authentication for local connections"|$GREP -v "to the list of known hosts"|$GREP -v "LOG"|$WC -w` -ne 0 ];then
 		LOG_MSG "[WARN]:-*******************************************************" 1
 		LOG_MSG "[WARN]:-Scan of log file indicates that some warnings or errors" 1
 		LOG_MSG "[WARN]:-were generated during the array creation" 1

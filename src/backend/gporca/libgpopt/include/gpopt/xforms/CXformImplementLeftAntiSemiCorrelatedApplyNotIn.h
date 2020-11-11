@@ -19,60 +19,55 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//-------------------------------------------------------------------------
-	//	@class:
-	//		CXformImplementLeftAntiSemiCorrelatedApplyNotIn
-	//
-	//	@doc:
-	//		Transform left anti semi correlated apply with NOT-IN/ALL semantics
-	//		to physical left anti semi correlated join
-	//
-	//-------------------------------------------------------------------------
-	class CXformImplementLeftAntiSemiCorrelatedApplyNotIn :
-		public CXformImplementCorrelatedApply<CLogicalLeftAntiSemiCorrelatedApplyNotIn, CPhysicalCorrelatedNotInLeftAntiSemiNLJoin>
+//-------------------------------------------------------------------------
+//	@class:
+//		CXformImplementLeftAntiSemiCorrelatedApplyNotIn
+//
+//	@doc:
+//		Transform left anti semi correlated apply with NOT-IN/ALL semantics
+//		to physical left anti semi correlated join
+//
+//-------------------------------------------------------------------------
+class CXformImplementLeftAntiSemiCorrelatedApplyNotIn
+	: public CXformImplementCorrelatedApply<
+		  CLogicalLeftAntiSemiCorrelatedApplyNotIn,
+		  CPhysicalCorrelatedNotInLeftAntiSemiNLJoin>
+{
+private:
+public:
+	CXformImplementLeftAntiSemiCorrelatedApplyNotIn(
+		const CXformImplementLeftAntiSemiCorrelatedApplyNotIn &) = delete;
+
+	// ctor
+	explicit CXformImplementLeftAntiSemiCorrelatedApplyNotIn(CMemoryPool *mp)
+		: CXformImplementCorrelatedApply<
+			  CLogicalLeftAntiSemiCorrelatedApplyNotIn,
+			  CPhysicalCorrelatedNotInLeftAntiSemiNLJoin>(mp)
 	{
+	}
 
-		private:
+	// dtor
+	~CXformImplementLeftAntiSemiCorrelatedApplyNotIn() override = default;
 
-			// private copy ctor
-			CXformImplementLeftAntiSemiCorrelatedApplyNotIn(const CXformImplementLeftAntiSemiCorrelatedApplyNotIn &);
+	// ident accessors
+	EXformId
+	Exfid() const override
+	{
+		return ExfImplementLeftAntiSemiCorrelatedApplyNotIn;
+	}
 
-		public:
+	const CHAR *
+	SzId() const override
+	{
+		return "CXformImplementLeftAntiSemiCorrelatedApplyNotIn";
+	}
 
-			// ctor
-			explicit
-			CXformImplementLeftAntiSemiCorrelatedApplyNotIn
-				(
-				CMemoryPool *mp
-				)
-				:
-				CXformImplementCorrelatedApply<CLogicalLeftAntiSemiCorrelatedApplyNotIn, CPhysicalCorrelatedNotInLeftAntiSemiNLJoin>(mp)
-			{}
+};	// class CXformImplementLeftAntiSemiCorrelatedApplyNotIn
 
-			// dtor
-			virtual
-			~CXformImplementLeftAntiSemiCorrelatedApplyNotIn()
-			{}
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfImplementLeftAntiSemiCorrelatedApplyNotIn;
-			}
-
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformImplementLeftAntiSemiCorrelatedApplyNotIn";
-			}
-
-	}; // class CXformImplementLeftAntiSemiCorrelatedApplyNotIn
-
-}
-
-#endif // !GPOPT_CXformImplementLeftAntiSemiCorrelatedApplyNotIn_H
+#endif	// !GPOPT_CXformImplementLeftAntiSemiCorrelatedApplyNotIn_H
 
 // EOF

@@ -8,38 +8,39 @@
 
 namespace gpopt
 {
-	// Operator that implements logical union all, but creates a slice for each
-	// child relation to maximize concurrency.
-	// See gpopt::CPhysicalSerialUnionAll for its serial sibling.
-	class CPhysicalParallelUnionAll : public CPhysicalUnionAll
-	{
-		private:
-			// array of child hashed distributions -- used locally for distribution derivation
-			CDistributionSpecArray *const m_pdrgpds;
+// Operator that implements logical union all, but creates a slice for each
+// child relation to maximize concurrency.
+// See gpopt::CPhysicalSerialUnionAll for its serial sibling.
+class CPhysicalParallelUnionAll : public CPhysicalUnionAll
+{
+private:
+	// array of child hashed distributions -- used locally for distribution derivation
+	CDistributionSpecArray *const m_pdrgpds;
 
-		public:
-			CPhysicalParallelUnionAll(CMemoryPool *mp, CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrInput,
-									  ULONG ulScanIdPartialIndex);
+public:
+	CPhysicalParallelUnionAll(CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
+							  CColRef2dArray *pdrgpdrgpcrInput,
+							  ULONG ulScanIdPartialIndex);
 
-			virtual EOperatorId Eopid() const;
+	EOperatorId Eopid() const override;
 
-			virtual const CHAR *SzId() const;
+	const CHAR *SzId() const override;
 
-			virtual CDistributionSpec *
-			PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl, CDistributionSpec *pdsRequired,
-						ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const;
+	CDistributionSpec *PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CDistributionSpec *pdsRequired,
+								   ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulOptReq) const override;
 
-			virtual
-			CEnfdDistribution::EDistributionMatching Edm
-				(
-				CReqdPropPlan *, // prppInput
-				ULONG,  // child_index
-				CDrvdPropArray *, //pdrgpdpCtxt
-				ULONG // ulOptReq
-				);
+	CEnfdDistribution::EDistributionMatching Edm(
+		CReqdPropPlan *,   // prppInput
+		ULONG,			   // child_index
+		CDrvdPropArray *,  //pdrgpdpCtxt
+		ULONG			   // ulOptReq
+		) override;
 
-			virtual ~CPhysicalParallelUnionAll();
-	};
-}
+	~CPhysicalParallelUnionAll() override;
+};
+}  // namespace gpopt
 
-#endif //GPOPT_CPhysicalParallelUnionAll_H
+#endif	//GPOPT_CPhysicalParallelUnionAll_H

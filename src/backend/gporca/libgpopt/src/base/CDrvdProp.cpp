@@ -17,18 +17,18 @@
 #ifdef GPOS_DEBUG
 #include "gpopt/base/COptCtxt.h"
 #include "gpos/error/CAutoTrace.h"
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
-namespace gpopt {
+namespace gpopt
+{
+CDrvdProp::CDrvdProp() = default;
 
-	CDrvdProp::CDrvdProp()
-	{}
-
-	IOstream &operator << (IOstream &os, const CDrvdProp &drvdprop)
-	{
-		return drvdprop.OsPrint(os);
-	}
-
+IOstream &
+operator<<(IOstream &os, const CDrvdProp &drvdprop)
+{
+	return drvdprop.OsPrint(os);
 }
+
+}  // namespace gpopt
 
 // EOF

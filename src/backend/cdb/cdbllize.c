@@ -65,7 +65,6 @@
 
 #include "optimizer/paths.h"
 #include "optimizer/planmain.h" /* for make_result() */
-#include "optimizer/var.h"
 #include "parser/parsetree.h"	/* for rt_fetch() */
 #include "nodes/makefuncs.h"	/* for makeTargetEntry() */
 #include "utils/guc.h"			/* for Debug_pretty_print */
@@ -1550,9 +1549,7 @@ motion_sanity_check(PlannerInfo *root, Plan *plan)
 	elog(DEBUG5, "Motion Deadlock Sanity Check");
 
 	if (motion_sanity_walker((Node *) plan, &sanity_result))
-	{
-		Insist(0);
-	}
+		elog(ERROR, "motion sanity walker returned true");
 
 	if (sanity_result.flags & SANITY_DEADLOCK)
 		elog(ERROR, "Post-planning sanity check detected motion deadlock.");

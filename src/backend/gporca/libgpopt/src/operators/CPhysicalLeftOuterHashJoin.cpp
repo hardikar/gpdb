@@ -25,15 +25,11 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalLeftOuterHashJoin::CPhysicalLeftOuterHashJoin
-	(
-	CMemoryPool *mp,
-	CExpressionArray *pdrgpexprOuterKeys,
-	CExpressionArray *pdrgpexprInnerKeys,
-	IMdIdArray *hash_opfamilies
-	)
-	:
-	CPhysicalHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys, hash_opfamilies)
+CPhysicalLeftOuterHashJoin::CPhysicalLeftOuterHashJoin(
+	CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
+	CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies)
+	: CPhysicalHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys,
+						hash_opfamilies)
 {
 }
 
@@ -46,9 +42,6 @@ CPhysicalLeftOuterHashJoin::CPhysicalLeftOuterHashJoin
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CPhysicalLeftOuterHashJoin::~CPhysicalLeftOuterHashJoin()
-{
-}
+CPhysicalLeftOuterHashJoin::~CPhysicalLeftOuterHashJoin() = default;
 
 // EOF
-
