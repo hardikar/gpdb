@@ -195,7 +195,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
-        <dxl:PartConstraint DefaultPartition="0" Unbounded="false" ExprAbsent="false"/>
+        <dxl:PartConstraint DefaultPartition="0" Unbounded="false" ExprAbsent="true"/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1971.1.0"/>
         </dxl:DistrOpfamilies>
