@@ -1034,8 +1034,6 @@ get_leaf_part_constraints(Oid partOid, List **defaultLevels)
 
 	/* fetch part constraint mapped to root */
 	Node	   *partCons = getPartConstraints(partOid, rootOid, NIL /* partKey */ );
-
-	Assert(partCons);
 	return partCons;
 }
 
