@@ -58,14 +58,10 @@ CDebugCounter::~CDebugCounter()
 void
 CDebugCounter::Init()
 {
-	CAutoMemoryPool amp;
-	CMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = CMemoryPoolManager::GetMemoryPoolMgr()->GetCacheMemoryPool();
 
 	GPOS_RTL_ASSERT(NULL == m_instance);
 	m_instance = GPOS_NEW(mp) CDebugCounter(mp);
-
-	// detach safety
-	(void) amp.Detach();
 }
 
 void

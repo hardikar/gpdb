@@ -133,13 +133,9 @@ CFSimulator::NewStack(ULONG major, ULONG minor)
 GPOS_RESULT
 CFSimulator::Init()
 {
-	CAutoMemoryPool amp;
-	CMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = CMemoryPoolManager::GetMemoryPoolMgr()->GetCacheMemoryPool();
 
 	CFSimulator::m_fsim = GPOS_NEW(mp) CFSimulator(mp, GPOS_FSIM_RESOLUTION);
-
-	// detach safety
-	(void) amp.Detach();
 
 	return GPOS_OK;
 }

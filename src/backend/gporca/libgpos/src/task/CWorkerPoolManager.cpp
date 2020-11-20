@@ -50,7 +50,6 @@ CWorkerPoolManager::CWorkerPoolManager(CMemoryPool *mp)
 	m_active = true;
 }
 
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CWorkerPoolManager::Init()
@@ -65,7 +64,7 @@ CWorkerPoolManager::Init()
 	GPOS_ASSERT(NULL == WorkerPoolManager());
 
 	CMemoryPool *mp =
-		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+		CMemoryPoolManager::GetMemoryPoolMgr()->GetCacheMemoryPool();
 
 	GPOS_TRY
 	{
@@ -274,6 +273,5 @@ CWorkerPoolManager::Cancel(CTaskId tid)
 		}
 	}
 }
-
 
 // EOF

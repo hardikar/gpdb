@@ -179,14 +179,14 @@ main(INT iArgs, const CHAR **rgszArgs)
 	params.error_buffer_size = -1;
 	params.abort_requested = NULL;
 
+	int retval = 0;
 	if (gpos_exec(&params) || (tests_failed != 0))
 	{
-		return 1;
+		retval = 1;
 	}
-	else
-	{
-		return 0;
-	}
+
+	gpos_terminate();
+	return retval;
 }
 
 

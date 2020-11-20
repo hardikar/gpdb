@@ -208,8 +208,7 @@ gpos_exec(gpos_exec_params *params)
 		// scope for memory pool
 		{
 			// setup task memory
-			CAutoMemoryPool amp(CAutoMemoryPool::ElcStrict);
-			CMemoryPool *mp = amp.Pmp();
+			CMemoryPool *mp = CMemoryPoolManager::GetMemoryPoolMgr()->GetCacheMemoryPool();
 
 			// scope for ATP
 			{
@@ -284,7 +283,6 @@ gpos_terminate()
 #ifdef GPOS_DEBUG_COUNTERS
 	CDebugCounter::Shutdown();
 #endif
-#ifdef GPOS_DEBUG
 #ifdef GPOS_FPSIMULATOR
 	CFSimulator::FSim()->Shutdown();
 #endif	// GPOS_FPSIMULATOR
@@ -292,7 +290,6 @@ gpos_terminate()
 	CWorkerPoolManager::WorkerPoolManager()->Shutdown();
 	CCacheFactory::GetFactory()->Shutdown();
 	CMemoryPoolManager::GetMemoryPoolMgr()->Shutdown();
-#endif	// GPOS_DEBUG
 }
 
 // EOF

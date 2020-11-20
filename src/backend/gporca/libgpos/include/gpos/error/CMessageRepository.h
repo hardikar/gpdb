@@ -38,6 +38,11 @@ private:
 	// short hand for TMT accessor
 	typedef CSyncHashtableAccessByKey<CMessageTable, ELocale> TMTAccessor;
 
+	static void DestroyTMTElement(CMessageTable *table)
+	{
+		GPOS_DELETE(table);
+	}
+
 	// basic hash table
 	TMT m_hash_table;
 

@@ -41,7 +41,7 @@ using namespace gpos;
 CAutoMemoryPool::CAutoMemoryPool(ELeakCheck leak_check_type)
 	: m_leak_check_type(leak_check_type)
 {
-	m_mp = CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+	m_mp = CMemoryPoolManager::GetMemoryPoolMgr()->GetGlobalMemoryPool();
 }
 
 

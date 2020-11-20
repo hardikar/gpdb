@@ -47,6 +47,7 @@ CMessageRepository::~CMessageRepository()
 {
 	// no explicit cleanup;
 	// shutdown routine will reclaim all memory
+	m_hash_table.DestroyEntries(DestroyTMTElement);
 }
 
 
@@ -107,17 +108,13 @@ CMessageRepository::Init()
 {
 	GPOS_ASSERT(NULL == m_repository);
 
-	CAutoMemoryPool amp;
-	CMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = CMemoryPoolManager::GetMemoryPoolMgr()->GetCacheMemoryPool();
 
 	CMessageRepository *repository = GPOS_NEW(mp) CMessageRepository(mp);
 	repository->InitDirectory(mp);
 	repository->LoadStandardMessages();
 
 	CMessageRepository::m_repository = repository;
-
-	// detach safety
-	(void) amp.Detach();
 
 	return GPOS_OK;
 }
@@ -152,7 +149,7 @@ CMessageRepository::GetMessageRepository()
 void
 CMessageRepository::Shutdown()
 {
-	CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(m_mp);
+	GPOS_DELETE(CMessageRepository::m_repository);
 	CMessageRepository::m_repository = NULL;
 }
 

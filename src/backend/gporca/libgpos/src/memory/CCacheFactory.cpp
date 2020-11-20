@@ -66,7 +66,7 @@ CCacheFactory::Init()
 
 	// create cache factory memory pool
 	CMemoryPool *mp =
-		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+		CMemoryPoolManager::GetMemoryPoolMgr()->GetCacheMemoryPool();
 	GPOS_TRY
 	{
 		// create cache factory instance

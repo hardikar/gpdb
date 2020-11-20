@@ -124,8 +124,8 @@ CTask *
 CAutoTaskProxy::Create(void *(*pfunc)(void *), void *arg, BOOL *cancel)
 {
 	// create memory pool for task
-	CAutoMemoryPool amp(CAutoMemoryPool::ElcStrict);
-	CMemoryPool *mp = amp.Pmp();
+	// CAutoMemoryPool amp(CAutoMemoryPool::ElcStrict);
+	CMemoryPool *mp = CMemoryPoolManager::GetMemoryPoolMgr()->GetCacheMemoryPool();
 
 	// auto pointer to hold new task context
 	CAutoP<CTaskContext> task_ctxt;
@@ -161,9 +161,6 @@ CAutoTaskProxy::Create(void *(*pfunc)(void *), void *arg, BOOL *cancel)
 	// reset auto pointers - task now handles task and error context
 	(void) task_ctxt.Reset();
 	(void) err_ctxt.Reset();
-
-	// detach task's memory pool from auto memory pool
-	amp.Detach();
 
 	// bind function and argument
 	task = new_task.Value();

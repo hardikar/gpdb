@@ -151,7 +151,7 @@ public:
 		GPOS_ASSERT(NULL == m_mp);
 
 		// construct a memory pool for cache entry
-		m_mp = CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+		m_mp = CMemoryPoolManager::GetMemoryPoolMgr()->GetCacheMemoryPool();
 
 		return m_mp;
 	}

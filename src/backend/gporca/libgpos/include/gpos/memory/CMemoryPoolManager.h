@@ -53,6 +53,8 @@ private:
 	// are allocated
 	CMemoryPool *m_global_memory_pool;
 
+	CMemoryPool *m_cache_memory_pool;
+
 	// are allocations using global new operator allowed?
 	BOOL m_allow_global_new;
 
@@ -130,10 +132,11 @@ protected:
 		return GPOS_OK;
 	}
 
-public:
+
 	// create new memory pool
 	CMemoryPool *CreateMemoryPool();
 
+public:
 	// release memory pool
 	void Destroy(CMemoryPool *);
 
@@ -153,6 +156,12 @@ public:
 	GetGlobalMemoryPool()
 	{
 		return m_global_memory_pool;
+	}
+
+	CMemoryPool *
+	GetCacheMemoryPool()
+	{
+		return m_cache_memory_pool;
 	}
 
 	virtual ~CMemoryPoolManager()

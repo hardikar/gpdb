@@ -62,6 +62,7 @@ CMemoryPoolManager::Setup()
 
 	// create pool used in allocations made using global new operator
 	m_global_memory_pool = CreateMemoryPool();
+	m_cache_memory_pool = CreateMemoryPool();
 }
 
 // Initialize global memory pool manager using CMemoryPoolTracker
@@ -83,14 +84,14 @@ CMemoryPoolManager::CreateMemoryPool()
 {
 	CMemoryPool *mp = NewMemoryPool();
 
-	// accessor scope
-	{
-		// HERE BE DRAGONS
-		// See comment in CCache::InsertEntry
-		const ULONG_PTR hashKey = mp->GetHashKey();
-		MemoryPoolKeyAccessor acc(*m_ht_all_pools, hashKey);
-		acc.Insert(mp);
-	}
+//	// accessor scope
+//	{
+//		// HERE BE DRAGONS
+//		// See comment in CCache::InsertEntry
+//		const ULONG_PTR hashKey = mp->GetHashKey();
+//		MemoryPoolKeyAccessor acc(*m_ht_all_pools, hashKey);
+//		acc.Insert(mp);
+//	}
 
 	return mp;
 }
@@ -111,17 +112,17 @@ CMemoryPoolManager::Destroy(CMemoryPool *mp)
 	GPOS_ASSERT(NULL != mp);
 
 	// accessor scope
-	{
-		// HERE BE DRAGONS
-		// See comment in CCache::InsertEntry
-		const ULONG_PTR hashKey = mp->GetHashKey();
-		MemoryPoolKeyAccessor acc(*m_ht_all_pools, hashKey);
-		acc.Remove(mp);
-	}
+//	{
+//		// HERE BE DRAGONS
+//		// See comment in CCache::InsertEntry
+//		const ULONG_PTR hashKey = mp->GetHashKey();
+//		MemoryPoolKeyAccessor acc(*m_ht_all_pools, hashKey);
+//		acc.Remove(mp);
+//	}
 
-	mp->TearDown();
+	// mp->TearDown();
 
-	GPOS_DELETE(mp);
+	// GPOS_DELETE(mp);
 }
 
 
@@ -246,15 +247,29 @@ CMemoryPoolManager::Cleanup()
 		// allocations made by calling global new operator are not deleted
 		gpos::oswcerr << "Memory leaks detected" << std::endl
 					  << *m_global_memory_pool << std::endl;
+		GPOS_ASSERT(false);
+	}
+	if (0 < m_cache_memory_pool->TotalAllocatedSize())
+	{
+		// allocations made by calling global new operator are not deleted
+		gpos::oswcerr << "Memory leaks detected" << std::endl
+					  << *m_cache_memory_pool << std::endl;
+		GPOS_ASSERT(false && "Leak detected!");
 	}
 #endif	// GPOS_DEBUG
 
+	// m_global_memory_pool->AssertEmpty(oswcerr);
+	// m_cache_memory_pool->AssertEmpty(oswcerr);
+
 	GPOS_ASSERT(NULL != m_global_memory_pool);
-	Destroy(m_global_memory_pool);
+	DestroyMemoryPoolAtShutdown(m_global_memory_pool);
+	DestroyMemoryPoolAtShutdown(m_cache_memory_pool);
 
 	// cleanup left-over memory pools;
 	// any such pool means that we have a leak
-	m_ht_all_pools->DestroyEntries(DestroyMemoryPoolAtShutdown);
+	// m_ht_all_pools->DestroyEntries(DestroyMemoryPoolAtShutdown);
+	GPOS_ASSERT(m_ht_all_pools->Size() == 0);
+
 	GPOS_DELETE(m_ht_all_pools);
 }
 

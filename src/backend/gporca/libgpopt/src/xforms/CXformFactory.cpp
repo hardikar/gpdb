@@ -356,7 +356,7 @@ CXformFactory::Init()
 
 	// create xform factory memory pool
 	CMemoryPool *mp =
-		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+		CMemoryPoolManager::GetMemoryPoolMgr()->GetGlobalMemoryPool();
 	GPOS_TRY
 	{
 		// create xform factory instance

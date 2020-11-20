@@ -76,7 +76,7 @@ CSchedulerContext::Init(CMemoryPool *pmpGlobal, CJobFactory *pjf,
 
 	GPOS_ASSERT(!FInit() && "Scheduling context is already initialized");
 
-	m_pmpLocal = CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+	m_pmpLocal = CMemoryPoolManager::GetMemoryPoolMgr()->GetGlobalMemoryPool();
 
 	m_pmpGlobal = pmpGlobal;
 	m_pjf = pjf;
