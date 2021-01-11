@@ -130,11 +130,11 @@ CLogicalDynamicGet::ConstructRootColMappingPerPart(CMemoryPool *mp,
 
 				// Skip dropped columns of the child partition since its table descr is
 				// generated without dropped columns
-				if (coldesc->IsDropped())
-				{
-					--idx;
-					continue;
-				}
+				// if (coldesc->IsDropped())
+				// {
+				// 	--idx;
+				// 	continue;
+				// }
 
 				if (colname->Equals(root_colref->Name().Pstr()))
 				{

@@ -3181,10 +3181,10 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintForRel(
 	{
 		const IMDColumn *md_col = (*mdcol_array)[ul];
 
-		if (md_col->IsDropped())
-		{
-			continue;
-		}
+		// if (md_col->IsDropped())
+		// {
+		// 	continue;
+		// }
 
 		CMDName *md_colname =
 			GPOS_NEW(mp) CMDName(mp, md_col->Mdname().GetMDName());
