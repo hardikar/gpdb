@@ -219,6 +219,7 @@ INSERT INTO dml_heap_check_s SELECT i, i * 3,'s', i / 6 FROM generate_series(1,1
 INSERT INTO dml_heap_check_s VALUES(1,1,'sn',NULL),(2,2,'sn',NULL),(3,3,'sn',NULL),(4,4,'sn',NULL),(5,5,'sn',NULL);
 INSERT INTO dml_heap_check_p SELECT i, 'p','p', i FROM generate_series(1,100)i;
 INSERT INTO dml_heap_check_p VALUES(1,'pn','pn',NULL),(2,'pn','pn',NULL),(3,'pn','pn',NULL),(4,'pn','pn',NULL),(5,'pn','pn',NULL);
+ANALYZE dml_heap_check_r;
 
 
 CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
@@ -276,6 +277,7 @@ INSERT INTO dml_heap_pt_p VALUES(NULL,1,'pn',NULL),(1,NULL,'pn',0),(NULL,NULL,'p
 INSERT INTO dml_heap_pt_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) % 6;
 INSERT INTO dml_heap_pt_s VALUES(generate_series(1,10),NULL,'sn',NULL);
 INSERT INTO dml_heap_pt_s VALUES(NULL,1,'sn',NULL),(1,NULL,'sn',0),(NULL,NULL,'sn',0),(0,1,'sn',NULL),(NULL,NULL,'sn',NULL);
+ANALYZE dml_heap_pt_p;
 
 
 --Insert data that satisfy the check constraints
