@@ -517,20 +517,15 @@ CMDAccessor::GetImdObj(IMDId *mdid)
 			{
 				timerFetch.Restart();
 			}
-			CAutoP<CWStringBase> a_pstr;
-			a_pstr = pmdp->GetMDObjDXLStr(m_mp, this, mdid);
 
-			GPOS_ASSERT(NULL != a_pstr.Value());
 			CMemoryPool *mp = m_mp;
-
 			if (IMDId::EmdidGPDBCtas != mdid->MdidType())
 			{
 				// create the accessor memory pool
 				mp = a_pmdcacc->Pmp();
 			}
 
-			pmdobjNew = gpdxl::CDXLUtils::ParseDXLToIMDIdCacheObj(
-				mp, a_pstr.Value(), NULL /* XSD path */);
+			pmdobjNew = pmdp->GetMDObj(mp, this, mdid);
 			GPOS_ASSERT(NULL != pmdobjNew);
 
 			if (fPrintOptStats)
