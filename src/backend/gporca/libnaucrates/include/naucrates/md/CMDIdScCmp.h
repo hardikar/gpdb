@@ -78,10 +78,10 @@ public:
 	}
 
 	// left type id
-	IMDId *GetLeftMdid() const;
+	CMDIdGPDB *GetLeftMdid() const;
 
 	// right type id
-	IMDId *GetRightMdid() const;
+	CMDIdGPDB *GetRightMdid() const;
 
 	IMDType::ECmpType
 	ParseCmpType() const

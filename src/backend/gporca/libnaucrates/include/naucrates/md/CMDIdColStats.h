@@ -79,7 +79,7 @@ public:
 	}
 
 	// accessors
-	IMDId *GetRelMdId() const;
+	CMDIdGPDB *GetRelMdId() const;
 	ULONG Position() const;
 
 	// equality check

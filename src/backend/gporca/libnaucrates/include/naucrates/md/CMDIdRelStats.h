@@ -76,7 +76,7 @@ public:
 	}
 
 	// accessors
-	IMDId *GetRelMdId() const;
+	CMDIdGPDB *GetRelMdId() const;
 
 	// equality check
 	BOOL Equals(const IMDId *mdid) const override;

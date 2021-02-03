@@ -96,7 +96,7 @@ CMDIdScCmp::GetBuffer() const
 //		Returns the source type id
 //
 //---------------------------------------------------------------------------
-IMDId *
+CMDIdGPDB *
 CMDIdScCmp::GetLeftMdid() const
 {
 	return m_mdid_left;
@@ -110,7 +110,7 @@ CMDIdScCmp::GetLeftMdid() const
 //		Returns the destination type id
 //
 //---------------------------------------------------------------------------
-IMDId *
+CMDIdGPDB *
 CMDIdScCmp::GetRightMdid() const
 {
 	return m_mdid_right;

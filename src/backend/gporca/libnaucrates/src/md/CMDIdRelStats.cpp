@@ -84,7 +84,7 @@ CMDIdRelStats::GetBuffer() const
 //		Returns the base relation id
 //
 //---------------------------------------------------------------------------
-IMDId *
+CMDIdGPDB *
 CMDIdRelStats::GetRelMdId() const
 {
 	return m_rel_mdid;

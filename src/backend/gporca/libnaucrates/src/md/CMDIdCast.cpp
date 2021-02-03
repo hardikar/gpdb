@@ -92,7 +92,7 @@ CMDIdCast::GetBuffer() const
 //		Returns the source type id
 //
 //---------------------------------------------------------------------------
-IMDId *
+CMDIdGPDB *
 CMDIdCast::MdidSrc() const
 {
 	return m_mdid_src;
@@ -106,7 +106,7 @@ CMDIdCast::MdidSrc() const
 //		Returns the destination type id
 //
 //---------------------------------------------------------------------------
-IMDId *
+CMDIdGPDB *
 CMDIdCast::MdidDest() const
 {
 	return m_mdid_dest;

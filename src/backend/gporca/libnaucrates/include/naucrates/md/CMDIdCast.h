@@ -78,10 +78,10 @@ public:
 	}
 
 	// source type id
-	IMDId *MdidSrc() const;
+	CMDIdGPDB *MdidSrc() const;
 
 	// destination type id
-	IMDId *MdidDest() const;
+	CMDIdGPDB *MdidDest() const;
 
 	// equality check
 	BOOL Equals(const IMDId *mdid) const override;

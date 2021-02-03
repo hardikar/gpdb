@@ -28,6 +28,7 @@
 #include "naucrates/md/CMDIdCast.h"
 #include "naucrates/md/CMDIdColStats.h"
 #include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/CMDIdGPDBCtas.h"
 #include "naucrates/md/CMDIdScCmp.h"
 #include "naucrates/md/CMDProviderGeneric.h"
 #include "naucrates/md/IMDAggregate.h"
@@ -461,7 +462,58 @@ CMDAccessor::Pmdp(CSystemId sysid)
 	return pmdpelem->Pmdp();
 }
 
+IMDId *MdidCopy(CMemoryPool *mp, IMDId *mdid)
+{
+	IMDId *mdidCopy = nullptr;
+	switch (mdid->MdidType())
+	{
+		case IMDId::EmdidGPDB:
+		{
+			mdidCopy = GPOS_NEW(mp) CMDIdGPDB(*dynamic_cast<CMDIdGPDB*>(mdid));
+			break;
+		}
+		case IMDId::EmdidColStats:
+		{
+			CMDIdColStats *mdid_col_stats = dynamic_cast<CMDIdColStats *>(mdid);
+			gpmd::CMDIdGPDB *mdid_rel =  GPOS_NEW(mp) CMDIdGPDB(*mdid_col_stats->GetRelMdId());
+			mdidCopy = GPOS_NEW(mp) CMDIdColStats(mdid_rel,
+												  mdid_col_stats->Position());
+			break;
+		}
+		case IMDId::EmdidRelStats:
+		{
+			CMDIdRelStats *mdid_rel_stats = dynamic_cast<CMDIdRelStats *>(mdid);
+			gpmd::CMDIdGPDB *mdid_rel =  GPOS_NEW(mp) CMDIdGPDB(*mdid_rel_stats->GetRelMdId());
+			mdidCopy = GPOS_NEW(mp) CMDIdRelStats(mdid_rel);
+			break;
+		}
+		case IMDId::EmdidCastFunc:
+		{
+			CMDIdCast *mdid_cast = dynamic_cast<CMDIdCast *>(mdid);
+			CMDIdGPDB *mdid_src = GPOS_NEW(mp) CMDIdGPDB(*mdid_cast->MdidSrc());
+			CMDIdGPDB *mdid_dest = GPOS_NEW(mp) CMDIdGPDB(*mdid_cast->MdidDest());
+			mdidCopy = GPOS_NEW(mp) CMDIdCast(mdid_src, mdid_dest);
+			break;
+		}
+		case IMDId::EmdidScCmp:
+		{
+			CMDIdScCmp *mdid_sccmp = dynamic_cast<CMDIdScCmp *>(mdid);
+			CMDIdGPDB *mdid_left = GPOS_NEW(mp) CMDIdGPDB(*mdid_sccmp->GetLeftMdid());
+			CMDIdGPDB *mdid_right = GPOS_NEW(mp) CMDIdGPDB(*mdid_sccmp->GetRightMdid());
 
+			mdidCopy = GPOS_NEW(mp) CMDIdScCmp(mdid_left, mdid_right, mdid_sccmp->ParseCmpType());
+			break;
+		}
+		case IMDId::EmdidGPDBCtas:
+			mdidCopy = GPOS_NEW(mp) CMDIdGPDBCtas(*dynamic_cast<CMDIdGPDBCtas*>(mdid));
+			break;
+		default:
+			// FIXME: THROW ERROR
+			abort();
+			break;
+	}
+	return mdidCopy;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -525,7 +577,13 @@ CMDAccessor::GetImdObj(IMDId *mdid)
 				mp = a_pmdcacc->Pmp();
 			}
 
-			pmdobjNew = pmdp->GetMDObj(mp, this, mdid);
+			IMDId *mdidCopy = mdid;
+			if (IMDId::EmdidGPDBCtas != mdid->MdidType())
+			{
+				mdidCopy = MdidCopy(mp, mdid);
+			}
+			GPOS_ASSERT(mdidCopy->Equals(mdid));
+			pmdobjNew = pmdp->GetMDObj(mp, this, mdidCopy);
 			GPOS_ASSERT(NULL != pmdobjNew);
 
 			if (fPrintOptStats)
