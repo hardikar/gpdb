@@ -342,6 +342,14 @@ PvExec(void *pv)
 			optimizer_config, NULL /*pceeval*/
 		);
 
+		// dump
+		CAutoTrace at(mp);
+		CDXLUtils::SerializePlan(
+			mp, at.Os(), pdxlnPlan,
+			optimizer_config->GetEnumeratorCfg()->GetPlanId(),
+			optimizer_config->GetEnumeratorCfg()->GetPlanSpaceSize(),
+			true /*serialize_header_footer*/, true /*indentation*/);
+
 		GPOS_DELETE(pdxlmd);
 		optimizer_config->Release();
 		pdxlnPlan->Release();
