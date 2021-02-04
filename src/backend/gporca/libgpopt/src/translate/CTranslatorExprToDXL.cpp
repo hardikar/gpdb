@@ -4132,6 +4132,9 @@ CTranslatorExprToDXL::PdxlnHashJoin(CExpression *pexprHJ,
 	CExpression *pexprInnerChild = (*pexprHJ)[1];
 	CExpression *pexprScalar = (*pexprHJ)[2];
 
+	CPhysicalPartitionSelector *popPS = GPOS_NEW(m_mp) CPhysicalPartitionSelector(m_mp, pexprScalar);
+	CExpression *pexprInnerNew = GPOS_NEW(m_mp) CExpression(m_mp, popPS, pexprInnerChild);
+
 	EdxlJoinType join_type = EdxljtHashJoin(popHJ);
 	GPOS_ASSERT(popHJ->PdrgpexprOuterKeys()->Size() ==
 				popHJ->PdrgpexprInnerKeys()->Size());
@@ -4141,7 +4144,7 @@ CTranslatorExprToDXL::PdxlnHashJoin(CExpression *pexprHJ,
 		pexprOuterChild, NULL /*colref_array*/, pdrgpdsBaseTables,
 		pulNonGatherMotions, pfDML, false /*fRemap*/, false /*fRoot*/);
 	CDXLNode *pdxlnInnerChild = CreateDXLNode(
-		pexprInnerChild, NULL /*colref_array*/, pdrgpdsBaseTables,
+											  pexprInnerNew, NULL /*colref_array*/, pdrgpdsBaseTables,
 		pulNonGatherMotions, pfDML, false /*fRemap*/, false /*fRoot*/);
 
 	// construct hash condition
@@ -4512,9 +4515,32 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 	CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
 	BOOL *pfDML)
 {
-	return PdxlnPartitionSelector(
-		pexpr, colref_array, pdrgpdsBaseTables, pulNonGatherMotions, pfDML,
-		NULL /*pexprScalarCond*/, NULL /*dxl_properties*/);
+	CPhysicalPartitionSelector *popSelector =
+		CPhysicalPartitionSelector::PopConvert(pexpr->Pop());
+
+	CExpression *pexprChild = (*pexpr)[0];
+
+	// translate child
+	CDXLNode *child_dxlnode = CreateDXLNode(
+											  pexprChild, NULL /*colref_array*/, pdrgpdsBaseTables,
+		pulNonGatherMotions, pfDML, false /*fRemap*/, false /*fRoot*/);
+
+	CDXLNode *pdxlnPrL = PdxlnProjList(pexprChild->DeriveOutputColumns(), colref_array);
+
+
+	CDXLNode *pdxlnSelector =
+		GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalPartitionSelector(
+									  m_mp, NULL, 1, 1));
+	CExpression *pexprPrintable = popSelector->PexprCombinedPred();
+	CDXLNode *pdxlnPrintable = PdxlnScalar(pexprPrintable);
+
+	CDXLPhysicalProperties *dxl_properties = GetProperties(pexprChild);
+	pdxlnSelector->SetProperties(dxl_properties);
+	pdxlnSelector->AddChild(pdxlnPrL);
+	pdxlnSelector->AddChild(pdxlnPrintable);
+	pdxlnSelector->AddChild(child_dxlnode);
+
+	return pdxlnSelector;
 }
 
 //---------------------------------------------------------------------------

@@ -95,6 +95,9 @@ public:
 							   UlongToExprMap *phmulexprPredicates,
 							   CExpression *pexprResidual);
 
+	CPhysicalPartitionSelector(CMemoryPool *mp, CExpression *pexprScalar);
+
+
 	// dtor
 	~CPhysicalPartitionSelector() override;
 

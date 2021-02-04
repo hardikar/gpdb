@@ -86,6 +86,21 @@ CPhysicalPartitionSelector::CPhysicalPartitionSelector(
 	m_pexprCombinedPredicate = PexprCombinedPartPred(mp);
 }
 
+CPhysicalPartitionSelector::CPhysicalPartitionSelector(
+	CMemoryPool *mp, CExpression *pexprScalar)
+	: CPhysical(mp),
+	  m_scan_id(0),
+	  m_mdid(NULL),
+	  m_pdrgpdrgpcr(NULL),
+	  m_ppartcnstrmap(NULL),
+	  m_part_constraint(NULL),
+	  m_phmulexprEqPredicates(NULL),
+	  m_phmulexprPredicates(NULL),
+	  m_pexprResidual(NULL),
+	  m_pexprCombinedPredicate(pexprScalar)
+{
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CPhysicalPartitionSelector::~CPhysicalPartitionSelector
