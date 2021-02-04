@@ -4522,11 +4522,12 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 
 	// translate child
 	CDXLNode *child_dxlnode = CreateDXLNode(
-											  pexprChild, NULL /*colref_array*/, pdrgpdsBaseTables,
+											  pexprChild, colref_array, pdrgpdsBaseTables,
 		pulNonGatherMotions, pfDML, false /*fRemap*/, false /*fRoot*/);
 
-	CDXLNode *pdxlnPrL = PdxlnProjList(pexprChild->DeriveOutputColumns(), colref_array);
-
+	CDXLNode *pdxlnPrLChild = (*child_dxlnode)[0];
+	CDXLNode *pdxlnPrL = CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
+		m_mp, m_pcf, m_phmcrdxln, pdxlnPrLChild);
 
 	CDXLNode *pdxlnSelector =
 		GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalPartitionSelector(
