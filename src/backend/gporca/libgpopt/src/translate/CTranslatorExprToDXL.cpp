@@ -4132,8 +4132,10 @@ CTranslatorExprToDXL::PdxlnHashJoin(CExpression *pexprHJ,
 	CExpression *pexprInnerChild = (*pexprHJ)[1];
 	CExpression *pexprScalar = (*pexprHJ)[2];
 
-	CPhysicalPartitionSelector *popPS = GPOS_NEW(m_mp) CPhysicalPartitionSelector(m_mp, pexprScalar);
-	CExpression *pexprInnerNew = GPOS_NEW(m_mp) CExpression(m_mp, popPS, pexprInnerChild);
+	CPhysicalPartitionSelector *popPS =
+		GPOS_NEW(m_mp) CPhysicalPartitionSelector(m_mp, pexprScalar);
+	CExpression *pexprInnerNew =
+		GPOS_NEW(m_mp) CExpression(m_mp, popPS, pexprInnerChild);
 
 	EdxlJoinType join_type = EdxljtHashJoin(popHJ);
 	GPOS_ASSERT(popHJ->PdrgpexprOuterKeys()->Size() ==
@@ -4144,7 +4146,7 @@ CTranslatorExprToDXL::PdxlnHashJoin(CExpression *pexprHJ,
 		pexprOuterChild, NULL /*colref_array*/, pdrgpdsBaseTables,
 		pulNonGatherMotions, pfDML, false /*fRemap*/, false /*fRoot*/);
 	CDXLNode *pdxlnInnerChild = CreateDXLNode(
-											  pexprInnerNew, NULL /*colref_array*/, pdrgpdsBaseTables,
+		pexprInnerNew, NULL /*colref_array*/, pdrgpdsBaseTables,
 		pulNonGatherMotions, pfDML, false /*fRemap*/, false /*fRoot*/);
 
 	// construct hash condition
@@ -4522,16 +4524,16 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 
 	// translate child
 	CDXLNode *child_dxlnode = CreateDXLNode(
-											  pexprChild, colref_array, pdrgpdsBaseTables,
-		pulNonGatherMotions, pfDML, false /*fRemap*/, false /*fRoot*/);
+		pexprChild, colref_array, pdrgpdsBaseTables, pulNonGatherMotions, pfDML,
+		false /*fRemap*/, false /*fRoot*/);
 
 	CDXLNode *pdxlnPrLChild = (*child_dxlnode)[0];
-	CDXLNode *pdxlnPrL = CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
-		m_mp, m_pcf, m_phmcrdxln, pdxlnPrLChild);
+	CDXLNode *pdxlnPrL =
+		CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
+			m_mp, m_pcf, m_phmcrdxln, pdxlnPrLChild);
 
-	CDXLNode *pdxlnSelector =
-		GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalPartitionSelector(
-									  m_mp, NULL, 1, 1));
+	CDXLNode *pdxlnSelector = GPOS_NEW(m_mp) CDXLNode(
+		m_mp, GPOS_NEW(m_mp) CDXLPhysicalPartitionSelector(m_mp, NULL, 1, 1));
 	CExpression *pexprPrintable = popSelector->PexprCombinedPred();
 	CDXLNode *pdxlnPrintable = PdxlnScalar(pexprPrintable);
 

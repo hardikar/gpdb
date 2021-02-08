@@ -3374,18 +3374,23 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 	Plan *plan = &(partition_selector->plan);
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
 
-	CDXLPhysicalPartitionSelector *partition_selector_dxlop = CDXLPhysicalPartitionSelector::Cast(partition_selector_dxlnode->GetOperator());
+	CDXLPhysicalPartitionSelector *partition_selector_dxlop =
+		CDXLPhysicalPartitionSelector::Cast(
+			partition_selector_dxlnode->GetOperator());
 	TranslatePlanCosts(partition_selector_dxlnode, plan);
 
 	CDXLNode *child_dxlnode = NULL;
-	CDXLTranslationContextArray *child_contexts = GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
+	CDXLTranslationContextArray *child_contexts =
+		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
 
-	CDXLTranslateContext child_context(m_mp, false, output_context->GetColIdToParamIdMap());
+	CDXLTranslateContext child_context(m_mp, false,
+									   output_context->GetColIdToParamIdMap());
 
-		// translate child plan
+	// translate child plan
 	child_dxlnode = (*partition_selector_dxlnode)[2];
 
-	Plan *child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context, ctxt_translation_prev_siblings);
+	Plan *child_plan = TranslateDXLOperatorToPlan(
+		child_dxlnode, &child_context, ctxt_translation_prev_siblings);
 	GPOS_ASSERT(NULL != child_plan && "child plan cannot be NULL");
 
 	partition_selector->plan.lefttree = child_plan;
@@ -3393,10 +3398,12 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 	child_contexts->Append(&child_context);
 
 	CDXLNode *project_list_dxlnode = (*partition_selector_dxlnode)[0];
-	plan->targetlist = TranslateDXLProjList(project_list_dxlnode, NULL /*base_table_context*/, child_contexts, output_context);
+	plan->targetlist =
+		TranslateDXLProjList(project_list_dxlnode, NULL /*base_table_context*/,
+							 child_contexts, output_context);
 
-//	CMappingColIdVarPlStmt colid_var_mapping = CMappingColIdVarPlStmt(m_mp, NULL /*base_table_context*/, child_contexts, output_context, m_dxl_to_plstmt_context);
-//	partition_selector->printablePredicate = (Node *) m_translator_dxl_to_scalar->PexprFromDXLNodeScalar(pdxlnPrintableFilter, &colid_var_mapping);
+	//	CMappingColIdVarPlStmt colid_var_mapping = CMappingColIdVarPlStmt(m_mp, NULL /*base_table_context*/, child_contexts, output_context, m_dxl_to_plstmt_context);
+	//	partition_selector->printablePredicate = (Node *) m_translator_dxl_to_scalar->PexprFromDXLNodeScalar(pdxlnPrintableFilter, &colid_var_mapping);
 
 	partition_selector->paramid = 0;
 	partition_selector->part_prune_info = MakeNode(PartitionPruneInfo);

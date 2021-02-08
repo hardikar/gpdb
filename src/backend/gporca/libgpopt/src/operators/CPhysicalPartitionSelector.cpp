@@ -86,8 +86,8 @@ CPhysicalPartitionSelector::CPhysicalPartitionSelector(
 	m_pexprCombinedPredicate = PexprCombinedPartPred(mp);
 }
 
-CPhysicalPartitionSelector::CPhysicalPartitionSelector(
-	CMemoryPool *mp, CExpression *pexprScalar)
+CPhysicalPartitionSelector::CPhysicalPartitionSelector(CMemoryPool *mp,
+													   CExpression *pexprScalar)
 	: CPhysical(mp),
 	  m_scan_id(0),
 	  m_mdid(NULL),
