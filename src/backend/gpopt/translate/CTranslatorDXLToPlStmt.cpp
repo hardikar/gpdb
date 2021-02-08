@@ -3405,8 +3405,17 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 	//	CMappingColIdVarPlStmt colid_var_mapping = CMappingColIdVarPlStmt(m_mp, NULL /*base_table_context*/, child_contexts, output_context, m_dxl_to_plstmt_context);
 	//	partition_selector->printablePredicate = (Node *) m_translator_dxl_to_scalar->PexprFromDXLNodeScalar(pdxlnPrintableFilter, &colid_var_mapping);
 
+
+	CDXLNode *filterNode = (*partition_selector_dxlnode)[1];
 	partition_selector->paramid = 0;
 	partition_selector->part_prune_info = MakeNode(PartitionPruneInfo);
+	// FIXME: --FIRST--Filter translation here is messed up
+
+	List *clauses = TranslateDXLScCondToQual(filterNode, NULL, child_contexts,
+											 output_context);
+	partition_selector->part_prune_info->prune_infos =
+		gpdb::CreatePruneInfos(180265, clauses);
+	// FIXME: hardcoded
 
 	// TODO: DO something here
 

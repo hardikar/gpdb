@@ -54,6 +54,9 @@
 #include "partitioning/partprune.h"
 #include "rewrite/rewriteManip.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
+#include "partitioning/partdesc.h"
+#include "utils/partcache.h"
 
 
 /*
@@ -84,49 +87,6 @@ typedef enum PartClauseMatchStatus
 	PARTCLAUSE_UNSUPPORTED
 } PartClauseMatchStatus;
 
-/*
- * PartClauseTarget
- *		Identifies which qual clauses we can use for generating pruning steps
- */
-typedef enum PartClauseTarget
-{
-	PARTTARGET_PLANNER,			/* want to prune during planning */
-	PARTTARGET_INITIAL,			/* want to prune during executor startup */
-	PARTTARGET_EXEC				/* want to prune during each plan node scan */
-} PartClauseTarget;
-
-/*
- * GeneratePruningStepsContext
- *		Information about the current state of generation of "pruning steps"
- *		for a given set of clauses
- *
- * gen_partprune_steps() initializes and returns an instance of this struct.
- *
- * Note that has_mutable_op, has_mutable_arg, and has_exec_param are set if
- * we found any potentially-useful-for-pruning clause having those properties,
- * whether or not we actually used the clause in the steps list.  This
- * definition allows us to skip the PARTTARGET_EXEC pass in some cases.
- */
-typedef struct GeneratePruningStepsContext
-{
-	/* Copies of input arguments for gen_partprune_steps: */
-	RelOptInfo *rel;			/* the partitioned relation */
-	PartClauseTarget target;	/* use-case we're generating steps for */
-
-	Relids		available_relids; /* rels whose Vars may be used for pruning */
-
-	/* Result data: */
-	List	   *steps;			/* list of PartitionPruneSteps */
-	bool		has_mutable_op; /* clauses include any stable operators */
-	bool		has_mutable_arg;	/* clauses include any mutable comparison
-									 * values, *other than* exec params */
-	bool		has_exec_param; /* clauses include any PARAM_EXEC params */
-	bool		has_vars;		/* clauses include any Vars from 'available_rels' */
-	bool		contradictory;	/* clauses were proven self-contradictory */
-	/* Working state: */
-	int			next_step_id;
-} GeneratePruningStepsContext;
-
 /* The result of performing one PartitionPruneStep */
 typedef struct PruneStepResult
 {
@@ -146,10 +106,6 @@ static List *make_partitionedrel_pruneinfo(PlannerInfo *root,
 										   Relids available_relids,
 										   List *partitioned_rels, List *prunequal,
 										   Bitmapset **matchedsubplans);
-static void gen_partprune_steps(RelOptInfo *rel, List *clauses,
-								Relids available_relids,
-								PartClauseTarget target,
-								GeneratePruningStepsContext *context);
 static List *gen_partprune_steps_internal(GeneratePruningStepsContext *context,
 										  List *clauses);
 static PartitionPruneStep *gen_prune_step_op(GeneratePruningStepsContext *context,
@@ -630,7 +586,7 @@ make_partitionedrel_pruneinfo(PlannerInfo *root, RelOptInfo *parentrel,
  * 'context' is an output argument that receives the steps list as well as
  * some subsidiary flags; see the GeneratePruningStepsContext typedef.
  */
-static void
+void
 gen_partprune_steps(RelOptInfo *rel, List *clauses,
 					Relids available_relids,
 					PartClauseTarget target,
@@ -3577,4 +3533,25 @@ contain_forbidden_var_clause_walker(Node *node, void *context)
 		/* else fall through to check the contained expr */
 	}
 	return expression_tree_walker(node, contain_forbidden_var_clause_walker, context);
+}
+
+List *gen_partprune_steps_orca(Oid reloid, List *clauses, Relids available_relids)
+{
+	Relation rel = RelationIdGetRelation(reloid);
+	PartitionDesc pdesc = RelationGetPartitionDesc(rel);
+
+	// Dummy reloptinfo
+	RelOptInfo *subpart = makeNode(RelOptInfo);
+	subpart->boundinfo = pdesc->boundinfo;
+	subpart->partition_qual = RelationGetPartitionQual(rel);
+	subpart->relid = reloid;
+	subpart->part_scheme->strategy = PARTITION_STRATEGY_RANGE;
+	PartitionKey key = RelationGetPartitionKey(rel);
+	subpart->part_scheme->partnatts = get_partition_natts(key);
+	subpart->partexprs[0] = get_partition_exprs(key);
+
+	GeneratePruningStepsContext context;
+	gen_partprune_steps(subpart, clauses, available_relids, PARTTARGET_INITIAL, &context);
+
+	return context.steps;
 }

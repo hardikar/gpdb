@@ -33,11 +33,13 @@
 extern "C" {
 #include "access/external.h"
 #include "nodes/nodeFuncs.h"
+#include "nodes/pathnodes.h"
 #include "optimizer/clauses.h"
 #include "optimizer/optimizer.h"
 #include "optimizer/plancat.h"
 #include "parser/parse_agg.h"
 #include "partitioning/partdesc.h"
+#include "partitioning/partprune.h"
 #include "storage/lmgr.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
@@ -2835,6 +2837,25 @@ gpdb::GPDBLockRelationOid(Oid reloid, LOCKMODE lockmode)
 		LockRelationOid(reloid, lockmode);
 	}
 	GP_WRAP_END;
+}
+
+List *
+gpdb::CreatePruneInfos(Oid reloid, List *partquals)
+{
+	GP_WRAP_START;
+	{
+		List *prunerelinfos = NIL;
+		List *pinfolist = NIL;
+
+		gen_partprune_steps_orca(reloid, partquals, NULL /* available_relids */ );
+
+		PartitionedRelPruneInfo *pinfo = makeNode(PartitionedRelPruneInfo);
+		pinfolist = lappend(pinfolist, pinfo);
+		prunerelinfos = lappend(prunerelinfos, pinfolist);
+		return prunerelinfos;
+	}
+	GP_WRAP_END;
+	return NIL;
 }
 
 // EOF

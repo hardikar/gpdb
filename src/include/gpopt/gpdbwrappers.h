@@ -751,6 +751,7 @@ void GPDBMemoryContextDelete(MemoryContext context);
 
 void GPDBLockRelationOid(Oid reloid, int lockmode);
 
+List *CreatePruneInfos(Oid reloid, List *partquals);
 }  //namespace gpdb
 
 #define ForEach(cell, l) \
