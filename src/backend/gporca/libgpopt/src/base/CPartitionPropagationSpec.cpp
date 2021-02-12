@@ -20,48 +20,39 @@
 using namespace gpos;
 using namespace gpopt;
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPartitionPropagationSpec::CPartitionPropagationSpec
-//
-//	@doc:
-//		Ctor
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec::CPartitionPropagationSpec()
+INT
+CPartitionPropagationSpec::SPartPropSpecInfo::CmpFunc(const void *val1,
+													  const void *val2)
 {
+	const SPartPropSpecInfo *info1 = *(const SPartPropSpecInfo **) val1;
+	const SPartPropSpecInfo *info2 = *(const SPartPropSpecInfo **) val2;
+
+	return info1->m_scan_id - info2->m_scan_id;
+}
+
+BOOL
+CPartitionPropagationSpec::SPartPropSpecInfo::Equals(
+	const SPartPropSpecInfo *other) const
+{
+	return m_scan_id == other->m_scan_id && m_type == other->m_type &&
+		   m_root_rel_mdid->Equals(other->m_root_rel_mdid) &&
+		   m_selector_ids->Equals(other->m_selector_ids);
+}
+
+BOOL
+CPartitionPropagationSpec::SPartPropSpecInfo::FSatisfies(
+	const SPartPropSpecInfo *other) const
+{
+	return m_scan_id == other->m_scan_id && m_type == other->m_type &&
+		   m_root_rel_mdid->Equals(other->m_root_rel_mdid);
 }
 
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CPartitionPropagationSpec::~CPartitionPropagationSpec
-//
-//	@doc:
-//		Dtor
-//
-//---------------------------------------------------------------------------
+// dtor
 CPartitionPropagationSpec::~CPartitionPropagationSpec()
 {
+	CRefCount::SafeRelease(m_part_prop_spec_infos);
 }
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPartitionPropagationSpec::HashValue
-//
-//	@doc:
-//		Hash of components
-//
-//---------------------------------------------------------------------------
-ULONG
-CPartitionPropagationSpec::HashValue() const
-{
-	// FIXME: Fix this!
-	return 0;
-}
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -72,19 +63,83 @@ CPartitionPropagationSpec::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CPartitionPropagationSpec::Equals(const CPartitionPropagationSpec *) const
+CPartitionPropagationSpec::Equals(const CPartitionPropagationSpec *pps) const
 {
-	// FIXME: Fix this!
-	return false;
+	GPOS_ASSERT(m_part_prop_spec_infos->IsSorted(SPartPropSpecInfo::CmpFunc));
+
+	if ((m_part_prop_spec_infos == nullptr) &&
+		(pps->m_part_prop_spec_infos == nullptr))
+	{
+		return true;
+	}
+
+	if ((m_part_prop_spec_infos == nullptr) ^
+		(pps->m_part_prop_spec_infos == nullptr))
+	{
+		return false;
+	}
+
+	GPOS_ASSERT(m_part_prop_spec_infos != nullptr &&
+				pps->m_part_prop_spec_infos != nullptr);
+	GPOS_ASSERT(m_part_prop_spec_infos->IsSorted(SPartPropSpecInfo::CmpFunc));
+	GPOS_ASSERT(
+		pps->m_part_prop_spec_infos->IsSorted(SPartPropSpecInfo::CmpFunc));
+
+	if (m_part_prop_spec_infos->Size() != pps->m_part_prop_spec_infos->Size())
+	{
+		return false;
+	}
+
+	ULONG size = m_part_prop_spec_infos->Size();
+	for (ULONG ul = 0; ul < size; ++ul)
+	{
+		if (!(*m_part_prop_spec_infos)[ul]->Equals(
+				(*pps->m_part_prop_spec_infos)[ul]))
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
+CPartitionPropagationSpec::SPartPropSpecInfo *
+CPartitionPropagationSpec::FindPartPropSpecInfo(INT scan_id) const
+{
+	for (ULONG ut = 0; ut < m_part_prop_spec_infos->Size(); ut++)
+	{
+		SPartPropSpecInfo *part_info = (*m_part_prop_spec_infos)[ut];
+
+		if (part_info->m_scan_id == scan_id)
+		{
+			return part_info;
+		}
+	}
+
+	return nullptr;
+}
 
 BOOL
 CPartitionPropagationSpec::FSatisfies(
 	const CPartitionPropagationSpec *pps) const
 {
-	// FIXME: Is this the right thing?
-	return Equals(pps);
+	if (pps->m_part_prop_spec_infos == nullptr)
+	{
+		return true;
+	}
+
+	for (ULONG ul = 0; ul < pps->m_part_prop_spec_infos->Size(); ul++)
+	{
+		SPartPropSpecInfo *reqd_info = (*pps->m_part_prop_spec_infos)[ul];
+		SPartPropSpecInfo *found_info =
+			FindPartPropSpecInfo(reqd_info->m_scan_id);
+
+		if (found_info == nullptr || !found_info->FSatisfies(reqd_info))
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 //---------------------------------------------------------------------------
@@ -185,7 +240,39 @@ CPartitionPropagationSpec::AppendEnforcers(CMemoryPool *, CExpressionHandle &,
 IOstream &
 CPartitionPropagationSpec::OsPrint(IOstream &os) const
 {
-	// FIXME
+	if (nullptr == m_part_prop_spec_infos ||
+		m_part_prop_spec_infos->Size() == 0)
+	{
+		os << "<empty>";
+		return os;
+	}
+
+	ULONG size = m_part_prop_spec_infos->Size();
+	for (ULONG ul = 0; ul < size; ++ul)
+	{
+		SPartPropSpecInfo *part_info = (*m_part_prop_spec_infos)[ul];
+
+		switch (part_info->m_type)
+		{
+			case EpptConsumer:
+				os << "consumer";
+				break;
+			case EpptPropagator:
+				os << "propagator";
+			default:
+				break;
+		}
+
+		os << "<" << part_info->m_scan_id << ">";
+		os << "(";
+		part_info->m_selector_ids->OsPrint(os);
+		os << ")";
+
+		if (ul < (size - 1))
+		{
+			os << ", ";
+		}
+	}
 	return os;
 }
 
