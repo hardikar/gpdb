@@ -47,11 +47,15 @@ CPartitionPropagationSpec::SPartPropSpecInfo::FSatisfies(
 		   m_root_rel_mdid->Equals(other->m_root_rel_mdid);
 }
 
+CPartitionPropagationSpec::CPartitionPropagationSpec(CMemoryPool *mp)
+{
+	m_part_prop_spec_infos = GPOS_NEW(mp) SPartPropSpecInfoArray(mp);
+}
 
 // dtor
 CPartitionPropagationSpec::~CPartitionPropagationSpec()
 {
-	CRefCount::SafeRelease(m_part_prop_spec_infos);
+	m_part_prop_spec_infos->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -117,6 +121,20 @@ CPartitionPropagationSpec::FindPartPropSpecInfo(INT scan_id) const
 	}
 
 	return nullptr;
+}
+
+void
+CPartitionPropagationSpec::Insert(INT scan_id, EPartPropSpecInfoType type,
+								  IMDId *rool_rel_mdid)
+{
+	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
+	rool_rel_mdid->AddRef();
+	SPartPropSpecInfo *info =
+		GPOS_NEW(mp) SPartPropSpecInfo(scan_id, type, rool_rel_mdid);
+
+	// NB: This is appended blindly !
+	m_part_prop_spec_infos->Append(info);
+	m_part_prop_spec_infos->Sort();
 }
 
 BOOL

@@ -91,8 +91,6 @@ private:
 	SPartPropSpecInfoArray *m_part_prop_spec_infos = nullptr;
 
 
-	SPartPropSpecInfo *FindPartPropSpecInfo(INT scan_id) const;
-
 	// return a colrefset containing all the part keys
 	// CColRefSet *PcrsKeys(CMemoryPool *mp, CColRef2dArray *pdrgpdrgpcrKeys);
 
@@ -103,7 +101,7 @@ public:
 	CPartitionPropagationSpec(const CPartitionPropagationSpec &) = delete;
 
 	// ctor
-	CPartitionPropagationSpec() = default;
+	CPartitionPropagationSpec(CMemoryPool *mp);
 
 	// dtor
 	~CPartitionPropagationSpec() override;
@@ -140,6 +138,11 @@ public:
 
 	// satisfies function
 	BOOL FSatisfies(const CPartitionPropagationSpec *ppps) const;
+
+
+	SPartPropSpecInfo *FindPartPropSpecInfo(INT scan_id) const;
+
+	void Insert(INT scan_id, EPartPropSpecInfoType type, IMDId *rool_rel_mdid);
 
 	// is partition propagation required
 	BOOL

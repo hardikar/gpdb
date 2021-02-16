@@ -991,7 +991,7 @@ CPhysical::PppsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 	// FIXME:
 	if (exprhdl.Arity() == 0)
 	{
-		return GPOS_NEW(mp) CPartitionPropagationSpec();
+		return GPOS_NEW(mp) CPartitionPropagationSpec(mp);
 	}
 	CPartitionPropagationSpec *pps = exprhdl.Pdpplan(0 /*child_index*/)->Ppps();
 	pps->AddRef();
