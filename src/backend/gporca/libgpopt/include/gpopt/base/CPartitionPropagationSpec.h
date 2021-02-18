@@ -147,6 +147,8 @@ public:
 	void InsertAllFromPartPropSpec(CPartitionPropagationSpec *pps,
 								   CBitSet *allowed_scan_ids);
 
+	void InsertAllExcept(CPartitionPropagationSpec *pps, INT scan_id);
+
 	// is partition propagation required
 	BOOL
 	FPartPropagationReqd() const

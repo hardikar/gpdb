@@ -365,6 +365,20 @@ CPhysicalPartitionSelector::PcteRequired(CMemoryPool *,		   //mp,
 	return PcterPushThru(pcter);
 }
 
+CPartitionPropagationSpec *
+CPhysicalPartitionSelector::PppsRequired(
+	CMemoryPool *mp, CExpressionHandle &,
+	CPartitionPropagationSpec *pppsRequired,
+	ULONG child_index GPOS_ASSERTS_ONLY, CDrvdPropArray *, ULONG) const
+{
+	GPOS_ASSERT(child_index == 0);
+
+	CPartitionPropagationSpec *pps_result =
+		GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+	pps_result->InsertAllExcept(pppsRequired, m_scan_id);
+	return pps_result;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CPhysicalPartitionSelector::FProvidesReqdCols
@@ -425,6 +439,24 @@ CPhysicalPartitionSelector::PrsDerive(CMemoryPool *mp,
 									  CExpressionHandle &exprhdl) const
 {
 	return PrsDerivePassThruOuter(mp, exprhdl);
+}
+
+CPartitionPropagationSpec *
+CPhysicalPartitionSelector::PppsDerive(CMemoryPool *mp,
+									   CExpressionHandle &exprhdl) const
+{
+	CPartitionPropagationSpec *pps_result =
+		GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+
+	CPartitionPropagationSpec *pps_child =
+		exprhdl.Pdpplan(0 /* child_index */)->Ppps();
+
+	pps_result->InsertAllFromPartPropSpec(pps_child,
+										  NULL /* allowed_scan_ids */);
+	pps_result->Insert(m_scan_id, CPartitionPropagationSpec::EpptPropagator,
+					   m_mdid);
+
+	return pps_result;
 }
 
 //---------------------------------------------------------------------------
