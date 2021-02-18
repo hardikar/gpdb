@@ -264,14 +264,32 @@ CPartitionPropagationSpec::FSatisfies(
 //
 //---------------------------------------------------------------------------
 void
-CPartitionPropagationSpec::AppendEnforcers(CMemoryPool *, CExpressionHandle &,
-										   CReqdPropPlan *
-#ifdef GPOS_DEBUG
-
-#endif	// GPOS_DEBUG
-										   ,
-										   CExpressionArray *, CExpression *)
+CPartitionPropagationSpec::AppendEnforcers(CMemoryPool *mp, CExpressionHandle &,
+										   CReqdPropPlan *,
+										   CExpressionArray *pdrgpexpr,
+										   CExpression *expr)
 {
+	for (ULONG ul = 0; ul < m_part_prop_spec_infos->Size(); ++ul)
+	{
+		SPartPropSpecInfo *info = (*m_part_prop_spec_infos)[ul];
+
+		if (info->m_type != CPartitionPropagationSpec::EpptPropagator)
+		{
+			continue;
+		}
+
+		info->m_root_rel_mdid->AddRef();
+		expr->AddRef();
+		// FIXME: Compute partkeys correctly.
+		CExpression *part_selector = GPOS_NEW(mp)
+			CExpression(mp,
+						GPOS_NEW(mp) CPhysicalPartitionSelector(
+							mp, info->m_scan_id, info->m_root_rel_mdid,
+							nullptr /* part keys */, nullptr /* pexprScalar */),
+						expr);
+
+		pdrgpexpr->Append(part_selector);
+	}
 }
 
 //---------------------------------------------------------------------------
