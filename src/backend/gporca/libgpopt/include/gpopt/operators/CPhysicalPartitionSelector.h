@@ -34,6 +34,9 @@ protected:
 	// Scan id
 	ULONG m_scan_id;
 
+	// Unique id per Partition Selector created
+	ULONG m_selector_id;
+
 	// mdid of partitioned table
 	IMDId *m_mdid;
 
@@ -56,6 +59,8 @@ protected:
 							   UlongToExprMap *phmulexprSnd);
 
 private:
+	static ULONG m_selector_id_counter;
+
 	// check whether first part constraint map is contained in the second one
 	static BOOL FSubsetPartCnstr(UlongToPartConstraintMap *ppartcnstrmapFst,
 								 UlongToPartConstraintMap *ppartcnstrmapSnd);

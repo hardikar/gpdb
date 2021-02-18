@@ -123,14 +123,32 @@ CPartitionPropagationSpec::FindPartPropSpecInfo(INT scan_id) const
 	return nullptr;
 }
 
+const CBitSet *
+CPartitionPropagationSpec::SelectorIds(INT scan_id) const
+{
+	SPartPropSpecInfo *found_info = FindPartPropSpecInfo(scan_id);
+
+	if (found_info == nullptr)
+	{
+		GPOS_RTL_ASSERT(false);
+	}
+
+	return found_info->m_selector_ids;
+}
+
 void
 CPartitionPropagationSpec::Insert(INT scan_id, EPartPropSpecInfoType type,
-								  IMDId *rool_rel_mdid)
+								  IMDId *rool_rel_mdid, CBitSet *selector_ids)
 {
 	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
 	rool_rel_mdid->AddRef();
 	SPartPropSpecInfo *info =
 		GPOS_NEW(mp) SPartPropSpecInfo(scan_id, type, rool_rel_mdid);
+
+	if (selector_ids != nullptr)
+	{
+		info->m_selector_ids->Union(selector_ids);
+	}
 
 	// NB: This is appended blindly !
 	m_part_prop_spec_infos->Append(info);
@@ -152,7 +170,7 @@ CPartitionPropagationSpec::InsertAll(CPartitionPropagationSpec *pps)
 		{
 			other_info->m_root_rel_mdid->AddRef();
 			Insert(other_info->m_scan_id, other_info->m_type,
-				   other_info->m_root_rel_mdid);
+				   other_info->m_root_rel_mdid, other_info->m_selector_ids);
 			continue;
 		}
 
@@ -187,7 +205,7 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 		{
 			other_info->m_root_rel_mdid->AddRef();
 			Insert(other_info->m_scan_id, other_info->m_type,
-				   other_info->m_root_rel_mdid);
+				   other_info->m_root_rel_mdid, other_info->m_selector_ids);
 			continue;
 		}
 
@@ -220,7 +238,7 @@ CPartitionPropagationSpec::InsertAllExcept(CPartitionPropagationSpec *pps,
 		{
 			other_info->m_root_rel_mdid->AddRef();
 			Insert(other_info->m_scan_id, other_info->m_type,
-				   other_info->m_root_rel_mdid);
+				   other_info->m_root_rel_mdid, other_info->m_selector_ids);
 			continue;
 		}
 

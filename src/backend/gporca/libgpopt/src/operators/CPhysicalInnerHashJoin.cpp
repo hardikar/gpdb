@@ -328,16 +328,23 @@ CPhysicalInnerHashJoin::PppsRequired(CMemoryPool *mp,
 			// FIXME: Add pexprCmp & selector-ids to the PartPropSpecInfo
 			if (child_index == 0)
 			{
-				// CPartitionPropagationSpec *pps_outer = exprhdl.Pdpplan(1 /*child_index*/)->Ppps();
-				pps_result->Insert(
-					scan_id, CPartitionPropagationSpec::EpptConsumer, rel_mdid);
+				CPartitionPropagationSpec *pps_inner =
+					CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Ppps();
+
+				// FIXME: This interface is yucky
+				CBitSet *selector_ids = GPOS_NEW(mp) CBitSet(mp);
+				selector_ids->Union(pps_inner->SelectorIds(scan_id));
+				pps_result->Insert(scan_id,
+								   CPartitionPropagationSpec::EpptConsumer,
+								   rel_mdid, selector_ids);
+				selector_ids->Release();
 			}
 			else
 			{
 				GPOS_ASSERT(child_index == 1);
 				pps_result->Insert(scan_id,
 								   CPartitionPropagationSpec::EpptPropagator,
-								   rel_mdid);
+								   rel_mdid, nullptr);
 			}
 			pexprCmp->Release();
 		}

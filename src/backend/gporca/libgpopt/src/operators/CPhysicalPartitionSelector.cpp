@@ -23,6 +23,8 @@
 
 using namespace gpopt;
 
+ULONG CPhysicalPartitionSelector::m_selector_id_counter = 0;
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CPhysicalPartitionSelector::CPhysicalPartitionSelector
@@ -58,6 +60,7 @@ CPhysicalPartitionSelector::CPhysicalPartitionSelector(
 	CMemoryPool *mp, IMDId *mdid, UlongToExprMap *phmulexprEqPredicates)
 	: CPhysical(mp),
 	  m_scan_id(0),
+	  m_selector_id(++m_selector_id_counter),
 	  m_mdid(mdid),
 	  m_phmulexprEqPredicates(phmulexprEqPredicates),
 	  m_pexprCombinedPredicate(nullptr)
@@ -447,13 +450,16 @@ CPhysicalPartitionSelector::PppsDerive(CMemoryPool *mp,
 {
 	CPartitionPropagationSpec *pps_result =
 		GPOS_NEW(mp) CPartitionPropagationSpec(mp);
-
 	CPartitionPropagationSpec *pps_child =
 		exprhdl.Pdpplan(0 /* child_index */)->Ppps();
 
+	CBitSet *selector_ids = GPOS_NEW(mp) CBitSet(mp);
+	selector_ids->ExchangeSet(m_selector_id);
+
 	pps_result->InsertAll(pps_child);
 	pps_result->Insert(m_scan_id, CPartitionPropagationSpec::EpptPropagator,
-					   m_mdid);
+					   m_mdid, selector_ids);
+	selector_ids->Release();
 
 	return pps_result;
 }

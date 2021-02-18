@@ -142,7 +142,8 @@ public:
 
 	SPartPropSpecInfo *FindPartPropSpecInfo(INT scan_id) const;
 
-	void Insert(INT scan_id, EPartPropSpecInfoType type, IMDId *rool_rel_mdid);
+	void Insert(INT scan_id, EPartPropSpecInfoType type, IMDId *rool_rel_mdid,
+				CBitSet *selector_ids);
 
 	void InsertAll(CPartitionPropagationSpec *pps);
 
@@ -150,6 +151,8 @@ public:
 								CBitSet *allowed_scan_ids);
 
 	void InsertAllExcept(CPartitionPropagationSpec *pps, INT scan_id);
+
+	const CBitSet *SelectorIds(INT scan_id) const;
 
 	// is partition propagation required
 	BOOL
