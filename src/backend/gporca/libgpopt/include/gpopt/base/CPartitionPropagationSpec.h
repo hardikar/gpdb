@@ -144,6 +144,9 @@ public:
 
 	void Insert(INT scan_id, EPartPropSpecInfoType type, IMDId *rool_rel_mdid);
 
+	void InsertAllFromPartPropSpec(CPartitionPropagationSpec *pps,
+								   CBitSet *allowed_scan_ids);
+
 	// is partition propagation required
 	BOOL
 	FPartPropagationReqd() const

@@ -137,6 +137,38 @@ CPartitionPropagationSpec::Insert(INT scan_id, EPartPropSpecInfoType type,
 	m_part_prop_spec_infos->Sort();
 }
 
+void
+CPartitionPropagationSpec::InsertAllFromPartPropSpec(
+	CPartitionPropagationSpec *pps, CBitSet *allowed_scan_ids)
+{
+	for (ULONG ul = 0; ul < pps->m_part_prop_spec_infos->Size(); ++ul)
+	{
+		SPartPropSpecInfo *other_info = (*pps->m_part_prop_spec_infos)[ul];
+
+		if (!allowed_scan_ids->Get(other_info->m_scan_id))
+		{
+			continue;
+		}
+
+		SPartPropSpecInfo *found_info =
+			FindPartPropSpecInfo(other_info->m_scan_id);
+
+		if (found_info == nullptr)
+		{
+			other_info->m_root_rel_mdid->AddRef();
+			Insert(other_info->m_scan_id, other_info->m_type,
+				   other_info->m_root_rel_mdid);
+			continue;
+		}
+
+		// FIXME: Convert to an exception
+		// propagator<x> and consumer<x> shouldn't be sent down the same child
+		GPOS_RTL_ASSERT(found_info->m_type == other_info->m_type &&
+						found_info->m_root_rel_mdid ==
+							other_info->m_root_rel_mdid);
+	}
+}
+
 BOOL
 CPartitionPropagationSpec::FSatisfies(
 	const CPartitionPropagationSpec *pps) const
