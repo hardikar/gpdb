@@ -4928,12 +4928,7 @@ CTranslatorExprToDXL::PdxlnPartFilterList(CExpression *pexpr, BOOL fEqFilters)
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarOpList(
 							   m_mp, CDXLScalarOpList::EdxloplistEqFilterList));
 	}
-	else
-	{
-		pdxlnFilters = GPOS_NEW(m_mp)
-			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarOpList(
-							   m_mp, CDXLScalarOpList::EdxloplistFilterList));
-	}
+
 
 	const ULONG ulPartLevels = popSelector->UlPartLevels();
 	GPOS_ASSERT(1 <= ulPartLevels);
@@ -4944,10 +4939,6 @@ CTranslatorExprToDXL::PdxlnPartFilterList(CExpression *pexpr, BOOL fEqFilters)
 		if (fEqFilters)
 		{
 			pexprFilter = popSelector->PexprEqFilter(ul);
-		}
-		else
-		{
-			pexprFilter = popSelector->PexprFilter(ul);
 		}
 
 		CDXLNode *filter_dxlnode = nullptr;
@@ -5079,31 +5070,8 @@ CTranslatorExprToDXL::PdxlnPartitionSelectorExpand(
 //
 //---------------------------------------------------------------------------
 BOOL
-CTranslatorExprToDXL::FEqPartFiltersAllLevels(CExpression *pexpr,
-											  BOOL fCheckGeneralFilters)
+CTranslatorExprToDXL::FEqPartFiltersAllLevels(CExpression *, BOOL)
 {
-	GPOS_ASSERT(nullptr != pexpr);
-	CPhysicalPartitionSelector *popSelector =
-		CPhysicalPartitionSelector::PopConvert(pexpr->Pop());
-	const ULONG ulPartLevels = popSelector->UlPartLevels();
-	GPOS_ASSERT(1 <= ulPartLevels);
-
-	for (ULONG ul = 0; ul < ulPartLevels; ul++)
-	{
-		CExpression *pexprEqFilter = popSelector->PexprEqFilter(ul);
-		CExpression *pexprFilter = popSelector->PexprFilter(ul);
-
-		if (nullptr == pexprEqFilter && nullptr != pexprFilter)
-		{
-			if (!fCheckGeneralFilters ||
-				!CPredicateUtils::FConjunctionOfEqComparisons(m_mp,
-															  pexprFilter))
-			{
-				return false;
-			}
-		}
-	}
-
 	return true;
 }
 
@@ -5129,22 +5097,6 @@ CTranslatorExprToDXL::TranslatePartitionFilters(
 	{
 		*ppdxlnEqFilters =
 			PdxlnPartFilterList(pexprPartSelector, true /*fEqFilters*/);
-		*ppdxlnFilters =
-			PdxlnPartFilterList(pexprPartSelector, false /*fEqFilters*/);
-
-		CPhysicalPartitionSelector *popSelector =
-			CPhysicalPartitionSelector::PopConvert(pexprPartSelector->Pop());
-		CExpression *pexprResidual = popSelector->PexprResidualPred();
-		if (nullptr == pexprResidual)
-		{
-			*ppdxlnResidual = CTranslatorExprToDXLUtils::PdxlnBoolConst(
-				m_mp, m_pmda, true /*value*/);
-		}
-		else
-		{
-			*ppdxlnResidual = PdxlnScalar(pexprResidual);
-		}
-
 		return;
 	}
 
@@ -5243,28 +5195,6 @@ CTranslatorExprToDXL::ConstructLevelFilters4PartitionSelector(
 						pmdidTypeOther, IMDType::EcmptEq, ulLevel,
 						fDefaultPartition);
 			}
-		}
-
-		// check general filters on current level
-		CExpression *pexprFilter = popSelector->PexprFilter(ulLevel);
-		if (nullptr != pexprFilter)
-		{
-			CExpressionArray *pdrgpexprConjuncts =
-				CPredicateUtils::PdrgpexprConjuncts(m_mp, pexprFilter);
-			const ULONG length = pdrgpexprConjuncts->Size();
-
-			for (ULONG ul = 0; ul < length; ul++)
-			{
-				CDXLNode *pdxlnScCmp = PdxlnPredOnPartKey(
-					(*pdrgpexprConjuncts)[ul], pcrPartKey, pmdidTypePartKey,
-					ulLevel, fRangePart, &fLTComparison, &fGTComparison,
-					&fEQComparison);
-
-				filter_dxlnode = CTranslatorExprToDXLUtils::PdxlnCombineBoolean(
-					m_mp, filter_dxlnode, pdxlnScCmp, Edxland);
-			}
-
-			pdrgpexprConjuncts->Release();
 		}
 
 		if (nullptr != filter_dxlnode && fRangePart)
