@@ -451,8 +451,7 @@ CPhysicalPartitionSelector::PppsDerive(CMemoryPool *mp,
 	CPartitionPropagationSpec *pps_child =
 		exprhdl.Pdpplan(0 /* child_index */)->Ppps();
 
-	pps_result->InsertAllFromPartPropSpec(pps_child,
-										  NULL /* allowed_scan_ids */);
+	pps_result->InsertAll(pps_child);
 	pps_result->Insert(m_scan_id, CPartitionPropagationSpec::EpptPropagator,
 					   m_mdid);
 

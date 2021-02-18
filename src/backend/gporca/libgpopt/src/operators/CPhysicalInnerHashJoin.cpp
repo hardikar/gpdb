@@ -350,7 +350,7 @@ CPhysicalInnerHashJoin::PppsRequired(CMemoryPool *mp,
 			allowed_scan_ids->ExchangeSet(scan_id);
 		}
 
-		pps_result->InsertAllFromPartPropSpec(pppsRequired, allowed_scan_ids);
+		pps_result->InsertAllowedConsumers(pppsRequired, allowed_scan_ids);
 		allowed_scan_ids->Release();
 	}
 	else

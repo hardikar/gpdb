@@ -138,7 +138,34 @@ CPartitionPropagationSpec::Insert(INT scan_id, EPartPropSpecInfoType type,
 }
 
 void
-CPartitionPropagationSpec::InsertAllFromPartPropSpec(
+CPartitionPropagationSpec::InsertAll(CPartitionPropagationSpec *pps)
+{
+	for (ULONG ul = 0; ul < pps->m_part_prop_spec_infos->Size(); ++ul)
+	{
+		SPartPropSpecInfo *other_info = (*pps->m_part_prop_spec_infos)[ul];
+
+		// FIXME: Make this more efficient!
+		SPartPropSpecInfo *found_info =
+			FindPartPropSpecInfo(other_info->m_scan_id);
+
+		if (found_info == nullptr)
+		{
+			other_info->m_root_rel_mdid->AddRef();
+			Insert(other_info->m_scan_id, other_info->m_type,
+				   other_info->m_root_rel_mdid);
+			continue;
+		}
+
+		// FIXME: Convert to an exception
+		// propagator<x> and consumer<x> cannot be both required/derived from the same subtree
+		GPOS_RTL_ASSERT(found_info->m_type == other_info->m_type &&
+						found_info->m_root_rel_mdid ==
+							other_info->m_root_rel_mdid);
+	}
+}
+
+void
+CPartitionPropagationSpec::InsertAllowedConsumers(
 	CPartitionPropagationSpec *pps, CBitSet *allowed_scan_ids)
 {
 	for (ULONG ul = 0; ul < pps->m_part_prop_spec_infos->Size(); ++ul)
@@ -146,7 +173,8 @@ CPartitionPropagationSpec::InsertAllFromPartPropSpec(
 		SPartPropSpecInfo *other_info = (*pps->m_part_prop_spec_infos)[ul];
 
 		if (allowed_scan_ids != NULL &&
-			!allowed_scan_ids->Get(other_info->m_scan_id))
+			!allowed_scan_ids->Get(other_info->m_scan_id) &&
+			!(other_info->m_type == EpptConsumer))
 		{
 			continue;
 		}
@@ -164,7 +192,7 @@ CPartitionPropagationSpec::InsertAllFromPartPropSpec(
 		}
 
 		// FIXME: Convert to an exception
-		// propagator<x> and consumer<x> shouldn't be sent down the same child
+		// propagator<x> and consumer<x> cannot be both required/derived from the same subtree
 		GPOS_RTL_ASSERT(found_info->m_type == other_info->m_type &&
 						found_info->m_root_rel_mdid ==
 							other_info->m_root_rel_mdid);
