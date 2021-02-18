@@ -31,7 +31,7 @@ class CReqdPropPlan;
 //		Property specification
 //
 //---------------------------------------------------------------------------
-class CPropSpec : public CRefCount
+class CPropSpec : public CRefCount, public DbgPrintMixin<CPropSpec>
 {
 public:
 	// property type
@@ -74,7 +74,6 @@ public:
 
 };	// class CPropSpec
 
-
 // shorthand for printing
 inline IOstream &
 operator<<(IOstream &os, const CPropSpec &ospec)
@@ -83,6 +82,8 @@ operator<<(IOstream &os, const CPropSpec &ospec)
 }
 
 }  // namespace gpopt
+
+FORCE_GENERATE_DBGSTR(gpopt::CPropSpec);
 
 #endif	// !GPOPT_CPropSpec_H
 
