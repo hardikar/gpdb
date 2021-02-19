@@ -147,8 +147,8 @@ public:
 
 	// ctor for n-ary expression with origin group expression
 	CExpression(CMemoryPool *mp, COperator *pop, CGroupExpression *pgexpr,
-				CExpressionArray *pdrgpexpr, IStatistics *input_stats,
-				CCost cost = GPOPT_INVALID_COST);
+				CExpressionArray *pdrgpexpr, CReqdPropPlan *prpp,
+				IStatistics *input_stats, CCost cost = GPOPT_INVALID_COST);
 
 	// dtor
 	~CExpression() override;

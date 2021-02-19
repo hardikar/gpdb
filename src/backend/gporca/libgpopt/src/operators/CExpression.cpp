@@ -242,13 +242,14 @@ CExpression::CExpression(CMemoryPool *mp, COperator *pop,
 //---------------------------------------------------------------------------
 CExpression::CExpression(CMemoryPool *mp, COperator *pop,
 						 CGroupExpression *pgexpr, CExpressionArray *pdrgpexpr,
-						 IStatistics *input_stats, CCost cost)
+						 CReqdPropPlan *prpp, IStatistics *input_stats,
+						 CCost cost)
 	: m_mp(mp),
 	  m_pop(pop),
 	  m_pdrgpexpr(pdrgpexpr),
 	  m_pdprel(nullptr),
 	  m_pstats(nullptr),
-	  m_prpp(nullptr),
+	  m_prpp(prpp),
 	  m_pdpplan(nullptr),
 	  m_pdpscalar(nullptr),
 	  m_pgexpr(pgexpr),
@@ -1305,8 +1306,10 @@ CExpression::PexprRehydrate(CMemoryPool *mp, CCostContext *pcc,
 		cost = pcc->CostCompute(mp, pdrgpcost);
 		pdrgpcost->Release();
 	}
-	CExpression *pexpr = GPOS_NEW(mp)
-		CExpression(mp, pop, pgexpr, pdrgpexpr, pcc->Pstats(), CCost(cost));
+	pcc->Poc()->Prpp()->AddRef();
+	CExpression *pexpr =
+		GPOS_NEW(mp) CExpression(mp, pop, pgexpr, pdrgpexpr, pcc->Poc()->Prpp(),
+								 pcc->Pstats(), CCost(cost));
 
 	if (pop->FPhysical() && !pexpr->FValidPlan(pcc->Poc()->Prpp(), pdpctxtplan))
 	{
