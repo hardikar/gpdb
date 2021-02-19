@@ -97,6 +97,12 @@ public:
 		return m_scan_id;
 	}
 
+	ULONG
+	SelectorId() const
+	{
+		return m_selector_id;
+	}
+
 	// partitioned table mdid
 	IMDId *
 	MDId() const

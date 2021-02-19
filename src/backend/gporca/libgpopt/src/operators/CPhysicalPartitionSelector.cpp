@@ -38,6 +38,7 @@ CPhysicalPartitionSelector::CPhysicalPartitionSelector(
 	CExpression *pexprScalar)
 	: CPhysical(mp),
 	  m_scan_id(scan_id),
+	  m_selector_id(++m_selector_id_counter),
 	  m_mdid(mdid),
 	  m_pdrgpdrgpcr(pdrgpdrgpcr),
 	  m_pexprCombinedPredicate(pexprScalar)
@@ -550,7 +551,8 @@ CPhysicalPartitionSelector::EpetOrder(CExpressionHandle &,	// exprhdl,
 IOstream &
 CPhysicalPartitionSelector::OsPrint(IOstream &os) const
 {
-	os << SzId() << ", Scan Id: " << m_scan_id << ", Part Table: ";
+	os << SzId() << ", Id: " << SelectorId() << ", Scan Id: " << m_scan_id
+	   << ", Part Table: ";
 	MDId()->OsPrint(os);
 
 	return os;
