@@ -4721,9 +4721,41 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 	CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
 	BOOL *pfDML)
 {
-	return PdxlnPartitionSelector(
-		pexpr, colref_array, pdrgpdsBaseTables, pulNonGatherMotions, pfDML,
-		nullptr /*pexprScalarCond*/, nullptr /*dxl_properties*/);
+	CPhysicalPartitionSelector *popSelector =
+		CPhysicalPartitionSelector::PopConvert(pexpr->Pop());
+
+	CExpression *pexprChild = (*pexpr)[0];
+
+	// translate child
+	CDXLNode *child_dxlnode = CreateDXLNode(
+		pexprChild, colref_array, pdrgpdsBaseTables, pulNonGatherMotions, pfDML,
+		false /*fRemap*/, false /*fRoot*/);
+
+	CDXLNode *pdxlnPrLChild = (*child_dxlnode)[0];
+	CDXLNode *pdxlnPrL =
+		CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
+			m_mp, m_pcf, m_phmcrdxln, pdxlnPrLChild);
+
+	CDXLNode *pdxlnSelector = GPOS_NEW(m_mp) CDXLNode(
+		m_mp, GPOS_NEW(m_mp) CDXLPhysicalPartitionSelector(
+				  m_mp, popSelector->MDId(), 1, popSelector->ScanId()));
+	CExpression *pexprPrintable = popSelector->PexprCombinedPred();
+
+	// FIXME: This check is temporary
+	if (pexprPrintable == nullptr)
+	{
+		pexprPrintable = CUtils::PexprScalarConstBool(m_mp, true, false);
+	}
+	CDXLNode *pdxlnPrintable = PdxlnScalar(pexprPrintable);
+	pexprPrintable->Release();
+
+	CDXLPhysicalProperties *dxl_properties = GetProperties(pexprChild);
+	pdxlnSelector->SetProperties(dxl_properties);
+	pdxlnSelector->AddChild(pdxlnPrL);
+	pdxlnSelector->AddChild(pdxlnPrintable);
+	pdxlnSelector->AddChild(child_dxlnode);
+
+	return pdxlnSelector;
 }
 
 //---------------------------------------------------------------------------
