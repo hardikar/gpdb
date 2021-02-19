@@ -164,12 +164,6 @@ private:
 								   CExpression *pexprScalar,
 								   CDXLPhysicalProperties *dxl_properties);
 
-	// translate a partition selector into DXL while inlining the given condition in the child
-	CDXLNode *PdxlnPartitionSelectorWithInlinedCondition(
-		CExpression *pexprFilter, CColRefArray *colref_array,
-		CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
-		BOOL *pfDML);
-
 	// create a DXL result node from an optimizer filter node
 	CDXLNode *PdxlnResultFromFilter(CExpression *pexprFilter,
 									CColRefArray *colref_array,
@@ -387,26 +381,11 @@ private:
 									 CDistributionSpecArray *pdrgpdsBaseTables,
 									 ULONG *pulNonGatherMotions, BOOL *pfDML);
 
-	// translate a partition selector
-	CDXLNode *PdxlnPartitionSelector(CExpression *pexpr,
-									 CColRefArray *colref_array,
-									 CDistributionSpecArray *pdrgpdsBaseTables,
-									 ULONG *pulNonGatherMotions, BOOL *pfDML,
-									 CExpression *pexprScalarCond,
-									 CDXLPhysicalProperties *dxl_properties);
-
 	// translate a DML partition selector
 	CDXLNode *PdxlnPartitionSelectorDML(
 		CExpression *pexpr, CColRefArray *pdrgpc,
 		CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
 		BOOL *pfDMLr);
-
-	// translate an expansion-based partition selector with a scalar condition to inline
-	CDXLNode *PdxlnPartitionSelectorExpand(
-		CExpression *pexpr, CColRefArray *colref_array,
-		CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
-		BOOL *pfDML, CExpression *pexprScalarCond,
-		CDXLPhysicalProperties *dxl_properties);
 
 	// translate partition filter list
 	CDXLNode *PdxlnPartFilterList(CExpression *pexpr, BOOL fEqFilters);
@@ -454,14 +433,6 @@ private:
 	// translate a scalar null test on a part key
 	CDXLNode *PdxlnScNullTestPartKey(IMDId *pmdidTypePartKey, ULONG ulPartLevel,
 									 BOOL fRangePart, BOOL is_null);
-
-	// translate the child of a partition selector expression, pushing the given
-	// scalar predicate if available
-	CDXLNode *PdxlnPartitionSelectorChild(
-		CExpression *pexprChild, CExpression *pexprScalarCond,
-		CDXLPhysicalProperties *dxl_properties, CColRefArray *colref_array,
-		CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
-		BOOL *pfDML);
 
 	CDXLNode *PdxlArrayExprOnPartKey(CExpression *pexprPred,
 									 CColRef *pcrPartKey,

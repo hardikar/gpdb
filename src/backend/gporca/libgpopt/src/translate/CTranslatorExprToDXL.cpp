@@ -1971,69 +1971,6 @@ CTranslatorExprToDXL::PdxlnFromFilter(CExpression *pexprFilter,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorExprToDXL::PdxlnPartitionSelectorWithInlinedCondition
-//
-//	@doc:
-//		Translate a partition selector into DXL while inlining the given
-//		condition in the child
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXL::PdxlnPartitionSelectorWithInlinedCondition(
-	CExpression *pexprFilter, CColRefArray *colref_array,
-	CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
-	BOOL *pfDML)
-{
-	GPOS_ASSERT(nullptr != pexprFilter);
-	GPOS_ASSERT(COperator::EopPhysicalFilter == pexprFilter->Pop()->Eopid());
-	GPOS_ASSERT(COperator::EopPhysicalPartitionSelector ==
-				(*pexprFilter)[0]->Pop()->Eopid());
-
-	CExpression *pexprRelational = (*pexprFilter)[0];
-	CExpression *pexprScalar = (*pexprFilter)[1];
-	CExpression *pexprChild = (*pexprRelational)[0];
-	COperator::EOperatorId op_id = pexprChild->Pop()->Eopid();
-	BOOL fTableScanChild = (COperator::EopPhysicalDynamicTableScan == op_id);
-	BOOL fIndexChild = (COperator::EopPhysicalDynamicIndexScan == op_id ||
-						COperator::EopPhysicalDynamicBitmapTableScan == op_id);
-	GPOS_ASSERT(fTableScanChild || fIndexChild);
-
-	// if we are a dynamic GiST index scan, we need to do a recheck condition since GiST indexes are lossy
-	BOOL isGist = false;
-	if (COperator::EopPhysicalDynamicIndexScan == op_id)
-	{
-		CPhysicalDynamicIndexScan *indexScan =
-			CPhysicalDynamicIndexScan::PopConvert(pexprChild->Pop());
-		isGist = indexScan->Pindexdesc()->IndexType() == IMDIndex::EmdindGist;
-	}
-
-	// inline condition in child operator if the following conditions are met:
-	BOOL fInlineCondition =
-		nullptr != pexprScalar &&  // condition is not NULL
-		!CUtils::FScalarConstTrue(
-			pexprScalar) &&	 // condition is not const True
-		(fTableScanChild ||	 // child operator is TableScan
-		 (fIndexChild &&
-		  (!pexprScalar->Matches((*pexprChild)[0]) ||
-		   isGist))	 // OR, child operator is IndexScan and condition does not match index condition
-		);	// if it is of type GiST, inline the condition anyway as the recheck
-
-	CExpression *pexprCond = nullptr;
-	CDXLPhysicalProperties *dxl_properties = nullptr;
-	if (fInlineCondition)
-	{
-		pexprCond = pexprScalar;
-		dxl_properties = GetProperties(pexprFilter);
-	}
-
-	return PdxlnPartitionSelector(pexprRelational, colref_array,
-								  pdrgpdsBaseTables, pulNonGatherMotions, pfDML,
-								  pexprCond, dxl_properties);
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorExprToDXL::PdxlnResultFromFilter
 //
 //	@doc:
@@ -2052,20 +1989,6 @@ CTranslatorExprToDXL::PdxlnResultFromFilter(
 	CExpression *pexprRelational = (*pexprFilter)[0];
 	CExpression *pexprScalar = (*pexprFilter)[1];
 	CColRefSet *pcrsOutput = pexprFilter->Prpp()->PcrsRequired();
-
-	if (COperator::EopPhysicalPartitionSelector ==
-		pexprRelational->Pop()->Eopid())
-	{
-		COperator::EOperatorId op_id = (*pexprRelational)[0]->Pop()->Eopid();
-		if (COperator::EopPhysicalDynamicIndexScan == op_id ||
-			COperator::EopPhysicalDynamicBitmapTableScan == op_id ||
-			COperator::EopPhysicalDynamicTableScan == op_id)
-		{
-			return PdxlnPartitionSelectorWithInlinedCondition(
-				pexprFilter, colref_array, pdrgpdsBaseTables,
-				pulNonGatherMotions, pfDML);
-		}
-	}
 
 	CDXLPhysicalProperties *dxl_properties = GetProperties(pexprFilter);
 
@@ -4805,38 +4728,6 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorExprToDXL::PdxlnPartitionSelector
-//
-//	@doc:
-//		Translate a partition selector into DXL
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXL::PdxlnPartitionSelector(
-	CExpression *pexpr, CColRefArray *colref_array,
-	CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
-	BOOL *pfDML, CExpression *pexprScalarCond,
-	CDXLPhysicalProperties *dxl_properties)
-{
-	GPOS_ASSERT(nullptr != pexpr);
-	CPhysicalPartitionSelector *popSelector =
-		CPhysicalPartitionSelector::PopConvert(pexpr->Pop());
-
-	CExpression *pexprScalar = popSelector->PexprCombinedPred();
-	if (CUtils::FScalarConstTrue(pexprScalar))
-	{
-		return PdxlnPartitionSelectorExpand(
-			pexpr, colref_array, pdrgpdsBaseTables, pulNonGatherMotions, pfDML,
-			pexprScalarCond, dxl_properties);
-	}
-
-	// GPDB_12_MERGE_FIXME: Support generating Partition Selector
-	GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiExpr2DXLUnsupportedFeature,
-			   GPOS_WSZ_LIT("Partition Selector with filter not supported"));
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorExprToDXL::PdxlnPartitionSelectorDML
 //
 //	@doc:
@@ -4955,105 +4846,6 @@ CTranslatorExprToDXL::PdxlnPartFilterList(CExpression *pexpr, BOOL fEqFilters)
 	}
 
 	return pdxlnFilters;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXL::PdxlnPartitionSelectorExpand
-//
-//	@doc:
-//		Translate an expand-based partition resolver into DXL
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXL::PdxlnPartitionSelectorExpand(
-	CExpression *pexpr, CColRefArray *colref_array,
-	CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
-	BOOL *pfDML, CExpression *pexprScalarCond,
-	CDXLPhysicalProperties *dxl_properties)
-{
-	GPOS_ASSERT(nullptr != pexpr);
-	GPOS_ASSERT(1 == pexpr->Arity());
-
-	CExpression *pexprChild = (*pexpr)[0];
-
-	GPOS_ASSERT_IMP(
-		nullptr != pexprScalarCond,
-		(COperator::EopPhysicalDynamicTableScan == pexprChild->Pop()->Eopid() ||
-		 COperator::EopPhysicalDynamicIndexScan == pexprChild->Pop()->Eopid() ||
-		 COperator::EopPhysicalDynamicBitmapTableScan ==
-			 pexprChild->Pop()->Eopid()) &&
-			"Inlining predicates only allowed in DynamicTableScan, DynamicIndexScan and DynamicBitmapTableScan");
-
-	CPhysicalPartitionSelector *popSelector =
-		CPhysicalPartitionSelector::PopConvert(pexpr->Pop());
-	const ULONG ulLevels = popSelector->UlPartLevels();
-
-	// translate child
-	CDXLNode *child_dxlnode = PdxlnPartitionSelectorChild(
-		pexprChild, pexprScalarCond, dxl_properties, colref_array,
-		pdrgpdsBaseTables, pulNonGatherMotions, pfDML);
-
-	// project list
-	IMDId *mdid = popSelector->MDId();
-	CDXLNode *pdxlnPrL = CTranslatorExprToDXLUtils::PdxlnPrLPartitionSelector(
-		m_mp, m_pmda, m_pcf, m_phmcrdxln,
-		false,	  //fUseChildProjList
-		nullptr,  //pdxlnPrLchild
-		nullptr,  //pcrOid
-		ulLevels, CUtils::FGeneratePartOid(mdid));
-
-	// translate filters
-	CDXLNode *pdxlnEqFilters = nullptr;
-	CDXLNode *pdxlnFilters = nullptr;
-	CDXLNode *pdxlnResidual = nullptr;
-	TranslatePartitionFilters(pexpr, true /*fPassThrough*/, &pdxlnEqFilters,
-							  &pdxlnFilters, &pdxlnResidual);
-
-	// construct propagation expression
-	ULONG scan_id = popSelector->ScanId();
-	CDXLNode *pdxlnPropagation =
-		CTranslatorExprToDXLUtils::PdxlnInt4Const(m_mp, m_pmda, (INT) scan_id);
-
-	// translate printable filter
-	CExpression *pexprPrintable = popSelector->PexprCombinedPred();
-	GPOS_ASSERT(nullptr != pexprPrintable);
-	CDXLNode *pdxlnPrintable = PdxlnScalar(pexprPrintable);
-
-	// construct PartitionSelector node
-	IMDId *rel_mdid = popSelector->MDId();
-	rel_mdid->AddRef();
-
-	CDXLNode *pdxlnSelector = CTranslatorExprToDXLUtils::PdxlnPartitionSelector(
-		m_mp, rel_mdid, ulLevels, scan_id,
-		CTranslatorExprToDXLUtils::GetProperties(m_mp), pdxlnPrL,
-		pdxlnEqFilters, pdxlnFilters, pdxlnResidual, pdxlnPropagation,
-		pdxlnPrintable);
-
-	// construct sequence node
-	CDXLPhysicalSequence *pdxlopSequence =
-		GPOS_NEW(m_mp) CDXLPhysicalSequence(m_mp);
-	CDXLNode *pdxlnSequence = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopSequence);
-
-	CDXLPhysicalProperties *pdxlpropSeq =
-		CTranslatorExprToDXLUtils::PdxlpropCopy(m_mp, child_dxlnode);
-	pdxlnSequence->SetProperties(pdxlpropSeq);
-
-	// construct sequence's project list from the project list of the last child
-	CDXLNode *pdxlnPrLChild = (*child_dxlnode)[0];
-	CDXLNode *pdxlnPrLSequence =
-		CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
-			m_mp, m_pcf, m_phmcrdxln, pdxlnPrLChild);
-
-	pdxlnSequence->AddChild(pdxlnPrLSequence);
-	pdxlnSequence->AddChild(pdxlnSelector);
-	pdxlnSequence->AddChild(child_dxlnode);
-
-#ifdef GPOS_DEBUG
-	pdxlopSequence->AssertValid(pdxlnSequence, false /* validate_children */);
-#endif
-
-	return pdxlnSequence;
 }
 
 //---------------------------------------------------------------------------
@@ -5549,49 +5341,6 @@ CTranslatorExprToDXL::PdxlnScNullTestPartKey(IMDId *pmdidTypePartKey,
 	return GPOS_NEW(m_mp)
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarBoolExpr(m_mp, Edxland),
 				 pdxlnNotDefaultOrOpenEnded, pdxlnNullTests);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXL::PdxlnPartitionSelectorChild
-//
-//	@doc:
-// 		Translate the child of a partition selector expression, pushing the given
-//		scalar predicate if available
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXL::PdxlnPartitionSelectorChild(
-	CExpression *pexprChild, CExpression *pexprScalarCond,
-	CDXLPhysicalProperties *dxl_properties, CColRefArray *colref_array,
-	CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
-	BOOL *pfDML)
-{
-	GPOS_ASSERT_IFF(nullptr != pexprScalarCond, nullptr != dxl_properties);
-
-	if (nullptr == pexprScalarCond)
-	{
-		return CreateDXLNode(pexprChild, colref_array, pdrgpdsBaseTables,
-							 pulNonGatherMotions, pfDML, true, false);
-	}
-
-	switch (pexprChild->Pop()->Eopid())
-	{
-		case COperator::EopPhysicalDynamicTableScan:
-			return PdxlnDynamicTableScan(pexprChild, colref_array,
-										 pdrgpdsBaseTables, pexprScalarCond,
-										 dxl_properties);
-		case COperator::EopPhysicalDynamicIndexScan:
-			return PdxlnIndexScanWithInlinedCondition(
-				pexprChild, pexprScalarCond, dxl_properties, colref_array,
-				pdrgpdsBaseTables);
-		default:
-			GPOS_ASSERT(COperator::EopPhysicalDynamicBitmapTableScan ==
-						pexprChild->Pop()->Eopid());
-			return PdxlnDynamicBitmapTableScan(pexprChild, colref_array,
-											   pdrgpdsBaseTables,
-											   pexprScalarCond, dxl_properties);
-	}
 }
 
 //---------------------------------------------------------------------------
