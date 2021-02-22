@@ -425,11 +425,6 @@ COptimizer::PexprOptimize(CMemoryPool *mp, CQueryContext *pqc,
 
 	CExpression *pexprPlan = eng.PexprExtractPlan();
 
-	// derive plan properties
-	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
-	pexprPlan->PdpDerive(pdpctxtplan);
-	pdpctxtplan->Release();
-
 	CheckCTEConsistency(mp, pexprPlan);
 
 	PrintQueryOrPlan(mp, pexprPlan);
