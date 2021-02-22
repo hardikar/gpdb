@@ -336,7 +336,7 @@ CPhysicalInnerHashJoin::PppsRequired(CMemoryPool *mp,
 				selector_ids->Union(pps_inner->SelectorIds(scan_id));
 				pps_result->Insert(scan_id,
 								   CPartitionPropagationSpec::EpptConsumer,
-								   rel_mdid, selector_ids);
+								   rel_mdid, selector_ids, nullptr);
 				selector_ids->Release();
 			}
 			else
@@ -344,7 +344,7 @@ CPhysicalInnerHashJoin::PppsRequired(CMemoryPool *mp,
 				GPOS_ASSERT(child_index == 1);
 				pps_result->Insert(scan_id,
 								   CPartitionPropagationSpec::EpptPropagator,
-								   rel_mdid, nullptr);
+								   rel_mdid, nullptr, pexprCmp);
 			}
 			pexprCmp->Release();
 		}

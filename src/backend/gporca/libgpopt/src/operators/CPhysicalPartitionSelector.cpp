@@ -459,7 +459,7 @@ CPhysicalPartitionSelector::PppsDerive(CMemoryPool *mp,
 
 	pps_result->InsertAll(pps_child);
 	pps_result->Insert(m_scan_id, CPartitionPropagationSpec::EpptPropagator,
-					   m_mdid, selector_ids);
+					   m_mdid, selector_ids, nullptr);
 	selector_ids->Release();
 
 	return pps_result;

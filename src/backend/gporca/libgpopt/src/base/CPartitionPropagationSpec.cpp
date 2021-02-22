@@ -138,7 +138,8 @@ CPartitionPropagationSpec::SelectorIds(INT scan_id) const
 
 void
 CPartitionPropagationSpec::Insert(INT scan_id, EPartPropSpecInfoType type,
-								  IMDId *rool_rel_mdid, CBitSet *selector_ids)
+								  IMDId *rool_rel_mdid, CBitSet *selector_ids,
+								  CExpression *expr)
 {
 	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
 	rool_rel_mdid->AddRef();
@@ -148,6 +149,12 @@ CPartitionPropagationSpec::Insert(INT scan_id, EPartPropSpecInfoType type,
 	if (selector_ids != nullptr)
 	{
 		info->m_selector_ids->Union(selector_ids);
+	}
+
+	if (expr != nullptr)
+	{
+		expr->AddRef();
+		info->m_filter_expr = expr;
 	}
 
 	// NB: This is appended blindly !
@@ -170,7 +177,8 @@ CPartitionPropagationSpec::InsertAll(CPartitionPropagationSpec *pps)
 		{
 			other_info->m_root_rel_mdid->AddRef();
 			Insert(other_info->m_scan_id, other_info->m_type,
-				   other_info->m_root_rel_mdid, other_info->m_selector_ids);
+				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
+				   other_info->m_filter_expr);
 			continue;
 		}
 
@@ -205,7 +213,8 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 		{
 			other_info->m_root_rel_mdid->AddRef();
 			Insert(other_info->m_scan_id, other_info->m_type,
-				   other_info->m_root_rel_mdid, other_info->m_selector_ids);
+				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
+				   other_info->m_filter_expr);
 			continue;
 		}
 
@@ -238,7 +247,8 @@ CPartitionPropagationSpec::InsertAllExcept(CPartitionPropagationSpec *pps,
 		{
 			other_info->m_root_rel_mdid->AddRef();
 			Insert(other_info->m_scan_id, other_info->m_type,
-				   other_info->m_root_rel_mdid, other_info->m_selector_ids);
+				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
+				   other_info->m_filter_expr);
 			continue;
 		}
 
@@ -297,13 +307,14 @@ CPartitionPropagationSpec::AppendEnforcers(CMemoryPool *mp, CExpressionHandle &,
 		}
 
 		info->m_root_rel_mdid->AddRef();
+		info->m_filter_expr->AddRef();
 		expr->AddRef();
 		// FIXME: Compute partkeys correctly.
 		CExpression *part_selector = GPOS_NEW(mp)
 			CExpression(mp,
 						GPOS_NEW(mp) CPhysicalPartitionSelector(
 							mp, info->m_scan_id, info->m_root_rel_mdid,
-							nullptr /* part keys */, nullptr /* pexprScalar */),
+							nullptr /* part keys */, info->m_filter_expr),
 						expr);
 
 		pdrgpexpr->Append(part_selector);

@@ -4755,13 +4755,7 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 						   popSelector->ScanId()));
 	CExpression *pexprPrintable = popSelector->PexprCombinedPred();
 
-	// FIXME: This check is temporary
-	if (pexprPrintable == nullptr)
-	{
-		pexprPrintable = CUtils::PexprScalarConstBool(m_mp, true, false);
-	}
 	CDXLNode *pdxlnPrintable = PdxlnScalar(pexprPrintable);
-	pexprPrintable->Release();
 
 	CDXLPhysicalProperties *dxl_properties = GetProperties(pexprChild);
 	pdxlnSelector->SetProperties(dxl_properties);
