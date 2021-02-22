@@ -119,9 +119,6 @@ private:
 	// copy group properties and stats to expression
 	void CopyGroupPropsAndStats(IStatistics *input_stats);
 
-	// decorate expression tree with required plan properties
-	CReqdPropPlan *PrppDecorate(CMemoryPool *mp, CReqdPropPlan *prppInput);
-
 public:
 	CExpression(const CExpression &) = delete;
 
@@ -237,9 +234,6 @@ public:
 
 	// reset expression stats
 	void ResetStats();
-
-	// compute required plan properties of all expression nodes
-	CReqdPropPlan *PrppCompute(CMemoryPool *mp, CReqdPropPlan *prppInput);
 
 	// check for outer references
 	BOOL HasOuterRefs();
