@@ -61,8 +61,6 @@ OBJS        = CAutoOptCtxt.o \
               COptCtxt.o \
               COptimizationContext.o \
               COrderSpec.o \
-              CPartFilterMap.o \
-              CPartIndexMap.o \
               CPartInfo.o \
               CPartKeys.o \
               CPartitionPropagationSpec.o \
