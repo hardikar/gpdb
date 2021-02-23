@@ -561,6 +561,8 @@ private:
 	static List *TranslateNestLoopParamList(
 		CDXLColRefArray *pdrgdxlcrOuterRefs, CDXLTranslateContext *dxltrctxLeft,
 		CDXLTranslateContext *dxltrctxRight);
+
+	PartitionedRelPruneInfo *CreatePruneInfo(CDXLNode *filterNode, gpdb::RelationWrapper &relation, CMappingColIdVarPlStmt &colid_var_mapping);
 };
 }  // namespace gpdxl
 

@@ -3438,6 +3438,49 @@ PartitionPruneInfoFromPartitionSelector(
 	return {dxl_part_selector->ScanId(), part_prune_info, range_table};
 }
 
+
+PartitionedRelPruneInfo *
+CTranslatorDXLToPlStmt::CreatePruneInfo(CDXLNode *filterNode, gpdb::RelationWrapper &relation, CMappingColIdVarPlStmt &colid_var_mapping)
+{
+	// Make a fake pruning step (works only for 1 equality pred)
+	PartitionPruneStepOp *step = MakeNode(PartitionPruneStepOp);
+	step->step.step_id = 0;
+	step->opstrategy = BTEqualStrategyNumber;
+
+	// GPDB_12_MERGE_FIXME: this is still pretty much a hack. Notice the btree
+	// support function is blindly picked from the relation definition. When the
+	// constant used in the equal filter is of a different type from that of the
+	// partition boundaries, this will be wrong.
+	step->cmpfns = ListMake1Oid(relation->rd_partkey->partsupfunc[0].fn_oid);
+
+	// FIXME: Assume the predicate is of the form pk = VAR
+	CDXLNode *dxl_ident = (*filterNode)[1];
+	Expr *expr = m_translator_dxl_to_scalar->TranslateDXLToScalar(
+		dxl_ident, &colid_var_mapping);
+	step->exprs = ListMake1(expr);
+
+	// FAKE PartitionedRelPruneInfo
+	PartitionedRelPruneInfo *pinfo = MakeNode(PartitionedRelPruneInfo);
+	pinfo->rtindex = 1;
+	pinfo->nparts = relation->rd_partdesc->nparts;
+	pinfo->present_parts = bms_add_range(NULL, 0, pinfo->nparts - 1);
+
+	// FIXME: This should be *computed* from the linked DTS
+	pinfo->subpart_map = (int *) palloc(sizeof(int) * pinfo->nparts);
+	pinfo->subplan_map = (int *) palloc(sizeof(int) * pinfo->nparts);
+	pinfo->relid_map = (Oid *) palloc(sizeof(int) * pinfo->nparts);
+	for (int i = 0; i < pinfo->nparts; ++i)
+	{
+		pinfo->subpart_map[i] = -1;
+		pinfo->subplan_map[i] = i;
+		pinfo->relid_map[i] = relation->rd_partdesc->oids[i];
+	}
+
+	PartitionPruneStep *st = (PartitionPruneStep *) step;
+	List *step_list = ListMake1(st);
+	pinfo->exec_pruning_steps = step_list;
+	return pinfo;
+}
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorDXLToPlStmt::TranslateDXLPartSelector
@@ -3502,45 +3545,13 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 		m_dxl_to_plstmt_context->GetParamIdForSelector(
 			oid_type, partition_selector_dxlop->SelectorId());
 
-	// Make a fake pruning step (works only for 1 equality pred)
-	PartitionPruneStepOp *step = MakeNode(PartitionPruneStepOp);
-	step->step.step_id = 0;
-	step->opstrategy = BTEqualStrategyNumber;
-
-	// GPDB_12_MERGE_FIXME: this is still pretty much a hack. Notice the btree
-	// support function is blindly picked from the relation definition. When the
-	// constant used in the equal filter is of a different type from that of the
-	// partition boundaries, this will be wrong.
-	step->cmpfns = ListMake1Oid(relation->rd_partkey->partsupfunc[0].fn_oid);
 
 	// no need to translate printable filter - since it is not needed by the executor
 	CDXLNode *filterNode = (*partition_selector_dxlnode)[1];
-	// FIXME: Assume the predicate is of the form pk = VAR
-	CDXLNode *dxl_ident = (*filterNode)[1];
-	Expr *expr = m_translator_dxl_to_scalar->TranslateDXLToScalar(
-		dxl_ident, &colid_var_mapping);
-	step->exprs = ListMake1(expr);
+	PartitionedRelPruneInfo *pinfo = CreatePruneInfo(filterNode, relation, colid_var_mapping);
 
-	// FAKE PartitionedRelPruneInfo
-	PartitionedRelPruneInfo *pinfo = MakeNode(PartitionedRelPruneInfo);
-	pinfo->rtindex = 1;
-	pinfo->nparts = relation->rd_partdesc->nparts;
-	pinfo->present_parts = bms_add_range(NULL, 0, pinfo->nparts - 1);
 
-	// FIXME: This should be *computed* from the linked DTS
-	pinfo->subpart_map = (int *) palloc(sizeof(int) * pinfo->nparts);
-	pinfo->subplan_map = (int *) palloc(sizeof(int) * pinfo->nparts);
-	pinfo->relid_map = (Oid *) palloc(sizeof(int) * pinfo->nparts);
-	for (int i = 0; i < pinfo->nparts; ++i)
-	{
-		pinfo->subpart_map[i] = -1;
-		pinfo->subplan_map[i] = i;
-		pinfo->relid_map[i] = relation->rd_partdesc->oids[i];
-	}
 
-	PartitionPruneStep *st = (PartitionPruneStep *) step;
-	List *step_list = ListMake1(st);
-	pinfo->exec_pruning_steps = step_list;
 	partition_selector->part_prune_info = MakeNode(PartitionPruneInfo);
 	partition_selector->part_prune_info->prune_infos =
 		ListMake1(ListMake1(pinfo));
