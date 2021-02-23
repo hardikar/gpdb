@@ -3452,123 +3452,101 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 	CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
-	// HAAAAACK: recognize static pruning, and return a place holder partition
-	// selector
-	const bool dynamic_pruning =
-		(EdxlpsIndexChild == partition_selector_dxlnode->Arity() - 1);
-	if (!dynamic_pruning)
-	{
-		PartitionPruneInfo *part_prune_info;
-		List *range_table;
-		ULONG scanId;
-		std::tie(scanId, part_prune_info, range_table) =
-			PartitionPruneInfoFromPartitionSelector(partition_selector_dxlnode,
-													m_md_accessor,
-													m_translator_dxl_to_scalar);
-
-		// FIXME: prelinfo->nparts won't work if you have subparts
-		auto prune_result = ExecuteSaticPruning(part_prune_info, range_table);
-
-		m_dxl_to_plstmt_context->SetStaticPruneResult(scanId, prune_result);
-		return reinterpret_cast<Plan *>(MakeNode(Result));
-	}
-	else
-		return nullptr;
-
-#if 0
 	PartitionSelector *partition_selector = MakeNode(PartitionSelector);
 
 	Plan *plan = &(partition_selector->plan);
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
+	CDXLPhysicalPartitionSelector *partition_selector_dxlop =
+		CDXLPhysicalPartitionSelector::Cast(
+			partition_selector_dxlnode->GetOperator());
 
-	CDXLPhysicalPartitionSelector *partition_selector_dxlop = CDXLPhysicalPartitionSelector::Cast(partition_selector_dxlnode->GetOperator());
-	const ULONG num_of_levels = partition_selector_dxlop->GetPartitioningLevel();
-	partition_selector->nLevels = num_of_levels;
-	partition_selector->scanId = partition_selector_dxlop->ScanId();
-	partition_selector->relid = CMDIdGPDB::CastMdid(partition_selector_dxlop->GetRelMdId())->Oid();
-	partition_selector->selectorId = m_partition_selector_counter++;
-
-	// translate operator costs
 	TranslatePlanCosts(partition_selector_dxlnode, plan);
 
 	CDXLNode *child_dxlnode = NULL;
-	CDXLTranslationContextArray *child_contexts = GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
+	CDXLTranslationContextArray *child_contexts =
+		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
 
-	CDXLTranslateContext child_context(m_mp, false, output_context->GetColIdToParamIdMap());
+	CDXLTranslateContext child_context(m_mp, false,
+									   output_context->GetColIdToParamIdMap());
 
-	BOOL has_childs = (EdxlpsIndexChild == partition_selector_dxlnode->Arity() - 1);
-	if (has_childs)
-	{
-		// translate child plan
-		child_dxlnode = (*partition_selector_dxlnode)[EdxlpsIndexChild];
+	// translate child plan
+	child_dxlnode = (*partition_selector_dxlnode)[2];
 
-		Plan *child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context, ctxt_translation_prev_siblings);
-		GPOS_ASSERT(NULL != child_plan && "child plan cannot be NULL");
+	Plan *child_plan = TranslateDXLOperatorToPlan(
+		child_dxlnode, &child_context, ctxt_translation_prev_siblings);
+	GPOS_ASSERT(NULL != child_plan && "child plan cannot be NULL");
 
-		partition_selector->plan.lefttree = child_plan;
-	}
+	partition_selector->plan.lefttree = child_plan;
 
 	child_contexts->Append(&child_context);
 
-	CDXLNode *project_list_dxlnode = (*partition_selector_dxlnode)[EdxlpsIndexProjList];
-	CDXLNode *eq_filters_dxlnode = (*partition_selector_dxlnode)[EdxlpsIndexEqFilters];
-	CDXLNode *filters_dxlnode = (*partition_selector_dxlnode)[EdxlpsIndexFilters];
-	CDXLNode *residual_filter_dxlnode = (*partition_selector_dxlnode)[EdxlpsIndexResidualFilter];
-	CDXLNode *proj_expr_dxlnode = (*partition_selector_dxlnode)[EdxlpsIndexPropExpr];
+	CDXLNode *project_list_dxlnode = (*partition_selector_dxlnode)[0];
+	plan->targetlist =
+		TranslateDXLProjList(project_list_dxlnode, NULL /*base_table_context*/,
+							 child_contexts, output_context);
 
-	// translate proj list
-	plan->targetlist = TranslateDXLProjList(project_list_dxlnode, NULL /*base_table_context*/, child_contexts, output_context);
+	CMDIdGPDB *mdid =
+		CMDIdGPDB::CastMdid(partition_selector_dxlop->GetRelMdId());
+	gpdb::RelationWrapper relation = gpdb::GetRelation(mdid->Oid());
 
-	// translate filter lists
-	GPOS_ASSERT(eq_filters_dxlnode->Arity() == num_of_levels);
-	partition_selector->levelEqExpressions = TranslateDXLFilterList(eq_filters_dxlnode, NULL /*base_table_context*/, child_contexts, output_context);
+	CMappingColIdVarPlStmt colid_var_mapping = CMappingColIdVarPlStmt(
+		m_mp, NULL /*base_table_context*/, child_contexts, output_context,
+		m_dxl_to_plstmt_context);
+	//	partition_selector->printablePredicate = (Node *) m_translator_dxl_to_scalar->PexprFromDXLNodeScalar(pdxlnPrintableFilter, &colid_var_mapping);
 
-	GPOS_ASSERT(filters_dxlnode->Arity() == num_of_levels);
-	partition_selector->levelExpressions = TranslateDXLFilterList(filters_dxlnode, NULL /*base_table_context*/, child_contexts, output_context);
+	partition_selector->paramid =
+		m_dxl_to_plstmt_context->GetParamIdForSelector(
+			partition_selector_dxlop->SelectorId());
 
-	//translate residual filter
-	CMappingColIdVarPlStmt colid_var_mapping = CMappingColIdVarPlStmt(m_mp, NULL /*base_table_context*/, child_contexts, output_context, m_dxl_to_plstmt_context);
-	if (!m_translator_dxl_to_scalar->HasConstTrue(residual_filter_dxlnode, m_md_accessor))
-	{
-		partition_selector->residualPredicate = (Node *) m_translator_dxl_to_scalar->TranslateDXLToScalar(residual_filter_dxlnode, &colid_var_mapping);
-	}
+	// Make a fake pruning step (works only for 1 equality pred)
+	PartitionPruneStepOp *step = MakeNode(PartitionPruneStepOp);
+	step->step.step_id = 0;
+	step->opstrategy = BTEqualStrategyNumber;
 
-	//translate propagation expression
-	if (!m_translator_dxl_to_scalar->HasConstNull(proj_expr_dxlnode))
-	{
-		partition_selector->propagationExpression = (Node *) m_translator_dxl_to_scalar->TranslateDXLToScalar(proj_expr_dxlnode, &colid_var_mapping);
-	}
+	// GPDB_12_MERGE_FIXME: this is still pretty much a hack. Notice the btree
+	// support function is blindly picked from the relation definition. When the
+	// constant used in the equal filter is of a different type from that of the
+	// partition boundaries, this will be wrong.
+	step->cmpfns = ListMake1Oid(relation->rd_partkey->partsupfunc[0].fn_oid);
 
 	// no need to translate printable filter - since it is not needed by the executor
+	CDXLNode *filterNode = (*partition_selector_dxlnode)[1];
+	// FIXME: Assume the predicate is of the form pk = VAR
+	CDXLNode *dxl_ident = (*filterNode)[1];
+	Expr *expr = m_translator_dxl_to_scalar->TranslateDXLToScalar(
+		dxl_ident, &colid_var_mapping);
+	step->exprs = ListMake1(expr);
 
-	partition_selector->staticPartOids = NIL;
-	partition_selector->staticScanIds = NIL;
-	partition_selector->staticSelection = !has_childs;
+	// FAKE PartitionedRelPruneInfo
+	PartitionedRelPruneInfo *pinfo = MakeNode(PartitionedRelPruneInfo);
+	pinfo->rtindex = 1;
+	pinfo->nparts = relation->rd_partdesc->nparts;
+	pinfo->present_parts = bms_add_range(NULL, 0, pinfo->nparts - 1);
 
-	if (partition_selector->staticSelection)
+	// FIXME: This should be *computed* from the linked DTS
+	pinfo->subpart_map = (int *) palloc(sizeof(int) * pinfo->nparts);
+	pinfo->subplan_map = (int *) palloc(sizeof(int) * pinfo->nparts);
+	pinfo->relid_map = (Oid *) palloc(sizeof(int) * pinfo->nparts);
+	for (int i = 0; i < pinfo->nparts; ++i)
 	{
-		SelectedParts *sp = gpdb::RunStaticPartitionSelection(partition_selector);
-		partition_selector->staticPartOids = sp->partOids;
-		partition_selector->staticScanIds = sp->scanIds;
-		gpdb::GPDBFree(sp);
-	}
-	else
-	{
-		// if we cannot do static elimination then add this partitioned table oid
-		// to the planned stmt so we can ship the constraints with the plan
-		m_dxl_to_plstmt_context->AddPartitionedTable(partition_selector->relid);
+		pinfo->subpart_map[i] = -1;
+		pinfo->subplan_map[i] = i;
+		pinfo->relid_map[i] = relation->rd_partdesc->oids[i];
 	}
 
-	// increment the number of partition selectors for the given scan id
-	m_dxl_to_plstmt_context->IncrementPartitionSelectors(partition_selector->scanId);
+	PartitionPruneStep *st = (PartitionPruneStep *) step;
+	List *step_list = ListMake1(st);
+	pinfo->exec_pruning_steps = step_list;
+	partition_selector->part_prune_info = MakeNode(PartitionPruneInfo);
+	partition_selector->part_prune_info->prune_infos =
+		ListMake1(ListMake1(pinfo));
 
 	SetParamIds(plan);
-
 	// cleanup
 	child_contexts->Release();
 
 	return (Plan *) partition_selector;
-#endif
+	-#endif
 }
 
 //---------------------------------------------------------------------------
