@@ -3494,9 +3494,13 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 		m_dxl_to_plstmt_context);
 	//	partition_selector->printablePredicate = (Node *) m_translator_dxl_to_scalar->PexprFromDXLNodeScalar(pdxlnPrintableFilter, &colid_var_mapping);
 
+
+	OID oid_type =
+		CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
+			->Oid();
 	partition_selector->paramid =
 		m_dxl_to_plstmt_context->GetParamIdForSelector(
-			partition_selector_dxlop->SelectorId());
+			oid_type, partition_selector_dxlop->SelectorId());
 
 	// Make a fake pruning step (works only for 1 equality pred)
 	PartitionPruneStepOp *step = MakeNode(PartitionPruneStepOp);
@@ -3546,7 +3550,6 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 	child_contexts->Release();
 
 	return (Plan *) partition_selector;
-	-#endif
 }
 
 //---------------------------------------------------------------------------
@@ -3642,11 +3645,19 @@ CTranslatorDXLToPlStmt::TranslateDXLAppend(
 
 		m_dxl_to_plstmt_context->AddRTE(rte);
 
-		// FIXME: Actually pass through the params used from ORCA!
-		// We will need a map from PartitionSelector::id -> Param; Save all such ids in the Append node
-		ULONG param_id = m_dxl_to_plstmt_context->GetNextParamId(0);
-		// param_id should also be 0, but that's only for this hack!
-		append->join_prune_paramids = ListMake1Int(param_id);
+		append->join_prune_paramids = NIL;
+		const ULongPtrArray *selector_ids = phy_append_dxlop->GetSelectorIds();
+		OID oid_type =
+			CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
+				->Oid();
+		for (ULONG ul = 0; ul < selector_ids->Size(); ++ul)
+		{
+			ULONG selector_id = *(*selector_ids)[ul];
+			ULONG param_id = m_dxl_to_plstmt_context->GetParamIdForSelector(
+				oid_type, selector_id);
+			append->join_prune_paramids =
+				gpdb::LAppendInt(append->join_prune_paramids, param_id);
+		}
 	}
 
 	// translate children

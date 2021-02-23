@@ -59,7 +59,7 @@ CContextDXLToPlStmt::CContextDXLToPlStmt(
 	  m_result_relation_index(0),
 	  m_into_clause(nullptr),
 	  m_distribution_policy(nullptr),
-	  m_part_selector_to_param_map(nullptr);
+	  m_part_selector_to_param_map(nullptr)
 {
 	m_cte_consumer_info = GPOS_NEW(m_mp) HMUlCTEConsumerInfo(m_mp);
 	m_num_partition_selectors_array = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
@@ -537,13 +537,14 @@ CContextDXLToPlStmt::SetStaticPruneResult(ULONG scanId,
 }
 
 ULONG
-CContextDXLToPlStmt::GetParamIdForSelector(ULONG selectorId)
+CContextDXLToPlStmt::GetParamIdForSelector(OID oid_type, ULONG selectorId)
 {
-	ULONG *param_id = m_part_selector_to_param_map->Find(selectorId);
+	ULONG *param_id = m_part_selector_to_param_map->Find(&selectorId);
 	if (nullptr == param_id)
 	{
-		*param_id = GetNextParamId();
-		m_part_selector_to_param_map->Insert(selectorId, param_id);
+		param_id = GPOS_NEW(m_mp) ULONG(GetNextParamId(oid_type));
+		ULONG *selector_id = GPOS_NEW(m_mp) ULONG(selectorId);
+		m_part_selector_to_param_map->Insert(selector_id, param_id);
 	}
 	return *param_id;
 }

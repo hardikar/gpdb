@@ -255,7 +255,7 @@ public:
 	List *GetStaticPruneResult(ULONG scanId);
 	void SetStaticPruneResult(ULONG scanId, List *static_prune_result);
 
-	ULONG GetParamIdForSelector(ULONG selectorId);
+	ULONG GetParamIdForSelector(OID oid_type, const ULONG selectorId);
 };
 
 }  // namespace gpdxl
