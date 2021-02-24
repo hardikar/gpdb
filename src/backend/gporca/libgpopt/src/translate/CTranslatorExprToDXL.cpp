@@ -84,6 +84,8 @@ CTranslatorExprToDXL::CTranslatorExprToDXL(CMemoryPool *mp,
 
 	m_phmcrdxlnIndexLookup = GPOS_NEW(m_mp) ColRefToDXLNodeMap(m_mp);
 
+	m_scanid_to_part_map = GPOS_NEW(m_mp) UlongToIMdIdArrayMap(m_mp);
+
 	if (fInitColumnFactory)
 	{
 		// get column factory from optimizer context object
@@ -106,6 +108,7 @@ CTranslatorExprToDXL::~CTranslatorExprToDXL()
 	m_phmcrdxln->Release();
 	m_phmcrdxlnIndexLookup->Release();
 	CRefCount::SafeRelease(m_pdpplan);
+	m_scanid_to_part_map->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -1314,6 +1317,7 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 		// add to the other scans under the created Append node
 		pdxlnAppend->AddChild(dxlnode);
 
+		AddPartForScanId(popDTS->ScanId(), part_mdid);
 		// cleanup
 		part_colrefs->Release();
 	}
@@ -4748,11 +4752,14 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 	CDXLNode *pdxlnPrL =
 		CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
 			m_mp, m_pcf, m_phmcrdxln, pdxlnPrLChild);
-
+	const ULONG scanid = popSelector->ScanId();
+	IMdIdArray *parts = m_scanid_to_part_map->Find(&scanid);
+	GPOS_ASSERT(nullptr != parts);
+	parts->AddRef();
 	CDXLNode *pdxlnSelector = GPOS_NEW(m_mp)
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalPartitionSelector(
 						   m_mp, popSelector->MDId(), popSelector->SelectorId(),
-						   popSelector->ScanId()));
+						   popSelector->ScanId(), parts));
 	CExpression *pexprPrintable = popSelector->PexprCombinedPred();
 
 	CDXLNode *pdxlnPrintable = PdxlnScalar(pexprPrintable);
@@ -8179,5 +8186,18 @@ CTranslatorExprToDXL::FNeedsMaterializeUnderResult(CDXLNode *proj_list_dxlnode,
 		pbsScIdentColIds->Release();
 	}
 	return fMotionHazard;
+}
+
+void
+CTranslatorExprToDXL::AddPartForScanId(ULONG scanid, IMDId *part)
+{
+	IMdIdArray *parts = m_scanid_to_part_map->Find(&scanid);
+	if (nullptr == parts)
+	{
+		parts = GPOS_NEW(m_mp) IMdIdArray(m_mp);
+		m_scanid_to_part_map->Insert(GPOS_NEW(m_mp) ULONG(scanid), parts);
+	}
+	part->AddRef();
+	parts->Append(part);
 }
 // EOF

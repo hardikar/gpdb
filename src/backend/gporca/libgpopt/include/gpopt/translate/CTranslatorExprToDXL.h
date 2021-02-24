@@ -95,6 +95,9 @@ private:
 	// id of master node
 	INT m_iMasterId;
 
+	// mappings of dynamic scan -> partitions (after static elimination)
+	UlongToIMdIdArrayMap *m_scanid_to_part_map;
+
 	// private copy ctor
 	CTranslatorExprToDXL(const CTranslatorExprToDXL &);
 
@@ -723,6 +726,8 @@ private:
 	// check if result node imposes a motion hazard
 	BOOL FNeedsMaterializeUnderResult(CDXLNode *proj_list_dxlnode,
 									  CDXLNode *child_dxlnode);
+
+	void AddPartForScanId(ULONG scanid, IMDId *part);
 
 	// helper to find subplan type from a correlated left outer join expression
 	static EdxlSubPlanType EdxlsubplantypeCorrelatedLOJ(

@@ -3440,7 +3440,9 @@ PartitionPruneInfoFromPartitionSelector(
 
 
 PartitionedRelPruneInfo *
-CTranslatorDXLToPlStmt::CreatePruneInfo(CDXLNode *filterNode, gpdb::RelationWrapper &relation, CMappingColIdVarPlStmt &colid_var_mapping)
+CTranslatorDXLToPlStmt::CreatePruneInfo(
+	CDXLNode *filterNode, gpdb::RelationWrapper &relation,
+	CMappingColIdVarPlStmt &colid_var_mapping, IMdIdArray *parts)
 {
 	// Make a fake pruning step (works only for 1 equality pred)
 	PartitionPruneStepOp *step = MakeNode(PartitionPruneStepOp);
@@ -3463,17 +3465,28 @@ CTranslatorDXLToPlStmt::CreatePruneInfo(CDXLNode *filterNode, gpdb::RelationWrap
 	PartitionedRelPruneInfo *pinfo = MakeNode(PartitionedRelPruneInfo);
 	pinfo->rtindex = 1;
 	pinfo->nparts = relation->rd_partdesc->nparts;
-	pinfo->present_parts = bms_add_range(NULL, 0, pinfo->nparts - 1);
 
-	// FIXME: This should be *computed* from the linked DTS
 	pinfo->subpart_map = (int *) palloc(sizeof(int) * pinfo->nparts);
 	pinfo->subplan_map = (int *) palloc(sizeof(int) * pinfo->nparts);
 	pinfo->relid_map = (Oid *) palloc(sizeof(int) * pinfo->nparts);
+	int part_ptr = 0;
 	for (int i = 0; i < pinfo->nparts; ++i)
 	{
 		pinfo->subpart_map[i] = -1;
-		pinfo->subplan_map[i] = i;
-		pinfo->relid_map[i] = relation->rd_partdesc->oids[i];
+		Oid part_relid = relation->rd_partdesc->oids[i];
+		if (part_ptr < parts->Size() &&
+			part_relid == CMDIdGPDB::CastMdid((*parts)[part_ptr])->Oid())
+		{
+			pinfo->subplan_map[i] = part_ptr;
+			pinfo->relid_map[i] = part_relid;
+			pinfo->present_parts = bms_add_member(pinfo->present_parts, i);
+			part_ptr++;
+		}
+		else
+		{
+			pinfo->subplan_map[i] = -1;
+			pinfo->relid_map[i] = 0;
+		}
 	}
 
 	PartitionPruneStep *st = (PartitionPruneStep *) step;
@@ -3548,7 +3561,10 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 
 	// no need to translate printable filter - since it is not needed by the executor
 	CDXLNode *filterNode = (*partition_selector_dxlnode)[1];
-	PartitionedRelPruneInfo *pinfo = CreatePruneInfo(filterNode, relation, colid_var_mapping);
+
+	IMdIdArray *parts = partition_selector_dxlop->Partitions();
+	PartitionedRelPruneInfo *pinfo =
+		CreatePruneInfo(filterNode, relation, colid_var_mapping, parts);
 
 
 

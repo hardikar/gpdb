@@ -16,6 +16,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CHashMap.h"
 #include "gpos/common/CHashSet.h"
 #include "gpos/common/CHashSetIter.h"
 #include "gpos/string/CWStringConst.h"
@@ -178,6 +179,12 @@ typedef CHashSet<IMDId, IMDId::MDIdHash, IMDId::MDIdCompare,
 typedef CHashSetIter<IMDId, IMDId::MDIdHash, IMDId::MDIdCompare,
 					 CleanupRelease<IMDId> >
 	MdidHashSetIter;
+
+// hash maps ULONG -> array of ULONGs
+typedef CHashMap<ULONG, IMdIdArray, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+				 CleanupDelete<ULONG>, CleanupRelease<IMdIdArray> >
+	UlongToIMdIdArrayMap;
+
 }  // namespace gpmd
 
 

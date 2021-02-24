@@ -11,6 +11,7 @@
 
 #include "naucrates/dxl/operators/CDXLPhysicalPartitionSelector.h"
 
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
@@ -28,11 +29,13 @@ using namespace gpdxl;
 CDXLPhysicalPartitionSelector::CDXLPhysicalPartitionSelector(CMemoryPool *mp,
 															 IMDId *mdid_rel,
 															 ULONG selector_id,
-															 ULONG scan_id)
+															 ULONG scan_id,
+															 IMdIdArray *parts)
 	: CDXLPhysical(mp),
 	  m_rel_mdid(mdid_rel),
 	  m_selector_id(selector_id),
-	  m_scan_id(scan_id)
+	  m_scan_id(scan_id),
+	  m_parts(parts)
 {
 }
 
@@ -46,6 +49,7 @@ CDXLPhysicalPartitionSelector::CDXLPhysicalPartitionSelector(CMemoryPool *mp,
 //---------------------------------------------------------------------------
 CDXLPhysicalPartitionSelector::~CDXLPhysicalPartitionSelector()
 {
+	CRefCount::SafeRelease(m_parts);
 }
 
 //---------------------------------------------------------------------------
@@ -102,6 +106,11 @@ CDXLPhysicalPartitionSelector::SerializeToDXL(CXMLSerializer *xml_serializer,
 		m_scan_id);
 	dxlnode->SerializePropertiesToDXL(xml_serializer);
 
+	IMDCacheObject::SerializeMDIdList(
+		xml_serializer, m_parts,
+		CDXLTokens::GetDXLTokenStr(EdxltokenPartitions),
+		CDXLTokens::GetDXLTokenStr(EdxltokenPartition));
+
 	// serialize project list and filter lists
 	(*dxlnode)[0]->SerializeToDXL(xml_serializer);
 
@@ -113,7 +122,6 @@ CDXLPhysicalPartitionSelector::SerializeToDXL(CXMLSerializer *xml_serializer,
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenScalarPrintableFilter));
-
 	// serialize relational child, if any
 	(*dxlnode)[2]->SerializeToDXL(xml_serializer);
 

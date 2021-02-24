@@ -51,12 +51,15 @@ private:
 	// scan id
 	ULONG m_scan_id;
 
+	IMdIdArray *m_parts;
+
 public:
 	CDXLPhysicalPartitionSelector(CDXLPhysicalPartitionSelector &) = delete;
 
 	// ctor
 	CDXLPhysicalPartitionSelector(CMemoryPool *mp, IMDId *mdid_rel,
-								  ULONG selector_id, ULONG scan_id);
+								  ULONG selector_id, ULONG scan_id,
+								  IMdIdArray *parts);
 
 	// dtor
 	~CDXLPhysicalPartitionSelector() override;
@@ -86,6 +89,12 @@ public:
 	ScanId() const
 	{
 		return m_scan_id;
+	}
+
+	IMdIdArray *
+	Partitions() const
+	{
+		return m_parts;
 	}
 
 	// serialize operator in DXL format

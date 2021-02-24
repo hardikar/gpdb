@@ -223,9 +223,10 @@ CParseHandlerPartitionSelector::EndElement(
 				   str->GetBuffer());
 	}
 
+	// CHRIS
 	CDXLPhysicalPartitionSelector *dxl_op =
-		GPOS_NEW(m_mp) CDXLPhysicalPartitionSelector(m_mp, m_rel_mdid,
-													 m_selector_id, m_scan_id);
+		GPOS_NEW(m_mp) CDXLPhysicalPartitionSelector(
+			m_mp, m_rel_mdid, m_selector_id, m_scan_id, nullptr);
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 
 	CParseHandlerProperties *prop_parse_handler =
