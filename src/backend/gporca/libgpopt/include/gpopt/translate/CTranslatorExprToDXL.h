@@ -55,6 +55,11 @@ typedef CHashMap<CColRef, CDXLNode, CColRef::HashValue, CColRef::Equals,
 				 CleanupNULL<CColRef>, CleanupRelease<CDXLNode> >
 	ColRefToDXLNodeMap;
 
+// hash maps ULONG -> array of ULONGs
+typedef CHashMap<ULONG, CBitSet, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+				 CleanupDelete<ULONG>, CleanupRelease<CBitSet> >
+	UlongToBitSetMap;
+
 //---------------------------------------------------------------------------
 //	@class:
 //		CTranslatorExprToDXL
@@ -95,8 +100,8 @@ private:
 	// id of master node
 	INT m_iMasterId;
 
-	// mappings of dynamic scan -> partitions (after static elimination)
-	UlongToIMdIdArrayMap *m_scanid_to_part_map;
+	// mappings of dynamic scan -> partition indexes (after static elimination)
+	UlongToBitSetMap *m_scanid_to_part_map;
 
 	// private copy ctor
 	CTranslatorExprToDXL(const CTranslatorExprToDXL &);
@@ -727,7 +732,7 @@ private:
 	BOOL FNeedsMaterializeUnderResult(CDXLNode *proj_list_dxlnode,
 									  CDXLNode *child_dxlnode);
 
-	void AddPartForScanId(ULONG scanid, IMDId *part);
+	void AddPartForScanId(ULONG scanid, ULONG index);
 
 	// helper to find subplan type from a correlated left outer join expression
 	static EdxlSubPlanType EdxlsubplantypeCorrelatedLOJ(

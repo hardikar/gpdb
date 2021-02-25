@@ -84,7 +84,7 @@ CTranslatorExprToDXL::CTranslatorExprToDXL(CMemoryPool *mp,
 
 	m_phmcrdxlnIndexLookup = GPOS_NEW(m_mp) ColRefToDXLNodeMap(m_mp);
 
-	m_scanid_to_part_map = GPOS_NEW(m_mp) UlongToIMdIdArrayMap(m_mp);
+	m_scanid_to_part_map = GPOS_NEW(m_mp) UlongToBitSetMap(m_mp);
 
 	if (fInitColumnFactory)
 	{
@@ -1268,6 +1268,10 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	pdxlnAppend->AddChild(pdxlnPrLAppend);
 	pdxlnAppend->AddChild(PdxlnFilter(nullptr));
 
+	const IMDRelation *root_mdrel =
+		m_pmda->RetrieveRel(popDTS->Ptabdesc()->MDId());
+	IMdIdArray *partition_mdids = root_mdrel->ChildPartitionMdids();
+	ULONG part_ptr = 0;
 	IMdIdArray *part_mdids = popDTS->GetPartitionMdids();
 	for (ULONG ul = 0; ul < part_mdids->Size(); ++ul)
 	{
@@ -1318,7 +1322,11 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 		// add to the other scans under the created Append node
 		pdxlnAppend->AddChild(dxlnode);
 
-		AddPartForScanId(popDTS->ScanId(), part_mdid);
+		while (part_mdid != (*partition_mdids)[part_ptr])
+		{
+			part_ptr++;
+		}
+		AddPartForScanId(popDTS->ScanId(), part_ptr);
 		// cleanup
 		part_colrefs->Release();
 	}
@@ -4754,9 +4762,14 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 		CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
 			m_mp, m_pcf, m_phmcrdxln, pdxlnPrLChild);
 	const ULONG scanid = popSelector->ScanId();
-	IMdIdArray *parts = m_scanid_to_part_map->Find(&scanid);
-	GPOS_ASSERT(nullptr != parts);
-	parts->AddRef();
+	CBitSet *bs = m_scanid_to_part_map->Find(&scanid);
+	GPOS_ASSERT(nullptr != bs);
+	ULongPtrArray *parts = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
+	CBitSetIter bsi(*bs);
+	for (ULONG ul = 0; bsi.Advance(); ul++)
+	{
+		parts->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
+	}
 	CDXLNode *pdxlnSelector = GPOS_NEW(m_mp)
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalPartitionSelector(
 						   m_mp, popSelector->MDId(), popSelector->SelectorId(),
@@ -8190,15 +8203,14 @@ CTranslatorExprToDXL::FNeedsMaterializeUnderResult(CDXLNode *proj_list_dxlnode,
 }
 
 void
-CTranslatorExprToDXL::AddPartForScanId(ULONG scanid, IMDId *part)
+CTranslatorExprToDXL::AddPartForScanId(ULONG scanid, ULONG index)
 {
-	IMdIdArray *parts = m_scanid_to_part_map->Find(&scanid);
+	CBitSet *parts = m_scanid_to_part_map->Find(&scanid);
 	if (nullptr == parts)
 	{
-		parts = GPOS_NEW(m_mp) IMdIdArray(m_mp);
+		parts = GPOS_NEW(m_mp) CBitSet(m_mp);
 		m_scanid_to_part_map->Insert(GPOS_NEW(m_mp) ULONG(scanid), parts);
 	}
-	part->AddRef();
-	parts->Append(part);
+	parts->ExchangeSet(index);
 }
 // EOF

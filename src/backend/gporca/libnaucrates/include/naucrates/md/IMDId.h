@@ -180,11 +180,6 @@ typedef CHashSetIter<IMDId, IMDId::MDIdHash, IMDId::MDIdCompare,
 					 CleanupRelease<IMDId> >
 	MdidHashSetIter;
 
-// hash maps ULONG -> array of ULONGs
-typedef CHashMap<ULONG, IMdIdArray, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupRelease<IMdIdArray> >
-	UlongToIMdIdArrayMap;
-
 }  // namespace gpmd
 
 

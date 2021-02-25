@@ -565,16 +565,16 @@ private:
 	List *CreatePartPruneInfos(CDXLNode *filterNode,
 							   gpdb::RelationWrapper &relation,
 							   CMappingColIdVarPlStmt &colid_var_mapping,
-							   IMdIdArray *parts);
+							   ULongPtrArray *part_indexes);
 
 	PartitionedRelPruneInfo *CreatePartPruneInfoForOneLevel(
 		CDXLNode *filterNode, gpdb::RelationWrapper &relation,
-		CMappingColIdVarPlStmt &colid_var_mapping, IMdIdArray *parts);
+		CMappingColIdVarPlStmt &colid_var_mapping, ULongPtrArray *part_indexes);
 
 	List *PartPruneStepsFromFilter(CDXLNode *filterNode,
 								   gpdb::RelationWrapper &relation,
 								   CMappingColIdVarPlStmt &colid_var_mapping,
-								   IMdIdArray *part_mdids);
+								   ULongPtrArray *part_mdids);
 };
 }  // namespace gpdxl
 

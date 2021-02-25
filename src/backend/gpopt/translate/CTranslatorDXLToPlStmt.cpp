@@ -44,6 +44,8 @@ extern "C" {
 #include <tuple>
 
 #include "gpos/base.h"
+#include "gpos/common/CBitSet.h"
+#include "gpos/common/CBitSetIter.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/gpdbwrappers.h"
@@ -3442,7 +3444,7 @@ PartitionPruneInfoFromPartitionSelector(
 List *
 CTranslatorDXLToPlStmt::PartPruneStepsFromFilter(
 	CDXLNode *filterNode, gpdb::RelationWrapper &relation,
-	CMappingColIdVarPlStmt &colid_var_mapping, IMdIdArray *part_mdids)
+	CMappingColIdVarPlStmt &colid_var_mapping, ULongPtrArray *part_indexes)
 {
 	// Make a fake pruning step (works only for 1 equality pred)
 	PartitionPruneStepOp *step = MakeNode(PartitionPruneStepOp);
@@ -3470,7 +3472,7 @@ CTranslatorDXLToPlStmt::PartPruneStepsFromFilter(
 List *
 CTranslatorDXLToPlStmt::CreatePartPruneInfos(
 	CDXLNode *filterNode, gpdb::RelationWrapper &relation,
-	CMappingColIdVarPlStmt &colid_var_mapping, IMdIdArray *part_mdids)
+	CMappingColIdVarPlStmt &colid_var_mapping, ULongPtrArray *part_indexes)
 {
 	// Since ORCA translates each DynamicTableScan to a different Append node,
 	// there is always only one partition heirarchy per Append node.
@@ -3482,14 +3484,14 @@ CTranslatorDXLToPlStmt::CreatePartPruneInfos(
 	// FIXME: Check & and throw exception if we got this far otherwise
 
 	PartitionedRelPruneInfo *pinfo = CreatePartPruneInfoForOneLevel(
-		filterNode, relation, colid_var_mapping, part_mdids);
+		filterNode, relation, colid_var_mapping, part_indexes);
 	return ListMake1(ListMake1(pinfo));
 }
 
 PartitionedRelPruneInfo *
 CTranslatorDXLToPlStmt::CreatePartPruneInfoForOneLevel(
 	CDXLNode *filterNode, gpdb::RelationWrapper &relation,
-	CMappingColIdVarPlStmt &colid_var_mapping, IMdIdArray *part_mdids)
+	CMappingColIdVarPlStmt &colid_var_mapping, ULongPtrArray *part_indexes)
 {
 	PartitionedRelPruneInfo *pinfo = MakeNode(PartitionedRelPruneInfo);
 	pinfo->rtindex = 1;
@@ -3498,18 +3500,18 @@ CTranslatorDXLToPlStmt::CreatePartPruneInfoForOneLevel(
 	pinfo->subpart_map = (int *) palloc(sizeof(int) * pinfo->nparts);
 	pinfo->subplan_map = (int *) palloc(sizeof(int) * pinfo->nparts);
 	pinfo->relid_map = (Oid *) palloc(sizeof(int) * pinfo->nparts);
-	int part_ptr = 0;
+
+	ULONG part_ptr = 0;
 	for (int i = 0; i < pinfo->nparts; ++i)
 	{
 		pinfo->subpart_map[i] = -1;
-		Oid part_relid = relation->rd_partdesc->oids[i];
-		if (part_ptr < part_mdids->Size() &&
-			part_relid == CMDIdGPDB::CastMdid((*part_mdids)[part_ptr])->Oid())
+		if (part_ptr < part_indexes->Size() && i == *(*part_indexes)[part_ptr])
 		{
 			pinfo->subplan_map[i] = part_ptr;
-			pinfo->relid_map[i] = part_relid;
+			pinfo->relid_map[i] = relation->rd_partdesc->oids[i];
+			;
 			pinfo->present_parts = bms_add_member(pinfo->present_parts, i);
-			part_ptr++;
+			++part_ptr;
 		}
 		else
 		{
@@ -3519,7 +3521,7 @@ CTranslatorDXLToPlStmt::CreatePartPruneInfoForOneLevel(
 	}
 
 	pinfo->exec_pruning_steps = PartPruneStepsFromFilter(
-		filterNode, relation, colid_var_mapping, part_mdids);
+		filterNode, relation, colid_var_mapping, part_indexes);
 	return pinfo;
 }
 //---------------------------------------------------------------------------
@@ -3587,9 +3589,9 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 
 	// part_prune_info
 	CDXLNode *filterNode = (*partition_selector_dxlnode)[1];
-	IMdIdArray *part_mdids = partition_selector_dxlop->Partitions();
+	ULongPtrArray *part_indexes = partition_selector_dxlop->Partitions();
 	List *prune_infos = CreatePartPruneInfos(filterNode, relation,
-											 colid_var_mapping, part_mdids);
+											 colid_var_mapping, part_indexes);
 
 	partition_selector->part_prune_info = MakeNode(PartitionPruneInfo);
 	partition_selector->part_prune_info->prune_infos = prune_infos;

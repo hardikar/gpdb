@@ -11,6 +11,8 @@
 
 #include "naucrates/dxl/operators/CDXLPhysicalPartitionSelector.h"
 
+#include "gpos/common/CBitSetIter.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
@@ -26,11 +28,9 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLPhysicalPartitionSelector::CDXLPhysicalPartitionSelector(CMemoryPool *mp,
-															 IMDId *mdid_rel,
-															 ULONG selector_id,
-															 ULONG scan_id,
-															 IMdIdArray *parts)
+CDXLPhysicalPartitionSelector::CDXLPhysicalPartitionSelector(
+	CMemoryPool *mp, IMDId *mdid_rel, ULONG selector_id, ULONG scan_id,
+	ULongPtrArray *parts)
 	: CDXLPhysical(mp),
 	  m_rel_mdid(mdid_rel),
 	  m_selector_id(selector_id),
@@ -104,12 +104,14 @@ CDXLPhysicalPartitionSelector::SerializeToDXL(CXMLSerializer *xml_serializer,
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenPhysicalPartitionSelectorScanId),
 		m_scan_id);
-	dxlnode->SerializePropertiesToDXL(xml_serializer);
 
-	IMDCacheObject::SerializeMDIdList(
-		xml_serializer, m_parts,
-		CDXLTokens::GetDXLTokenStr(EdxltokenPartitions),
-		CDXLTokens::GetDXLTokenStr(EdxltokenPartition));
+	CWStringDynamic *serialized_partitions =
+		CDXLUtils::Serialize(m_mp, m_parts);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenPartitions), serialized_partitions);
+	GPOS_DELETE(serialized_partitions);
+
+	dxlnode->SerializePropertiesToDXL(xml_serializer);
 
 	// serialize project list and filter lists
 	(*dxlnode)[0]->SerializeToDXL(xml_serializer);
