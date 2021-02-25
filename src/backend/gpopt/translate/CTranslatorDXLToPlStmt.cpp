@@ -3439,10 +3439,10 @@ PartitionPruneInfoFromPartitionSelector(
 }
 
 
-PartitionedRelPruneInfo *
-CTranslatorDXLToPlStmt::CreatePruneInfo(
+List *
+CTranslatorDXLToPlStmt::PartPruneStepsFromFilter(
 	CDXLNode *filterNode, gpdb::RelationWrapper &relation,
-	CMappingColIdVarPlStmt &colid_var_mapping, IMdIdArray *parts)
+	CMappingColIdVarPlStmt &colid_var_mapping, IMdIdArray *part_mdids)
 {
 	// Make a fake pruning step (works only for 1 equality pred)
 	PartitionPruneStepOp *step = MakeNode(PartitionPruneStepOp);
@@ -3461,7 +3461,36 @@ CTranslatorDXLToPlStmt::CreatePruneInfo(
 		dxl_ident, &colid_var_mapping);
 	step->exprs = ListMake1(expr);
 
-	// FAKE PartitionedRelPruneInfo
+	PartitionPruneStep *st = (PartitionPruneStep *) step;
+	List *step_list = ListMake1(st);
+
+	return step_list;
+}
+
+List *
+CTranslatorDXLToPlStmt::CreatePartPruneInfos(
+	CDXLNode *filterNode, gpdb::RelationWrapper &relation,
+	CMappingColIdVarPlStmt &colid_var_mapping, IMdIdArray *part_mdids)
+{
+	// Since ORCA translates each DynamicTableScan to a different Append node,
+	// there is always only one partition heirarchy per Append node.
+	// So, size of 1st dimension of (prune_infos) = 1
+
+	// Furthermore, ORCA only supports single-level partitioned tables for now.
+	// So, size of 2nd dimension of (prune_infos) = 1
+
+	// FIXME: Check & and throw exception if we got this far otherwise
+
+	PartitionedRelPruneInfo *pinfo = CreatePartPruneInfoForOneLevel(
+		filterNode, relation, colid_var_mapping, part_mdids);
+	return ListMake1(ListMake1(pinfo));
+}
+
+PartitionedRelPruneInfo *
+CTranslatorDXLToPlStmt::CreatePartPruneInfoForOneLevel(
+	CDXLNode *filterNode, gpdb::RelationWrapper &relation,
+	CMappingColIdVarPlStmt &colid_var_mapping, IMdIdArray *part_mdids)
+{
 	PartitionedRelPruneInfo *pinfo = MakeNode(PartitionedRelPruneInfo);
 	pinfo->rtindex = 1;
 	pinfo->nparts = relation->rd_partdesc->nparts;
@@ -3474,8 +3503,8 @@ CTranslatorDXLToPlStmt::CreatePruneInfo(
 	{
 		pinfo->subpart_map[i] = -1;
 		Oid part_relid = relation->rd_partdesc->oids[i];
-		if (part_ptr < parts->Size() &&
-			part_relid == CMDIdGPDB::CastMdid((*parts)[part_ptr])->Oid())
+		if (part_ptr < part_mdids->Size() &&
+			part_relid == CMDIdGPDB::CastMdid((*part_mdids)[part_ptr])->Oid())
 		{
 			pinfo->subplan_map[i] = part_ptr;
 			pinfo->relid_map[i] = part_relid;
@@ -3489,9 +3518,8 @@ CTranslatorDXLToPlStmt::CreatePruneInfo(
 		}
 	}
 
-	PartitionPruneStep *st = (PartitionPruneStep *) step;
-	List *step_list = ListMake1(st);
-	pinfo->exec_pruning_steps = step_list;
+	pinfo->exec_pruning_steps = PartPruneStepsFromFilter(
+		filterNode, relation, colid_var_mapping, part_mdids);
 	return pinfo;
 }
 //---------------------------------------------------------------------------
@@ -3548,9 +3576,8 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 	CMappingColIdVarPlStmt colid_var_mapping = CMappingColIdVarPlStmt(
 		m_mp, NULL /*base_table_context*/, child_contexts, output_context,
 		m_dxl_to_plstmt_context);
-	//	partition_selector->printablePredicate = (Node *) m_translator_dxl_to_scalar->PexprFromDXLNodeScalar(pdxlnPrintableFilter, &colid_var_mapping);
 
-
+	// paramid
 	OID oid_type =
 		CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
 			->Oid();
@@ -3558,19 +3585,14 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 		m_dxl_to_plstmt_context->GetParamIdForSelector(
 			oid_type, partition_selector_dxlop->SelectorId());
 
-
-	// no need to translate printable filter - since it is not needed by the executor
+	// part_prune_info
 	CDXLNode *filterNode = (*partition_selector_dxlnode)[1];
-
-	IMdIdArray *parts = partition_selector_dxlop->Partitions();
-	PartitionedRelPruneInfo *pinfo =
-		CreatePruneInfo(filterNode, relation, colid_var_mapping, parts);
-
-
+	IMdIdArray *part_mdids = partition_selector_dxlop->Partitions();
+	List *prune_infos = CreatePartPruneInfos(filterNode, relation,
+											 colid_var_mapping, part_mdids);
 
 	partition_selector->part_prune_info = MakeNode(PartitionPruneInfo);
-	partition_selector->part_prune_info->prune_infos =
-		ListMake1(ListMake1(pinfo));
+	partition_selector->part_prune_info->prune_infos = prune_infos;
 
 	SetParamIds(plan);
 	// cleanup

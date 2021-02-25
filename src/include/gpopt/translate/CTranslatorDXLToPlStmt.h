@@ -562,9 +562,19 @@ private:
 		CDXLColRefArray *pdrgdxlcrOuterRefs, CDXLTranslateContext *dxltrctxLeft,
 		CDXLTranslateContext *dxltrctxRight);
 
-	PartitionedRelPruneInfo *CreatePruneInfo(
+	List *CreatePartPruneInfos(CDXLNode *filterNode,
+							   gpdb::RelationWrapper &relation,
+							   CMappingColIdVarPlStmt &colid_var_mapping,
+							   IMdIdArray *parts);
+
+	PartitionedRelPruneInfo *CreatePartPruneInfoForOneLevel(
 		CDXLNode *filterNode, gpdb::RelationWrapper &relation,
 		CMappingColIdVarPlStmt &colid_var_mapping, IMdIdArray *parts);
+
+	List *PartPruneStepsFromFilter(CDXLNode *filterNode,
+								   gpdb::RelationWrapper &relation,
+								   CMappingColIdVarPlStmt &colid_var_mapping,
+								   IMdIdArray *part_mdids);
 };
 }  // namespace gpdxl
 
