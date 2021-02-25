@@ -90,6 +90,8 @@ private:
 	// partition required/derived info, sorted by scanid
 	SPartPropSpecInfoArray *m_part_prop_spec_infos = nullptr;
 
+	// Present scanids (for easy lookup)
+	CBitSet *m_scan_ids = nullptr;
 
 	// return a colrefset containing all the part keys
 	// CColRefSet *PcrsKeys(CMemoryPool *mp, CColRef2dArray *pdrgpdrgpcrKeys);
@@ -131,6 +133,12 @@ public:
 	Epst() const override
 	{
 		return EpstPartPropagation;
+	}
+
+	BOOL
+	Contains(ULONG scan_id) const
+	{
+		return m_scan_ids->Get(scan_id);
 	}
 
 	// equality function

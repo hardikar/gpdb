@@ -50,12 +50,14 @@ CPartitionPropagationSpec::SPartPropSpecInfo::FSatisfies(
 CPartitionPropagationSpec::CPartitionPropagationSpec(CMemoryPool *mp)
 {
 	m_part_prop_spec_infos = GPOS_NEW(mp) SPartPropSpecInfoArray(mp);
+	m_scan_ids = GPOS_NEW(mp) CBitSet(mp);
 }
 
 // dtor
 CPartitionPropagationSpec::~CPartitionPropagationSpec()
 {
 	m_part_prop_spec_infos->Release();
+	m_scan_ids->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -110,6 +112,11 @@ CPartitionPropagationSpec::Equals(const CPartitionPropagationSpec *pps) const
 CPartitionPropagationSpec::SPartPropSpecInfo *
 CPartitionPropagationSpec::FindPartPropSpecInfo(INT scan_id) const
 {
+	if (!Contains(scan_id))
+	{
+		return nullptr;
+	}
+
 	for (ULONG ut = 0; ut < m_part_prop_spec_infos->Size(); ut++)
 	{
 		SPartPropSpecInfo *part_info = (*m_part_prop_spec_infos)[ut];
@@ -120,7 +127,7 @@ CPartitionPropagationSpec::FindPartPropSpecInfo(INT scan_id) const
 		}
 	}
 
-	return nullptr;
+	GPOS_RTL_ASSERT(false && "Should never come here");
 }
 
 const CBitSet *
@@ -141,6 +148,9 @@ CPartitionPropagationSpec::Insert(INT scan_id, EPartPropSpecInfoType type,
 								  IMDId *rool_rel_mdid, CBitSet *selector_ids,
 								  CExpression *expr)
 {
+	// FIXME: Should we guard against duplicate entries here?
+	GPOS_ASSERT(!Contains(scan_id));
+
 	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
 	rool_rel_mdid->AddRef();
 	SPartPropSpecInfo *info =
@@ -157,7 +167,7 @@ CPartitionPropagationSpec::Insert(INT scan_id, EPartPropSpecInfoType type,
 		info->m_filter_expr = expr;
 	}
 
-	// NB: This is appended blindly !
+	m_scan_ids->ExchangeSet(scan_id);
 	m_part_prop_spec_infos->Append(info);
 	m_part_prop_spec_infos->Sort();
 }
@@ -205,7 +215,6 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 			continue;
 		}
 
-		// FIXME: Make this more efficient!
 		SPartPropSpecInfo *found_info =
 			FindPartPropSpecInfo(other_info->m_scan_id);
 
@@ -239,7 +248,6 @@ CPartitionPropagationSpec::InsertAllExcept(CPartitionPropagationSpec *pps,
 			continue;
 		}
 
-		// FIXME: Make this more efficient!
 		SPartPropSpecInfo *found_info =
 			FindPartPropSpecInfo(other_info->m_scan_id);
 

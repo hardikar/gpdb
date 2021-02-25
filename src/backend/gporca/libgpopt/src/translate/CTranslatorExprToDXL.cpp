@@ -1206,9 +1206,10 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 		CPhysicalDynamicTableScan::PopConvert(pexprDTS->Pop());
 
 	ULongPtrArray *selector_ids = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
+	CPartitionPropagationSpec *pps_reqd =
+		pexprDTS->Prpp()->Pepp()->PppsRequired();
+	if (pps_reqd->Contains(popDTS->ScanId()))
 	{
-		CPartitionPropagationSpec *pps_reqd =
-			pexprDTS->Prpp()->Pepp()->PppsRequired();
 		const CBitSet *bs = pps_reqd->SelectorIds(popDTS->ScanId());
 		CBitSetIter bsi(*bs);
 		for (ULONG ul = 0; bsi.Advance(); ul++)
