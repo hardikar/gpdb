@@ -24,6 +24,11 @@ namespace gpopt
 {
 using namespace gpos;
 
+// hash maps ULONG -> array of ULONGs
+typedef CHashMap<ULONG, CBitSet, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+				 CleanupDelete<ULONG>, CleanupRelease<CBitSet> >
+	UlongToBitSetMap;
+
 // forward declarations
 class CColRefSet;
 class COptimizerConfig;
@@ -97,6 +102,9 @@ private:
 
 	// does this plan have a direct dispatchable filter
 	CExpressionArray *m_direct_dispatchable_filters;
+
+	// mappings of dynamic scan -> partition indexes (after static elimination)
+	UlongToBitSetMap *m_scanid_to_part_map;
 
 public:
 	COptCtxt(COptCtxt &) = delete;
@@ -255,6 +263,14 @@ public:
 	PdrgpcrSystemCols() const
 	{
 		return m_pdrgpcrSystemCols;
+	}
+
+	void AddPartForScanId(ULONG scanid, ULONG index);
+
+	CBitSet *
+	GetPartitionsForScanId(ULONG scanid)
+	{
+		return m_scanid_to_part_map->Find(&scanid);
 	}
 
 	// set required system columns

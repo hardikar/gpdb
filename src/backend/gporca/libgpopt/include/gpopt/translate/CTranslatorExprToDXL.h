@@ -55,10 +55,6 @@ typedef CHashMap<CColRef, CDXLNode, CColRef::HashValue, CColRef::Equals,
 				 CleanupNULL<CColRef>, CleanupRelease<CDXLNode> >
 	ColRefToDXLNodeMap;
 
-// hash maps ULONG -> array of ULONGs
-typedef CHashMap<ULONG, CBitSet, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupRelease<CBitSet> >
-	UlongToBitSetMap;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -99,9 +95,6 @@ private:
 
 	// id of master node
 	INT m_iMasterId;
-
-	// mappings of dynamic scan -> partition indexes (after static elimination)
-	UlongToBitSetMap *m_scanid_to_part_map;
 
 	// private copy ctor
 	CTranslatorExprToDXL(const CTranslatorExprToDXL &);

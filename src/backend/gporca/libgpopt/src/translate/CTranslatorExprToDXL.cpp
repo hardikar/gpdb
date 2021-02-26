@@ -84,8 +84,6 @@ CTranslatorExprToDXL::CTranslatorExprToDXL(CMemoryPool *mp,
 
 	m_phmcrdxlnIndexLookup = GPOS_NEW(m_mp) ColRefToDXLNodeMap(m_mp);
 
-	m_scanid_to_part_map = GPOS_NEW(m_mp) UlongToBitSetMap(m_mp);
-
 	if (fInitColumnFactory)
 	{
 		// get column factory from optimizer context object
@@ -108,7 +106,6 @@ CTranslatorExprToDXL::~CTranslatorExprToDXL()
 	m_phmcrdxln->Release();
 	m_phmcrdxlnIndexLookup->Release();
 	CRefCount::SafeRelease(m_pdpplan);
-	m_scanid_to_part_map->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -1268,10 +1265,6 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	pdxlnAppend->AddChild(pdxlnPrLAppend);
 	pdxlnAppend->AddChild(PdxlnFilter(nullptr));
 
-	const IMDRelation *root_mdrel =
-		m_pmda->RetrieveRel(popDTS->Ptabdesc()->MDId());
-	IMdIdArray *partition_mdids = root_mdrel->ChildPartitionMdids();
-	ULONG part_ptr = 0;
 	IMdIdArray *part_mdids = popDTS->GetPartitionMdids();
 	for (ULONG ul = 0; ul < part_mdids->Size(); ++ul)
 	{
@@ -1322,11 +1315,6 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 		// add to the other scans under the created Append node
 		pdxlnAppend->AddChild(dxlnode);
 
-		while (part_mdid != (*partition_mdids)[part_ptr])
-		{
-			part_ptr++;
-		}
-		AddPartForScanId(popDTS->ScanId(), part_ptr);
 		// cleanup
 		part_colrefs->Release();
 	}
@@ -4762,7 +4750,7 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 		CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
 			m_mp, m_pcf, m_phmcrdxln, pdxlnPrLChild);
 	const ULONG scanid = popSelector->ScanId();
-	CBitSet *bs = m_scanid_to_part_map->Find(&scanid);
+	CBitSet *bs = COptCtxt::PoctxtFromTLS()->GetPartitionsForScanId(scanid);
 	GPOS_ASSERT(nullptr != bs);
 	ULongPtrArray *parts = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
 	CBitSetIter bsi(*bs);
@@ -8200,17 +8188,5 @@ CTranslatorExprToDXL::FNeedsMaterializeUnderResult(CDXLNode *proj_list_dxlnode,
 		pbsScIdentColIds->Release();
 	}
 	return fMotionHazard;
-}
-
-void
-CTranslatorExprToDXL::AddPartForScanId(ULONG scanid, ULONG index)
-{
-	CBitSet *parts = m_scanid_to_part_map->Find(&scanid);
-	if (nullptr == parts)
-	{
-		parts = GPOS_NEW(m_mp) CBitSet(m_mp);
-		m_scanid_to_part_map->Insert(GPOS_NEW(m_mp) ULONG(scanid), parts);
-	}
-	parts->ExchangeSet(index);
 }
 // EOF
