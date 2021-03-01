@@ -3440,33 +3440,127 @@ PartitionPruneInfoFromPartitionSelector(
 	return {dxl_part_selector->ScanId(), part_prune_info, range_table};
 }
 
+List *
+CTranslatorDXLToPlStmt::PartPruneStepFromScalarCmp(
+	CDXLNode *node, int *step_id, List *steps_list,
+	gpdb::RelationWrapper &relation, CMappingColIdVarPlStmt &colid_var_mapping)
+{
+	GPOS_ASSERT(nullptr != node);
+	CDXLScalarComp *dxlop = CDXLScalarComp::Cast(node->GetOperator());
+	Oid opno = CMDIdGPDB::CastMdid(dxlop->MDId())->Oid();
+	Oid opfamily = relation->rd_partkey->partopfamily[0 /* col */];
+
+	// FIXME: This *should* be StrategyNumber, but IndexOpProperties takes an INT
+	INT strategy;
+	Oid righttype = InvalidOid;
+
+	gpdb::IndexOpProperties(opno, opfamily, &strategy, &righttype);
+
+	if (InvalidOid == righttype)
+	{
+		GPOS_RTL_ASSERT(false && "Could not find op in part table's opfamily");
+	}
+
+	// GPDB_12_MERGE_FIXME: Add an Assert
+	// Assume that the LHS is *only* the partitioning column, and the RHS contains translatable expression
+	// This is ensured by FIXME: TBD.
+	Expr *expr = m_translator_dxl_to_scalar->TranslateDXLToScalar(
+		(*node)[1], &colid_var_mapping);
+
+	PartitionPruneStepOp *step = MakeNode(PartitionPruneStepOp);
+	step->step.step_id = (*step_id)++;
+	step->opstrategy = strategy;
+	// Use cmpfns from the partitioned table, since the op was confirmed
+	// to be part of partitioning column opfamily above.
+	// ORCA doesn't support multi-key (a.k.a composite) partition keys. So these
+	// lists will be of size 1.
+	step->cmpfns = ListMake1Oid(relation->rd_partkey->partsupfunc[0].fn_oid);
+	step->exprs = ListMake1(expr);
+	return gpdb::LAppend(steps_list, (PartitionPruneStep *) step);
+}
+
+List *
+CTranslatorDXLToPlStmt::PartPruneStepFromScalarBoolExpr(
+	CDXLNode *node, int *step_id, List *steps_list,
+	gpdb::RelationWrapper &relation, CMappingColIdVarPlStmt &colid_var_mapping)
+{
+	GPOS_ASSERT(nullptr != node);
+	CDXLScalarBoolExpr *dxlop = CDXLScalarBoolExpr::Cast(node->GetOperator());
+
+	PartitionPruneCombineOp combineOp;
+	switch (dxlop->GetDxlBoolTypeStr())
+	{
+		case Edxlnot:
+		{
+			GPOS_RTL_ASSERT(false);
+			break;
+		}
+		case Edxland:
+		{
+			GPOS_ASSERT(2 <= node->Arity());
+			combineOp = PARTPRUNE_COMBINE_INTERSECT;
+			break;
+		}
+		case Edxlor:
+		{
+			GPOS_ASSERT(2 <= node->Arity());
+			combineOp = PARTPRUNE_COMBINE_UNION;
+			break;
+		}
+		default:
+		{
+			GPOS_ASSERT(!"Boolean Operation: Must be either or/ and / not");
+			return nullptr;
+		}
+	}
+
+	List *stepids = NIL;
+	for (ULONG ul = 0; ul < node->Arity(); ul++)
+	{
+		CDXLNode *child_node = (*node)[ul];
+		steps_list = PartPruneStepsFromFilter(child_node, step_id, steps_list,
+											  relation, colid_var_mapping);
+
+		PartitionPruneStep *last_step =
+			(PartitionPruneStep *) lfirst(gpdb::ListTail(steps_list));
+		stepids = gpdb::LAppendInt(stepids, last_step->step_id);
+	}
+
+	PartitionPruneStepCombine *step = MakeNode(PartitionPruneStepCombine);
+	step->step.step_id = (*step_id)++;
+	step->source_stepids = stepids;
+	step->combineOp = combineOp;
+
+	return gpdb::LAppend(steps_list, (PartitionPruneStep *) step);
+}
 
 List *
 CTranslatorDXLToPlStmt::PartPruneStepsFromFilter(
-	CDXLNode *filterNode, gpdb::RelationWrapper &relation,
-	CMappingColIdVarPlStmt &colid_var_mapping, ULongPtrArray *part_indexes)
+	CDXLNode *node, INT *step_id, List *steps_list,
+	gpdb::RelationWrapper &relation, CMappingColIdVarPlStmt &colid_var_mapping)
 {
-	// Make a fake pruning step (works only for 1 equality pred)
-	PartitionPruneStepOp *step = MakeNode(PartitionPruneStepOp);
-	step->step.step_id = 0;
-	step->opstrategy = BTEqualStrategyNumber;
+	GPOS_ASSERT(nullptr != node);
+	Edxlopid eopid = node->GetOperator()->GetDXLOperator();
 
-	// GPDB_12_MERGE_FIXME: this is still pretty much a hack. Notice the btree
-	// support function is blindly picked from the relation definition. When the
-	// constant used in the equal filter is of a different type from that of the
-	// partition boundaries, this will be wrong.
-	step->cmpfns = ListMake1Oid(relation->rd_partkey->partsupfunc[0].fn_oid);
-
-	// FIXME: Assume the predicate is of the form pk = VAR
-	CDXLNode *dxl_ident = (*filterNode)[1];
-	Expr *expr = m_translator_dxl_to_scalar->TranslateDXLToScalar(
-		dxl_ident, &colid_var_mapping);
-	step->exprs = ListMake1(expr);
-
-	PartitionPruneStep *st = (PartitionPruneStep *) step;
-	List *step_list = ListMake1(st);
-
-	return step_list;
+	switch (eopid)
+	{
+		case EdxlopScalarCmp:
+		{
+			steps_list = PartPruneStepFromScalarCmp(
+				node, step_id, steps_list, relation, colid_var_mapping);
+			break;
+		}
+		case EdxlopScalarBoolExpr:
+		{
+			steps_list = PartPruneStepFromScalarBoolExpr(
+				node, step_id, steps_list, relation, colid_var_mapping);
+			break;
+		}
+		default:
+			GPOS_RTL_ASSERT(false && "Unsupported operater");
+			break;
+	}
+	return steps_list;
 }
 
 List *
@@ -3520,8 +3614,11 @@ CTranslatorDXLToPlStmt::CreatePartPruneInfoForOneLevel(
 		}
 	}
 
+	INT step_id = 0;
+	pinfo->exec_pruning_steps = NIL;
 	pinfo->exec_pruning_steps = PartPruneStepsFromFilter(
-		filterNode, relation, colid_var_mapping, part_indexes);
+		filterNode, &step_id, pinfo->exec_pruning_steps, relation,
+		colid_var_mapping);
 	return pinfo;
 }
 //---------------------------------------------------------------------------
