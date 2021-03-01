@@ -208,9 +208,14 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 	{
 		SPartPropSpecInfo *other_info = (*pps->m_part_prop_spec_infos)[ul];
 
-		if (allowed_scan_ids != NULL &&
-			!allowed_scan_ids->Get(other_info->m_scan_id) &&
-			!(other_info->m_type == EpptConsumer))
+		// only process allowed_scan_ids ...
+		if (allowed_scan_ids != nullptr && !allowed_scan_ids->Get(other_info->m_scan_id))
+		{
+			continue;
+		}
+
+		// ... and consumers
+		if (other_info->m_type != EpptConsumer)
 		{
 			continue;
 		}
@@ -232,6 +237,9 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 		GPOS_RTL_ASSERT(found_info->m_type == other_info->m_type &&
 						found_info->m_root_rel_mdid ==
 							other_info->m_root_rel_mdid);
+
+		// nested hash joins with partition propagation
+		found_info->m_selector_ids->Union(other_info->m_selector_ids);
 	}
 }
 
