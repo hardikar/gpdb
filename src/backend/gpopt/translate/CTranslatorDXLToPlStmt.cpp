@@ -3264,60 +3264,6 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	return (Plan *) result;
 }
 
-static List *
-ExecuteSaticPruning(PartitionPruneInfo *part_prune_info, List *rtable)
-{
-	auto estate = CreateExecutorState();
-	/* We can use the estate's working context to avoid memory leaks. */
-	auto oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
-
-	ExecInitRangeTable(estate, rtable);
-	PlanState bogus_plan_state{T_PlanState, nullptr, estate};
-	ExecAssignExprContext(estate, &bogus_plan_state);
-	auto prunestate =
-		ExecCreatePartitionPruneState(&bogus_plan_state, part_prune_info);
-
-	Bitmapset *remaining_indexes =
-		ExecFindMatchingSubPlans(prunestate, estate, 0, nullptr);
-
-	/* Get back to outer memory context */
-	MemoryContextSwitchTo(oldcontext);
-
-	std::vector<Oid> universe;
-	// FIXME: I hate those ListCell variables. Extract them into an range-for iterator
-	ListCell *lc_prune_info_list;
-	ForEach(lc_prune_info_list, part_prune_info->prune_infos)
-	{
-		// We cannot use lfirst_node because it longjmp's
-		auto pinfolist = (List *) lfirst(lc_prune_info_list);
-		ListCell *lc;
-		ForEach(lc, pinfolist)
-		{
-			auto pinfo = (PartitionedRelPruneInfo *) lfirst(lc);
-			universe.insert(universe.cend(), pinfo->relid_map,
-							pinfo->relid_map + pinfo->nparts);
-		}
-	}
-
-	List *prune_result = NIL;
-	for (int i = -1; (i = bms_next_member(remaining_indexes, i)) >= 0;)
-	{
-		prune_result = gpdb::LAppendOid(prune_result, universe[i]);
-	}
-
-	// Why the for-loop, if you assume one?
-	// This is a domain-specific knowledge of ORCA plans: orca doesn't smash
-	// static pruning for different partitioned tables into one partition selector
-	GPOS_ASSERT(estate->es_range_table_size == 1);
-
-	for (ULONG ul = 0; ul < estate->es_range_table_size; ++ul)
-		if (estate->es_relations[ul])
-			// FIXME: this doesn't quite seem to handle locking, is this correct?
-			gpdb::CloseRelation(estate->es_relations[ul]);
-	FreeExecutorState(estate);
-	return prune_result;
-}
-
 static bool
 IsOneLevelPartitioned(Relation relation)
 {
@@ -3374,70 +3320,6 @@ PartPruneStepsFromEqFilters(CDXLNode *eq_values, Oid supportfnoid,
 	}
 
 	return result;
-}
-
-// Given a DXL Partition Selector, construct a PartitionPruneInfo
-// the pruning steps contained in the part_prune_info should be based on the
-// filter and eqFilter of the partition selector
-static std::tuple<ULONG, PartitionPruneInfo *, List *>
-PartitionPruneInfoFromPartitionSelector(
-	const CDXLNode *partition_selector_dxlnode, CMDAccessor *md_accessor,
-	CTranslatorDXLToScalar *translator_dxl_to_scalar)
-{
-	auto dxl_part_selector = dynamic_cast<CDXLPhysicalPartitionSelector *>(
-		partition_selector_dxlnode->GetOperator());
-	auto oid =
-		dynamic_cast<CMDIdGPDB *>(dxl_part_selector->GetRelMdId())->Oid();
-	gpdb::RelationWrapper relation = gpdb::GetRelation(oid);
-	if (!IsOneLevelPartitioned(relation.get()))
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
-				   GPOS_WSZ_LIT("multi-level partitioned tables"));
-
-	auto eq_filters = (*partition_selector_dxlnode)[EdxlpsIndexEqFilters];
-	auto filters = (*partition_selector_dxlnode)[EdxlpsIndexFilters];
-	auto has_trivial_eq_filters PG_USED_FOR_ASSERTS_ONLY =
-		CTranslatorDXLToScalar::HasConstTrue((*eq_filters)[0], md_accessor);
-	auto has_trivial_filters =
-		CTranslatorDXLToScalar::HasConstTrue((*filters)[0], md_accessor);
-
-	if (!has_trivial_filters)
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
-				   GPOS_WSZ_LIT("non-trivial part filter"));
-	if (has_trivial_eq_filters && has_trivial_filters)
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
-				   GPOS_WSZ_LIT("trivial eq filter"));
-
-	PartitionedRelPruneInfo *pinfo = MakeNode(PartitionedRelPruneInfo);
-
-	auto rte = MinimalRTE(oid);
-	List *range_table = ListMake1(rte);
-
-	pinfo->rtindex = 1;
-	pinfo->nparts = relation->rd_partdesc->nparts;
-	pinfo->present_parts = bms_add_range(nullptr, 0, pinfo->nparts - 1);
-	pinfo->subpart_map =
-		static_cast<int *>(palloc(sizeof(int) * pinfo->nparts));
-	std::fill(pinfo->subpart_map, pinfo->subpart_map + pinfo->nparts, -1);
-	pinfo->subplan_map =
-		static_cast<int *>(palloc(sizeof(int) * pinfo->nparts));
-	std::iota(pinfo->subplan_map, pinfo->subplan_map + pinfo->nparts, 0);
-	pinfo->relid_map = static_cast<Oid *>(palloc(sizeof(Oid) * pinfo->nparts));
-	std::copy(relation->rd_partdesc->oids,
-			  relation->rd_partdesc->oids + relation->rd_partdesc->nparts,
-			  pinfo->relid_map);
-
-	// GPDB_12_MERGE_FIXME: this is still pretty much a hack. Notice the btree
-	// support function is blindly picked from the relation definition. When the
-	// constant used in the equal filter is of a different type from that of the
-	// partition boundaries, this will be wrong.
-	pinfo->exec_pruning_steps = PartPruneStepsFromEqFilters(
-		eq_filters, relation->rd_partkey->partsupfunc[0].fn_oid,
-		translator_dxl_to_scalar, md_accessor);
-
-	auto part_prune_info = MakeNode(PartitionPruneInfo);
-	part_prune_info->prune_infos = ListMake1(ListMake1(pinfo));
-
-	return {dxl_part_selector->ScanId(), part_prune_info, range_table};
 }
 
 List *
