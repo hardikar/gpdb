@@ -39,6 +39,7 @@
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalAgg.h"
 #include "gpopt/operators/CPhysicalMotionGather.h"
+#include "gpopt/operators/CPhysicalPartitionSelector.h"
 #include "gpopt/operators/CPhysicalSort.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/search/CBinding.h"
@@ -2333,12 +2334,25 @@ CEngine::FCheckReqdProps(CExpressionHandle &exprhdl, CReqdPropPlan *prpp,
 		return false;
 	}
 
-	// FIXME: Why this?
-	BOOL fPartitionSpecCheckingReqd =
-		(NULL != prpp->Pepp()) ||
-		COperator::EopPhysicalPartitionSelector != popPhysical->Eopid();
+	// check if partition selector is passed a propagation spec not
+	// involving it's scan-id; this check is required to avoid self-
+	// deadlocks, i.e partition selector optimizing the same group
+	// with the same optimization context.
+	// this also avoids incorrect plans where the partition selector
+	// is picked on the outer side of a Hash Join, when it requested
+	// no dynamic partition propagation.
+	CPartitionPropagationSpec *pps = prpp->Pepp()->PppsRequired();
+	if (COperator::EopPhysicalPartitionSelector == popPhysical->Eopid())
+	{
+		CPhysicalPartitionSelector *part_selector =
+			CPhysicalPartitionSelector::PopConvert(popPhysical);
+		if (!pps->Contains(part_selector->ScanId()))
+		{
+			return false;
+		}
+	}
 
-	return fPartitionSpecCheckingReqd;
+	return true;
 }
 
 UlongPtrArray *
