@@ -293,8 +293,6 @@ CPhysicalInnerHashJoin::PppsRequired(CMemoryPool *mp,
 {
 	GPOS_ASSERT(nullptr != pppsRequired);
 	GPOS_ASSERT(nullptr != pdrgpdpCtxt);
-	GPOS_ASSERT(child_index >= 0);
-	GPOS_ASSERT(ulOptReq >= 0);
 
 	CExpression *pexprScalar = exprhdl.PexprScalarExactChild(2 /*child_index*/);
 
