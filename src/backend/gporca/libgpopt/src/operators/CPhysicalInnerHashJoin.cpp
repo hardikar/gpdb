@@ -367,4 +367,19 @@ CPhysicalInnerHashJoin::PppsRequired(CMemoryPool *mp,
 	return pps_result;
 }
 
+CPartitionPropagationSpec *
+CPhysicalInnerHashJoin::PppsDerive(CMemoryPool *mp,
+								   CExpressionHandle &exprhdl) const
+{
+	CPartitionPropagationSpec *pps_outer = exprhdl.Pdpplan(0)->Ppps();
+	CPartitionPropagationSpec *pps_inner = exprhdl.Pdpplan(1)->Ppps();
+
+	CPartitionPropagationSpec *pps_result =
+		GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+	pps_result->InsertAll(pps_outer);
+	pps_result->InsertAllResolve(pps_inner);
+
+	return pps_result;
+}
+
 // EOF

@@ -93,6 +93,8 @@ public:
 		CPartitionPropagationSpec *pppsRequired, ULONG child_index,
 		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const override;
 
+	CPartitionPropagationSpec *PppsDerive(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 };	// class CPhysicalInnerHashJoin
 
 }  // namespace gpopt

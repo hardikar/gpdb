@@ -172,6 +172,7 @@ public:
 	// print
 	IOstream &OsPrint(IOstream &os) const override;
 
+	void InsertAllResolve(CPartitionPropagationSpec *pSpec);
 };	// class CPartitionPropagationSpec
 
 }  // namespace gpopt

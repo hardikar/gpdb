@@ -959,8 +959,8 @@ CPhysical::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 CPartitionPropagationSpec *
 CPhysical::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-						CPartitionPropagationSpec *pppsRequired, ULONG,
-						CDrvdPropArray *, ULONG child_index) const
+						CPartitionPropagationSpec *pppsRequired,
+						ULONG child_index, CDrvdPropArray *, ULONG) const
 {
 	// pass through consumer<x> requests to the appropriate child.
 	// do not pass through any propagator<x> requests
@@ -1003,14 +1003,20 @@ CPhysical::EpetPartitionPropagation(
 CPartitionPropagationSpec *
 CPhysical::PppsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 {
-	// FIXME:
-	if (exprhdl.Arity() == 0)
+	CPartitionPropagationSpec *pps_result =
+		GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+
+	for (ULONG ul = 0; ul < exprhdl.Arity(); ++ul)
 	{
-		return GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+		if (exprhdl.FScalarChild(ul))
+		{
+			continue;
+		}
+		CPartitionPropagationSpec *pps = exprhdl.Pdpplan(ul)->Ppps();
+		pps_result->InsertAll(pps);
 	}
-	CPartitionPropagationSpec *pps = exprhdl.Pdpplan(0 /*child_index*/)->Ppps();
-	pps->AddRef();
-	return pps;
+
+	return pps_result;
 }
 
 // EOF

@@ -71,7 +71,6 @@ CPartitionPropagationSpec::~CPartitionPropagationSpec()
 BOOL
 CPartitionPropagationSpec::Equals(const CPartitionPropagationSpec *pps) const
 {
-
 	if ((m_part_prop_spec_infos == nullptr) &&
 		(pps->m_part_prop_spec_infos == nullptr))
 	{
@@ -276,6 +275,52 @@ CPartitionPropagationSpec::InsertAllExcept(CPartitionPropagationSpec *pps,
 	}
 }
 
+void
+CPartitionPropagationSpec::InsertAllResolve(CPartitionPropagationSpec *pps)
+{
+	for (ULONG ul = 0; ul < pps->m_part_prop_spec_infos->Size(); ++ul)
+	{
+		SPartPropSpecInfo *other_info = (*pps->m_part_prop_spec_infos)[ul];
+
+		SPartPropSpecInfo *found_info =
+			FindPartPropSpecInfo(other_info->m_scan_id);
+
+		if (found_info == nullptr)
+		{
+			other_info->m_root_rel_mdid->AddRef();
+			Insert(other_info->m_scan_id, other_info->m_type,
+				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
+				   other_info->m_filter_expr);
+			continue;
+		}
+
+		GPOS_ASSERT(found_info->m_scan_id == other_info->m_scan_id);
+
+		if (found_info->m_type == EpptConsumer &&
+			other_info->m_type == EpptPropagator)
+		{
+			// this scan_id is resolve (used in joins), don't add it to the result
+			continue;
+		}
+
+		if (found_info->m_type == EpptPropagator &&
+			other_info->m_type == EpptConsumer)
+		{
+			// FIXME: unreachable ...
+			// ... because only called from HJ which calls
+			// this method on the pps derived from its outer child
+			// implement this with a Delete(found_info)
+			GPOS_RTL_ASSERT(false);
+		}
+
+		// FIXME: Convert to an exception
+		// same consumer<x>/ propagator<x> from both children of a join
+		// this should not occur!
+		GPOS_RTL_ASSERT(false);
+	}
+}
+
+
 BOOL
 CPartitionPropagationSpec::FSatisfies(
 	const CPartitionPropagationSpec *pps) const
@@ -451,6 +496,5 @@ CPartitionPropagationSpec::OsPrint(IOstream &os) const
 	}
 	return os;
 }
-
 
 // EOF
