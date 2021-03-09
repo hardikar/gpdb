@@ -71,7 +71,6 @@ CPartitionPropagationSpec::~CPartitionPropagationSpec()
 BOOL
 CPartitionPropagationSpec::Equals(const CPartitionPropagationSpec *pps) const
 {
-	GPOS_ASSERT(m_part_prop_spec_infos->IsSorted(SPartPropSpecInfo::CmpFunc));
 
 	if ((m_part_prop_spec_infos == nullptr) &&
 		(pps->m_part_prop_spec_infos == nullptr))
@@ -169,7 +168,7 @@ CPartitionPropagationSpec::Insert(INT scan_id, EPartPropSpecInfoType type,
 
 	m_scan_ids->ExchangeSet(scan_id);
 	m_part_prop_spec_infos->Append(info);
-	m_part_prop_spec_infos->Sort();
+	m_part_prop_spec_infos->Sort(SPartPropSpecInfo::CmpFunc);
 }
 
 void
