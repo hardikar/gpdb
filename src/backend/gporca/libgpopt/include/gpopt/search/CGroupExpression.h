@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
+#include "gpos/common/DbgPrintMixin.h"
 
 #include "gpopt/base/CCostContext.h"
 #include "gpopt/engine/CPartialPlan.h"
@@ -34,7 +35,7 @@ using namespace gpos;
 //		Expression representation inside Memo structure
 //
 //---------------------------------------------------------------------------
-class CGroupExpression : public CRefCount
+class CGroupExpression : public CRefCount, public DbgPrintMixin<CGroupExpression>
 {
 public:
 #ifdef GPOS_DEBUG

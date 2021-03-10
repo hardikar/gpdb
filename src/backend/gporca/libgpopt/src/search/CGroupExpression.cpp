@@ -1141,6 +1141,8 @@ CGroupExpression::OsPrint(IOstream &os) const
 	return OsPrintWithPrefix(os, "");
 }
 
+FORCE_GENERATE_DBGSTR(gpopt::CGroupExpression);
+
 IOstream &
 CGroupExpression::OsPrintWithPrefix(IOstream &os, const CHAR *szPrefix) const
 {
