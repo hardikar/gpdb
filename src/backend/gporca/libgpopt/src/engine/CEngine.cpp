@@ -2181,20 +2181,11 @@ CEngine::FCheckEnfdProps(CMemoryPool *mp, CGroupExpression *pgexpr,
 //
 //---------------------------------------------------------------------------
 BOOL
-CEngine::FValidCTEAndPartitionProperties(CMemoryPool *, CExpressionHandle &,
-										 CReqdPropPlan *)
+CEngine::FValidCTEAndPartitionProperties(CMemoryPool *, CExpressionHandle &exprhdl,
+										 CReqdPropPlan *prpp)
 {
-	//	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
-	//	CPartIndexMap *ppimDrvd = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Ppim();
-	//
-	//	return popPhysical->FProvidesReqdCTEs(exprhdl, prpp->Pcter()) &&
-	//		   !CUtils::FMotionOverUnresolvedPartConsumers(
-	//			   mp, exprhdl, prpp->Pepp()->PppsRequired()->Ppim()) &&
-	//		   !ppimDrvd->FContainsRedundantPartitionSelectors(
-	//			   prpp->Pepp()->PppsRequired()->Ppim());
-
-	// FIXME
-	return true;
+	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
+	return popPhysical->FProvidesReqdCTEs(exprhdl, prpp->Pcter());
 }
 
 //---------------------------------------------------------------------------
