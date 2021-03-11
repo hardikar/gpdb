@@ -2183,7 +2183,8 @@ CEngine::FCheckEnfdProps(CMemoryPool *mp, CGroupExpression *pgexpr,
 //
 //---------------------------------------------------------------------------
 BOOL
-CEngine::FValidCTEAndPartitionProperties(CMemoryPool *, CExpressionHandle &exprhdl,
+CEngine::FValidCTEAndPartitionProperties(CMemoryPool *,
+										 CExpressionHandle &exprhdl,
 										 CReqdPropPlan *prpp)
 {
 	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
