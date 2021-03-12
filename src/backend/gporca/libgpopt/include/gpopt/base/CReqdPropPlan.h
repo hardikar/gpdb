@@ -71,9 +71,6 @@ public:
 
 	// ctor
 	CReqdPropPlan(CColRefSet *pcrs, CEnfdOrder *peo, CEnfdDistribution *ped,
-				  CEnfdRewindability *per, CCTEReq *pcter);
-	// ctor
-	CReqdPropPlan(CColRefSet *pcrs, CEnfdOrder *peo, CEnfdDistribution *ped,
 				  CEnfdRewindability *per, CEnfdPartitionPropagation *pepp,
 				  CCTEReq *pcter);
 

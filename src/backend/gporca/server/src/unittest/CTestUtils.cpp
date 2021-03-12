@@ -2418,6 +2418,8 @@ CTestUtils::PqcGenerate(CMemoryPool *mp, CExpression *pexpr,
 	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
 		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 
+	CPartitionPropagationSpec *pps = GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
 
 	// we require exact matching on distribution since final query results must be sent to master
@@ -2427,10 +2429,13 @@ CTestUtils::PqcGenerate(CMemoryPool *mp, CExpression *pexpr,
 	CEnfdRewindability *per =
 		GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
 
+	CEnfdPartitionPropagation *pepp =
+		GPOS_NEW(mp) CEnfdPartitionPropagation(pps, CEnfdPartitionPropagation::EppmSatisfy);
+
 	CCTEReq *pcter = COptCtxt::PoctxtFromTLS()->Pcteinfo()->PcterProducers(mp);
 
 	CReqdPropPlan *prpp =
-		GPOS_NEW(mp) CReqdPropPlan(pcrs, peo, ped, per, pcter);
+		GPOS_NEW(mp) CReqdPropPlan(pcrs, peo, ped, per, pepp, pcter);
 
 	colref_array->AddRef();
 	CMDNameArray *pdrgpmdname = GPOS_NEW(mp) CMDNameArray(mp);
@@ -2505,8 +2510,12 @@ CTestUtils::PqcGenerate(CMemoryPool *mp, CExpression *pexpr)
 
 	CCTEReq *pcter = COptCtxt::PoctxtFromTLS()->Pcteinfo()->PcterProducers(mp);
 
+	CPartitionPropagationSpec *pps = GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+	CEnfdPartitionPropagation *pepp =
+		GPOS_NEW(mp) CEnfdPartitionPropagation(pps, CEnfdPartitionPropagation::EppmSatisfy);
+
 	CReqdPropPlan *prpp =
-		GPOS_NEW(mp) CReqdPropPlan(pcrsOutput, peo, ped, per, pcter);
+		GPOS_NEW(mp) CReqdPropPlan(pcrsOutput, peo, ped, per, pepp, pcter);
 
 	CMDNameArray *pdrgpmdname = GPOS_NEW(mp) CMDNameArray(mp);
 	const ULONG length = colref_array->Size();

@@ -34,33 +34,6 @@
 
 using namespace gpopt;
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CReqdPropPlan::CReqdPropPlan
-//
-//	@doc:
-//		Ctor
-//
-//---------------------------------------------------------------------------
-CReqdPropPlan::CReqdPropPlan(CColRefSet *pcrs, CEnfdOrder *peo,
-							 CEnfdDistribution *ped, CEnfdRewindability *per,
-							 CCTEReq *pcter)
-	: m_pcrs(pcrs),
-	  m_peo(peo),
-	  m_ped(ped),
-	  m_per(per),
-	  m_pepp(NULL),
-	  m_pcter(pcter)
-{
-	GPOS_ASSERT(nullptr != pcrs);
-	GPOS_ASSERT(nullptr != peo);
-	GPOS_ASSERT(nullptr != ped);
-	GPOS_ASSERT(nullptr != per);
-	GPOS_ASSERT(nullptr != pcter);
-}
-
-
 //---------------------------------------------------------------------------
 //     @function:
 //             CReqdPropPlan::CReqdPropPlan
@@ -429,14 +402,17 @@ CReqdPropPlan::PrppEmpty(CMemoryPool *mp)
 		GPOS_NEW(mp) CDistributionSpecAny(COperator::EopSentinel);
 	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
 		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
+	CPartitionPropagationSpec *pps = GPOS_NEW(mp) CPartitionPropagationSpec(mp);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
 	CEnfdDistribution *ped =
 		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
 	CEnfdRewindability *per =
 		GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
+	CEnfdPartitionPropagation *pepp =
+		GPOS_NEW(mp) CEnfdPartitionPropagation(pps, CEnfdPartitionPropagation::EppmSatisfy);
 	CCTEReq *pcter = GPOS_NEW(mp) CCTEReq(mp);
 
-	return GPOS_NEW(mp) CReqdPropPlan(pcrs, peo, ped, per, pcter);
+	return GPOS_NEW(mp) CReqdPropPlan(pcrs, peo, ped, per, pepp, pcter);
 }
 
 //---------------------------------------------------------------------------
