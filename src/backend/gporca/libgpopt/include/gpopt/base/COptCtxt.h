@@ -106,6 +106,9 @@ private:
 	// mappings of dynamic scan -> partition indexes (after static elimination)
 	UlongToBitSetMap *m_scanid_to_part_map;
 
+	// partition selector ids - unique per PartitionSelector created
+	ULONG m_selector_id_counter;
+
 public:
 	COptCtxt(COptCtxt &) = delete;
 
@@ -256,6 +259,12 @@ public:
 	UlPartIndexNextVal()
 	{
 		return m_auPartId++;
+	}
+
+	ULONG
+	NextPartSelectorId()
+	{
+		return m_selector_id_counter++;
 	}
 
 	// required system columns
