@@ -1037,24 +1037,24 @@ CSubqueryTestUtils::PexprSubqueryQuantified(
 	pcrs = pexprOuter->DeriveOutputColumns();
 	const CColRef *pcrOuter = pcrs->PcrAny();
 
+	CColRefSet *pcrsSubquery = GPOS_NEW(mp) CColRefSet(mp);
+	pcrsSubquery->Include(pcrInner);
+
 	// return a quantified subquery expression
 	if (COperator::EopScalarSubqueryAny == op_id)
 	{
-		const CWStringConst *str =
-			GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("="));
-		return GPOS_NEW(mp) CExpression(
-			mp,
-			GPOS_NEW(mp) CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
-			pexprSelect, CUtils::PexprScalarIdent(mp, pcrOuter));
+		CExpression *pexprScalar =
+			CUtils::PexprScalarEqCmp(mp, pcrOuter, pcrInner);
+		return GPOS_NEW(mp)
+			CExpression(mp, GPOS_NEW(mp) CScalarSubqueryAny(mp, pcrsSubquery),
+						pexprSelect, pexprScalar);
 	}
 
-	const CWStringConst *str = GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("<>"));
-	return GPOS_NEW(mp) CExpression(
-		mp,
-		GPOS_NEW(mp) CScalarSubqueryAll(
-			mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_NEQ_OP), str, pcrInner),
-		pexprSelect, CUtils::PexprScalarIdent(mp, pcrOuter));
+	CExpression *pexprScalar =
+		CUtils::PexprScalarCmp(mp, pcrOuter, pcrInner, IMDType::EcmptNEq);
+	return GPOS_NEW(mp)
+		CExpression(mp, GPOS_NEW(mp) CScalarSubqueryAll(mp, pcrsSubquery),
+					pexprSelect, pexprScalar);
 }
 
 
@@ -1497,23 +1497,23 @@ CSubqueryTestUtils::PexprSelectWithQuantifiedAggSubquery(
 	CColRef *pcrInner = pexprGb->DeriveOutputColumns()->PcrAny();
 	CColRef *pcrOuter = pexprOuter->DeriveOutputColumns()->PcrAny();
 	CExpression *pexprSubqueryQuantified = nullptr;
+	CColRefSet *pcrsSubquery = GPOS_NEW(mp) CColRefSet(mp);
+	pcrsSubquery->Include(pcrInner);
+
 	if (COperator::EopScalarSubqueryAny == op_id)
 	{
-		const CWStringConst *str =
-			GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("="));
-		pexprSubqueryQuantified = GPOS_NEW(mp) CExpression(
-			mp,
-			GPOS_NEW(mp) CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
-			pexprGb, CUtils::PexprScalarIdent(mp, pcrOuter));
+		CExpression *pexprScalar =
+			CUtils::PexprScalarEqCmp(mp, pcrOuter, pcrInner);
+		pexprSubqueryQuantified = GPOS_NEW(mp)
+			CExpression(mp, GPOS_NEW(mp) CScalarSubqueryAny(mp, pcrsSubquery),
+						pexprGb, pexprScalar);
 	}
 
-	const CWStringConst *str = GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("<>"));
-	pexprSubqueryQuantified = GPOS_NEW(mp) CExpression(
-		mp,
-		GPOS_NEW(mp) CScalarSubqueryAll(
-			mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_NEQ_OP), str, pcrInner),
-		pexprGb, CUtils::PexprScalarIdent(mp, pcrOuter));
+	CExpression *pexprScalar =
+		CUtils::PexprScalarCmp(mp, pcrOuter, pcrInner, IMDType::EcmptNEq);
+	pexprSubqueryQuantified = GPOS_NEW(mp)
+		CExpression(mp, GPOS_NEW(mp) CScalarSubqueryAll(mp, pcrsSubquery),
+					pexprGb, pexprScalar);
 
 
 	return CUtils::PexprLogicalSelect(mp, pexprOuter, pexprSubqueryQuantified);
@@ -1544,8 +1544,8 @@ CSubqueryTestUtils::PexprProjectWithSubqueryQuantified(
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
 	// generate a computed column
-	CScalarSubqueryQuantified *pop =
-		CScalarSubqueryQuantified::PopConvert(pexprSubqueryQuantified->Pop());
+	CExpression *pexprScalar = (*pexprSubqueryQuantified)[1];
+	CScalarCmp *pop = CScalarCmp::PopConvert(pexprScalar->Pop());
 	const IMDType *pmdtype = md_accessor->RetrieveType(pop->MdidType());
 	CColRef *pcrComputed = col_factory->PcrCreate(pmdtype, pop->TypeModifier());
 
@@ -1720,30 +1720,31 @@ CSubqueryTestUtils::PexprSubqueryWithConstTableGet(CMemoryPool *mp,
 	CColRefSet *pcrs = pexprConstTableGet->DeriveOutputColumns();
 	const CColRef *pcrInner = pcrs->PcrAny();
 
+	CColRefSet *pcrsSubquery = GPOS_NEW(mp) CColRefSet(mp);
+	pcrsSubquery->Include(pcrInner);
+
 	// get random columns from outer expression
 	pcrs = pexprOuter->DeriveOutputColumns();
 	const CColRef *pcrOuter = pcrs->PcrAny();
-
-	const CWStringConst *str = GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("="));
 
 	CExpression *pexprSubquery = nullptr;
 	if (COperator::EopScalarSubqueryAny == op_id)
 	{
 		// construct ANY subquery expression
-		pexprSubquery = GPOS_NEW(mp) CExpression(
-			mp,
-			GPOS_NEW(mp) CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
-			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
+		CExpression *pexprScalar =
+			CUtils::PexprScalarEqCmp(mp, pcrOuter, pcrInner);
+		pexprSubquery = GPOS_NEW(mp)
+			CExpression(mp, GPOS_NEW(mp) CScalarSubqueryAny(mp, pcrsSubquery),
+						pexprConstTableGet, pexprScalar);
 	}
 	else
 	{
 		// construct ALL subquery expression
-		pexprSubquery = GPOS_NEW(mp) CExpression(
-			mp,
-			GPOS_NEW(mp) CScalarSubqueryAll(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
-			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
+		CExpression *pexprScalar =
+			CUtils::PexprScalarEqCmp(mp, pcrOuter, pcrInner);
+		pexprSubquery = GPOS_NEW(mp)
+			CExpression(mp, GPOS_NEW(mp) CScalarSubqueryAll(mp, pcrsSubquery),
+						pexprConstTableGet, pexprScalar);
 	}
 
 	return CUtils::PexprLogicalSelect(mp, pexprOuter, pexprSubquery);
@@ -1781,19 +1782,18 @@ CSubqueryTestUtils::PexprSubqueryWithDisjunction(CMemoryPool *mp)
 		// get random columns from inner expression
 		CColRefSet *pcrs = pexprConstTableGet->DeriveOutputColumns();
 		const CColRef *pcrInner = pcrs->PcrAny();
+		CColRefSet *pcrsSubquery = GPOS_NEW(mp) CColRefSet(mp);
+		pcrsSubquery->Include(pcrInner);
 
 		// get random columns from outer expression
 		pcrs = pexprOuter->DeriveOutputColumns();
 		const CColRef *pcrOuter = pcrs->PcrAny();
 
-		const CWStringConst *str =
-			GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("="));
-
-		CExpression *pexprSubquery = GPOS_NEW(mp) CExpression(
-			mp,
-			GPOS_NEW(mp) CScalarSubqueryAny(
-				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
-			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
+		CExpression *pexprScalar =
+			CUtils::PexprScalarEqCmp(mp, pcrOuter, pcrInner);
+		CExpression *pexprSubquery = GPOS_NEW(mp)
+			CExpression(mp, GPOS_NEW(mp) CScalarSubqueryAny(mp, pcrsSubquery),
+						pexprConstTableGet, pexprScalar);
 		pdrgpexpr->Append(pexprSubquery);
 	}
 
