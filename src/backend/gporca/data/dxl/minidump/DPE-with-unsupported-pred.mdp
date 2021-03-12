@@ -2588,7 +2588,7 @@
                 <dxl:PropagationExpression>
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                 </dxl:PropagationExpression>
-                <dxl:PrintableFilter>
+                <dxl:PartFilterExpr>
                   <dxl:And>
                     <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
                       <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
@@ -2609,7 +2609,7 @@
                       </dxl:CoerceViaIO>
                     </dxl:Comparison>
                   </dxl:And>
-                </dxl:PrintableFilter>
+                </dxl:PartFilterExpr>
                 <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                   <dxl:Properties>
                     <dxl:Cost StartupCost="0" TotalCost="431.000465" Rows="3.000000" Width="8"/>

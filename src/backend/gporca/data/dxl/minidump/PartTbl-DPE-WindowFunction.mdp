@@ -984,12 +984,12 @@
             <dxl:PropagationExpression>
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
             </dxl:PropagationExpression>
-            <dxl:PrintableFilter>
+            <dxl:PartFilterExpr>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
                 <dxl:Ident ColId="11" ColName="b" TypeMdid="0.1082.1.0"/>
                 <dxl:Ident ColId="1" ColName="b" TypeMdid="0.1082.1.0"/>
               </dxl:Comparison>
-            </dxl:PrintableFilter>
+            </dxl:PartFilterExpr>
             <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="442.780953" Rows="20000.000000" Width="16"/>

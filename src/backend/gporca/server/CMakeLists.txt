@@ -139,7 +139,7 @@ DynamicIndexScan-DefaultPartition DynamicIndexScan-DefaultPartition-2
 DynamicIndexScan-Homogenous-UnsupportedConstraint DynamicIndexScan-Heterogenous-UnsupportedConstraint
 DynamicIndexScan-Heterogenous-PartSelectEquality
 DynamicIndexScan-Heterogenous-PartSelectRange DynamicIndexScan-OpenEndedPartitions
-DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols DynamicIndexGet-OuterRefs;
+DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols;
 
 CIndexScanOnLeafTest:
 IndexOnLeaf-AddNewPartitionToRootTableContainingHeterogenousIndex

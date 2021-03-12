@@ -476,7 +476,7 @@ select * from foo where b is not null;
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:Append IsTarget="false" IsZapped="false">
+        <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="-1" SelectorIds="">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="1724.000277" Rows="1.000000" Width="8"/>
           </dxl:Properties>
@@ -518,12 +518,12 @@ select * from foo where b is not null;
               <dxl:PropagationExpression>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
               </dxl:PropagationExpression>
-              <dxl:PrintableFilter>
+              <dxl:PartFilterExpr>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
                   <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                 </dxl:Comparison>
-              </dxl:PrintableFilter>
+              </dxl:PartFilterExpr>
             </dxl:PartitionSelector>
             <dxl:DynamicTableScan PartIndexId="1">
               <dxl:Properties>
@@ -593,12 +593,12 @@ select * from foo where b is not null;
               <dxl:PropagationExpression>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
               </dxl:PropagationExpression>
-              <dxl:PrintableFilter>
+              <dxl:PartFilterExpr>
                 <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
                   <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
                 </dxl:Comparison>
-              </dxl:PrintableFilter>
+              </dxl:PartFilterExpr>
             </dxl:PartitionSelector>
             <dxl:DynamicTableScan PartIndexId="2">
               <dxl:Properties>
@@ -677,7 +677,7 @@ select * from foo where b is not null;
               <dxl:PropagationExpression>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
               </dxl:PropagationExpression>
-              <dxl:PrintableFilter>
+              <dxl:PartFilterExpr>
                 <dxl:Or>
                   <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
                     <dxl:Ident ColId="19" ColName="b" TypeMdid="0.23.1.0"/>
@@ -688,7 +688,7 @@ select * from foo where b is not null;
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                   </dxl:Comparison>
                 </dxl:Or>
-              </dxl:PrintableFilter>
+              </dxl:PartFilterExpr>
             </dxl:PartitionSelector>
             <dxl:DynamicTableScan PartIndexId="3">
               <dxl:Properties>
@@ -758,13 +758,13 @@ select * from foo where b is not null;
               <dxl:PropagationExpression>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
               </dxl:PropagationExpression>
-              <dxl:PrintableFilter>
+              <dxl:PartFilterExpr>
                 <dxl:Not>
                   <dxl:IsNull>
                     <dxl:Ident ColId="28" ColName="b" TypeMdid="0.23.1.0"/>
                   </dxl:IsNull>
                 </dxl:Not>
-              </dxl:PrintableFilter>
+              </dxl:PartFilterExpr>
             </dxl:PartitionSelector>
             <dxl:DynamicTableScan PartIndexId="4">
               <dxl:Properties>
