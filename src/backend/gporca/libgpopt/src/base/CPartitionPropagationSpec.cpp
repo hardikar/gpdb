@@ -183,7 +183,6 @@ CPartitionPropagationSpec::InsertAll(CPartitionPropagationSpec *pps)
 
 		if (found_info == nullptr)
 		{
-			other_info->m_root_rel_mdid->AddRef();
 			Insert(other_info->m_scan_id, other_info->m_type,
 				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
 				   other_info->m_filter_expr);
@@ -224,7 +223,6 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 
 		if (found_info == nullptr)
 		{
-			other_info->m_root_rel_mdid->AddRef();
 			Insert(other_info->m_scan_id, other_info->m_type,
 				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
 				   other_info->m_filter_expr);
@@ -260,7 +258,6 @@ CPartitionPropagationSpec::InsertAllExcept(CPartitionPropagationSpec *pps,
 
 		if (found_info == nullptr)
 		{
-			other_info->m_root_rel_mdid->AddRef();
 			Insert(other_info->m_scan_id, other_info->m_type,
 				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
 				   other_info->m_filter_expr);
@@ -287,7 +284,6 @@ CPartitionPropagationSpec::InsertAllResolve(CPartitionPropagationSpec *pps)
 
 		if (found_info == nullptr)
 		{
-			other_info->m_root_rel_mdid->AddRef();
 			Insert(other_info->m_scan_id, other_info->m_type,
 				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
 				   other_info->m_filter_expr);
