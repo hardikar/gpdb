@@ -547,7 +547,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
                       <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
                     </dxl:Comparison>
                   </dxl:HashCondList>
-                  <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="1">
+                  <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="21">
                     <dxl:Properties>
                       <dxl:Cost StartupCost="0" TotalCost="431.000071" Rows="1.000000" Width="8"/>
                     </dxl:Properties>
@@ -607,7 +607,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
                       </dxl:TableDescriptor>
                     </dxl:TableScan>
                   </dxl:Append>
-                  <dxl:PartitionSelector RelationMdid="0.25679.1.0" SelectorId="1" ScanId="1" Partitions="0">
+                  <dxl:PartitionSelector RelationMdid="0.25679.1.0" SelectorId="21" ScanId="1" Partitions="0">
                     <dxl:Properties>
                       <dxl:Cost StartupCost="0" TotalCost="431.000063" Rows="1.000000" Width="4"/>
                     </dxl:Properties>

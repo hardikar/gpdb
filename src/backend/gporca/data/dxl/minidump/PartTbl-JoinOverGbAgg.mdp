@@ -850,7 +850,7 @@
               <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="33">
+          <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="41">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="16"/>
             </dxl:Properties>
@@ -1012,7 +1012,7 @@
               </dxl:TableDescriptor>
             </dxl:TableScan>
           </dxl:Append>
-          <dxl:PartitionSelector RelationMdid="0.324859.1.1" SelectorId="33" ScanId="1" Partitions="0,1,2,3,4">
+          <dxl:PartitionSelector RelationMdid="0.324859.1.1" SelectorId="41" ScanId="1" Partitions="0,1,2,3,4">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000076" Rows="1.000000" Width="16"/>
             </dxl:Properties>

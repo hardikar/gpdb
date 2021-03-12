@@ -4044,7 +4044,7 @@
         </dxl:LogicalJoin>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="323272">
+    <dxl:Plan Id="0" SpaceSize="34264">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="4953729.958342" Rows="19136.250000" Width="31"/>
@@ -4275,7 +4275,7 @@
                           <dxl:Ident ColId="26" ColName="ymd" TypeMdid="0.1082.1.0"/>
                         </dxl:Comparison>
                       </dxl:HashCondList>
-                      <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="1">
+                      <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="174">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="277311.072550" Rows="15255100416.000000" Width="26"/>
                         </dxl:Properties>
@@ -4443,7 +4443,7 @@
                           </dxl:TableDescriptor>
                         </dxl:TableScan>
                       </dxl:Append>
-                      <dxl:PartitionSelector RelationMdid="0.328475.1.1" SelectorId="1" ScanId="1" Partitions="0,1,2,3">
+                      <dxl:PartitionSelector RelationMdid="0.328475.1.1" SelectorId="174" ScanId="1" Partitions="0,1,2,3">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="432.506406" Rows="6077.440000" Width="12"/>
                         </dxl:Properties>
