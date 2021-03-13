@@ -104,6 +104,15 @@ private:
 	CExpressionArray *m_direct_dispatchable_filters;
 
 	// mappings of dynamic scan -> partition indexes (after static elimination)
+	// this is mainetained here to avoid dependencies on optimization order
+	// between dynamic scans/partition selectors and remove the assumption
+	// of one being optimized before the other. Instead, we populate the
+	// partitions during optimization of the dynamic scans, and populate
+	// the partitions for the corresponding partition selector in
+	// ExprToDXL. We could possibly do this in DXLToPlstmt, but we would be
+	// making an assumption about the order the scan vs partition selector
+	// is translated, and would also need information from the append's
+	// child dxl nodes.
 	UlongToBitSetMap *m_scanid_to_part_map;
 
 	// partition selector ids - unique per PartitionSelector created
