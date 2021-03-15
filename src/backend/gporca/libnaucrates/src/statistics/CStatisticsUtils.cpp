@@ -23,6 +23,7 @@
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CExpressionUtils.h"
 #include "gpopt/operators/CLogicalDynamicIndexGet.h"
+#include "gpopt/operators/CPhysicalDynamicScan.h"
 #include "gpopt/operators/CLogicalIndexGet.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
@@ -1036,33 +1037,43 @@ CStatisticsUtils::DatumNull(const CColRef *colref)
 //
 //---------------------------------------------------------------------------
 IStatistics *
-CStatisticsUtils::DeriveStatsForDynamicScan(CMemoryPool *mp GPOS_UNUSED,
-											CExpressionHandle &expr_handle,
-											ULONG part_idx_id GPOS_UNUSED)
+CStatisticsUtils::DeriveStatsForDynamicScan(CMemoryPool *mp,
+											CExpressionHandle &exprhdl,
+											ULONG scan_id,
+											CPartitionPropagationSpec *pps_reqd)
 {
 	// extract part table base stats from passed handle
-	IStatistics *base_table_stats = expr_handle.Pstats();
+	IStatistics *base_table_stats = exprhdl.Pstats();
 	GPOS_ASSERT(nullptr != base_table_stats);
 
-	// GPDB_12_MERGE_FIXME: Re-enable this when DPE is re-implemented
-	if (true || !GPOS_FTRACE(EopttraceDeriveStatsForDPE))
+	if (!GPOS_FTRACE(EopttraceDeriveStatsForDPE))
 	{
 		// if stats derivation with dynamic partition elimitaion is disabled, we return base stats
 		base_table_stats->AddRef();
 		return base_table_stats;
 	}
 
-#if 0
-	if (!part_filter_map->FContainsScanId(part_idx_id) ||
-		NULL == part_filter_map->Pstats(part_idx_id))
+	const CBitSet *selector_ids = pps_reqd->SelectorIds(scan_id);
+	const SPartSelectorInfoEntry *part_selector_info = nullptr;
+	{
+		CBitSetIter it(*selector_ids);
+		it.Advance();
+		ULONG selector_id = it.Bit();
+
+		COptCtxt *opt_ctxt = COptCtxt::PoctxtFromTLS();
+		part_selector_info = opt_ctxt->GetPartSelectorInfo(selector_id);
+	}
+
+	if (!pps_reqd->Contains(scan_id) || selector_ids->Size() == 0 ||
+		nullptr == part_selector_info)
 	{
 		// no corresponding entry is found in map, return base stats
 		base_table_stats->AddRef();
 		return base_table_stats;
 	}
 
-	IStatistics *part_selector_stats = part_filter_map->Pstats(part_idx_id);
-	CExpression *scalar_expr = part_filter_map->Pexpr(part_idx_id);
+	IStatistics *part_selector_stats = part_selector_info->m_stats;
+	CExpression *scalar_expr = part_selector_info->m_filter_expr;
 
 	CColRefSetArray *output_colrefs = GPOS_NEW(mp) CColRefSetArray(mp);
 	output_colrefs->Append(base_table_stats->GetColRefSet(mp));
@@ -1106,8 +1117,6 @@ CStatisticsUtils::DeriveStatsForDynamicScan(CMemoryPool *mp GPOS_UNUSED,
 	join_preds_stats->Release();
 
 	return left_semi_join_stats;
-#endif
-	return nullptr;
 }
 
 //---------------------------------------------------------------------------
