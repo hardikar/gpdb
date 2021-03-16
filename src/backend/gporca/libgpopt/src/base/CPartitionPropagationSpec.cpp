@@ -170,6 +170,12 @@ CPartitionPropagationSpec::Insert(INT scan_id, EPartPropSpecInfoType type,
 	m_part_prop_spec_infos->Sort(SPartPropSpecInfo::CmpFunc);
 }
 
+void CPartitionPropagationSpec::InsertCopy(SPartPropSpecInfo *other)
+{
+	Insert(other->m_scan_id, other->m_type, other->m_root_rel_mdid,
+		   other->m_selector_ids, other->m_filter_expr);
+}
+
 void
 CPartitionPropagationSpec::InsertAll(CPartitionPropagationSpec *pps)
 {
@@ -183,9 +189,7 @@ CPartitionPropagationSpec::InsertAll(CPartitionPropagationSpec *pps)
 
 		if (found_info == nullptr)
 		{
-			Insert(other_info->m_scan_id, other_info->m_type,
-				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
-				   other_info->m_filter_expr);
+			InsertCopy(other_info);
 			continue;
 		}
 
@@ -223,9 +227,7 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 
 		if (found_info == nullptr)
 		{
-			Insert(other_info->m_scan_id, other_info->m_type,
-				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
-				   other_info->m_filter_expr);
+			InsertCopy(other_info);
 			continue;
 		}
 
@@ -258,9 +260,7 @@ CPartitionPropagationSpec::InsertAllExcept(CPartitionPropagationSpec *pps,
 
 		if (found_info == nullptr)
 		{
-			Insert(other_info->m_scan_id, other_info->m_type,
-				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
-				   other_info->m_filter_expr);
+			InsertCopy(other_info);
 			continue;
 		}
 
@@ -284,9 +284,7 @@ CPartitionPropagationSpec::InsertAllResolve(CPartitionPropagationSpec *pps)
 
 		if (found_info == nullptr)
 		{
-			Insert(other_info->m_scan_id, other_info->m_type,
-				   other_info->m_root_rel_mdid, other_info->m_selector_ids,
-				   other_info->m_filter_expr);
+			InsertCopy(other_info);
 			continue;
 		}
 

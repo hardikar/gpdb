@@ -153,6 +153,8 @@ public:
 	void Insert(INT scan_id, EPartPropSpecInfoType type, IMDId *rool_rel_mdid,
 				CBitSet *selector_ids, CExpression *expr);
 
+	void InsertCopy(SPartPropSpecInfo *other);
+
 	void InsertAll(CPartitionPropagationSpec *pps);
 
 	void InsertAllowedConsumers(CPartitionPropagationSpec *pps,
