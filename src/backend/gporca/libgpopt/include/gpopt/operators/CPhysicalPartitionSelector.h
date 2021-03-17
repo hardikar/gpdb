@@ -43,8 +43,8 @@ private:
 	// partition keys
 	CColRef2dArray *m_pdrgpdrgpcr;
 
-	// combined partition selection predicate
-	CExpression *m_pexprCombinedPredicate;
+	// partition selection predicate
+	CExpression *m_filter_expr;
 
 public:
 	CPhysicalPartitionSelector(const CPhysicalPartitionSelector &) = delete;
@@ -98,11 +98,11 @@ public:
 		return m_pdrgpdrgpcr;
 	}
 
-	// return a combined printable version of the partition selection predicate
+	// return the partition selection predicate
 	CExpression *
-	PexprCombinedPred() const
+	FilterExpr() const
 	{
-		return m_pexprCombinedPredicate;
+		return m_filter_expr;
 	}
 
 	// match function

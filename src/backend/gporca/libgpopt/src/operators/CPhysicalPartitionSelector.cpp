@@ -37,7 +37,7 @@ CPhysicalPartitionSelector::CPhysicalPartitionSelector(
 	  m_selector_id(COptCtxt::PoctxtFromTLS()->NextPartSelectorId()),
 	  m_mdid(mdid),
 	  m_pdrgpdrgpcr(pdrgpdrgpcr),
-	  m_pexprCombinedPredicate(pexprScalar)
+	  m_filter_expr(pexprScalar)
 {
 	GPOS_ASSERT(0 < scan_id);
 	GPOS_ASSERT(mdid->IsValid());
@@ -57,7 +57,7 @@ CPhysicalPartitionSelector::~CPhysicalPartitionSelector()
 {
 	CRefCount::SafeRelease(m_pdrgpdrgpcr);
 	m_mdid->Release();
-	CRefCount::SafeRelease(m_pexprCombinedPredicate);
+	CRefCount::SafeRelease(m_filter_expr);
 }
 
 //---------------------------------------------------------------------------
@@ -128,7 +128,7 @@ CPhysicalPartitionSelector::PcrsRequired(CMemoryPool *mp,
 		"Required properties can only be computed on the relational child");
 
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp, *pcrsInput);
-	// FIXME: pcrs->Union(m_pexprCombinedPredicate->DeriveUsedColumns());
+	pcrs->Union(m_filter_expr->DeriveUsedColumns());
 	pcrs->Intersection(exprhdl.DeriveOutputColumns(child_index));
 
 	return pcrs;

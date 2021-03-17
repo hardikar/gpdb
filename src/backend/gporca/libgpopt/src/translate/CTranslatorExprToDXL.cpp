@@ -1326,9 +1326,10 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 		CPhysicalDynamicTableScan::PopConvert(pexprDTS->Pop());
 
 	ULongPtrArray *selector_ids = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
+	CPartitionPropagationSpec *pps_reqd =
+		pexprDTS->Prpp()->Pepp()->PppsRequired();
+	if (pps_reqd->Contains(popDTS->ScanId()))
 	{
-		CPartitionPropagationSpec *pps_reqd =
-			pexprDTS->Prpp()->Pepp()->PppsRequired();
 		const CBitSet *bs = pps_reqd->SelectorIds(popDTS->ScanId());
 		CBitSetIter bsi(*bs);
 		for (ULONG ul = 0; bsi.Advance(); ul++)
@@ -4871,19 +4872,28 @@ CTranslatorExprToDXL::PdxlnPartitionSelector(
 	CDXLNode *pdxlnPrL =
 		CTranslatorExprToDXLUtils::PdxlnProjListFromChildProjList(
 			m_mp, m_pcf, m_phmcrdxln, pdxlnPrLChild);
+	const ULONG scanid = popSelector->ScanId();
+
+	CBitSet *bs = COptCtxt::PoctxtFromTLS()->GetPartitionsForScanId(scanid);
+	GPOS_ASSERT(nullptr != bs);
+	ULongPtrArray *parts = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
+	CBitSetIter bsi(*bs);
+	for (ULONG ul = 0; bsi.Advance(); ul++)
+	{
+		parts->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
+	}
 
 	CDXLNode *pdxlnSelector = GPOS_NEW(m_mp)
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalPartitionSelector(
 						   m_mp, popSelector->MDId(), popSelector->SelectorId(),
-						   popSelector->ScanId()));
-	CExpression *pexprPrintable = popSelector->PexprCombinedPred();
+						   popSelector->ScanId(), parts));
 
-	CDXLNode *pdxlnPrintable = PdxlnScalar(pexprPrintable);
-
+	CDXLNode *pdxlnFilter = PdxlnScalar(popSelector->FilterExpr());
 	CDXLPhysicalProperties *dxl_properties = GetProperties(pexprChild);
+
 	pdxlnSelector->SetProperties(dxl_properties);
 	pdxlnSelector->AddChild(pdxlnPrL);
-	pdxlnSelector->AddChild(pdxlnPrintable);
+	pdxlnSelector->AddChild(pdxlnFilter);
 	pdxlnSelector->AddChild(child_dxlnode);
 
 	return pdxlnSelector;
@@ -7685,4 +7695,5 @@ CTranslatorExprToDXL::FNeedsMaterializeUnderResult(CDXLNode *proj_list_dxlnode,
 	}
 	return fMotionHazard;
 }
+
 // EOF

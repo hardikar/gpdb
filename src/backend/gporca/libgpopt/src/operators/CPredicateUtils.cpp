@@ -1289,6 +1289,53 @@ CPredicateUtils::FCompareIdentToConstArray(CExpression *pexpr)
 	return CUtils::FScalarConstArray(pexprArray);
 }
 
+CExpression *
+CPredicateUtils::ValidatePartPruningExpr(CMemoryPool *mp, CExpression *expr,
+										 CColRef *pcrPartKey,
+										 CColRefSet *pcrsAllowedRefs,
+										 BOOL allow_not_equals_preds)
+{
+	GPOS_ASSERT(nullptr != expr);
+
+	if (expr->DeriveScalarFunctionProperties()->NeedsSingletonExecution() ||
+		COperator::EopScalarCmp != expr->Pop()->Eopid())
+	{
+		return nullptr;
+	}
+
+	CScalarCmp *sc_cmp = CScalarCmp::PopConvert(expr->Pop());
+
+	if (!allow_not_equals_preds && sc_cmp->ParseCmpType() == IMDType::EcmptNEq)
+	{
+		return nullptr;
+	}
+
+	CExpression *expr_left = (*expr)[0];
+	CExpression *expr_right = (*expr)[1];
+
+	if ((CUtils::FScalarIdent(expr_left, pcrPartKey) ||
+		 CCastUtils::FBinaryCoercibleCastedScId(expr_left, pcrPartKey)) &&
+		FValidRefsOnly(expr_right, pcrsAllowedRefs))
+	{
+		expr->AddRef();
+		return expr;
+	}
+
+	if ((CUtils::FScalarIdent(expr_right, pcrPartKey) ||
+		 CCastUtils::FBinaryCoercibleCastedScId(expr_right, pcrPartKey)) &&
+		FValidRefsOnly(expr_left, pcrsAllowedRefs))
+	{
+		COperator *commuted_op = sc_cmp->PopCommutedOp(mp);
+		expr_left->AddRef();
+		expr_right->AddRef();
+		CExpression *swapped_expr =
+			GPOS_NEW(mp) CExpression(mp, commuted_op, expr_right, expr_left);
+		return swapped_expr;
+	}
+
+	return nullptr;
+}
+
 // Find a predicate that can be used for partition pruning with the given
 // part key in the array of expressions if one exists. Relevant predicates
 // are those that compare the partition key to expressions involving only
@@ -1298,11 +1345,7 @@ CExpression *
 CPredicateUtils::PexprPartPruningPredicate(
 	CMemoryPool *mp, const CExpressionArray *pdrgpexpr, CColRef *pcrPartKey,
 	CExpression *pexprCol,	// predicate on pcrPartKey obtained from pcnstr
-	CColRefSet
-		*pcrsAllowedRefs,  // allowed colrefs in exprs (except pcrPartKey)
-	BOOL
-		allowNotEqualPreds	// allow NEq to generate partition pruning predicate
-)
+	CColRefSet *pcrsAllowedRefs, BOOL allow_not_equals_preds)
 {
 	CExpressionArray *pdrgpexprResult = GPOS_NEW(mp) CExpressionArray(mp);
 
@@ -1317,12 +1360,12 @@ CPredicateUtils::PexprPartPruningPredicate(
 
 		if (nullptr != pcrsAllowedRefs)
 		{
-			if (FComparison(pexpr, pcrPartKey, pcrsAllowedRefs) &&
-				!pexpr->DeriveScalarFunctionProperties()
-					 ->NeedsSingletonExecution())
+			CExpression *canonical_expr = ValidatePartPruningExpr(
+				mp, pexpr, pcrPartKey, pcrsAllowedRefs, allow_not_equals_preds);
+
+			if (nullptr != canonical_expr)
 			{
-				pexpr->AddRef();
-				pdrgpexprResult->Append(pexpr);
+				pdrgpexprResult->Append(canonical_expr);
 			}
 
 			// pexprCol contains a predicate only on partKey, which is useless for
@@ -1344,9 +1387,9 @@ CPredicateUtils::PexprPartPruningPredicate(
 				FNullCheckOnColumn(pexpr, pcrPartKey) ||
 				IsDisjunctionOfRangeComparison(mp, pexpr, pcrPartKey,
 											   pcrsAllowedRefs,
-											   allowNotEqualPreds) ||
+											   allow_not_equals_preds) ||
 				(FRangeComparison(pexpr, pcrPartKey, pcrsAllowedRefs,
-								  allowNotEqualPreds) &&
+								  allow_not_equals_preds) &&
 				 !pexpr->DeriveScalarFunctionProperties()
 					  ->NeedsSingletonExecution()))
 			{
