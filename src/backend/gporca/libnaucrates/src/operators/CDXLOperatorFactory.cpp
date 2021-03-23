@@ -396,12 +396,13 @@ CDXLOperatorFactory::MakeDXLAppend(CDXLMemoryManager *dxl_memory_manager,
 												   EdxltokenAppendIsZapped,
 												   EdxltokenPhysicalAppend);
 
-	INT scan_id = ExtractConvertAttrValueToInt(dxl_memory_manager, attrs,
-											   EdxltokenPartIndexId,
-											   EdxltokenPhysicalAppend);
+	ULONG scan_id = ExtractConvertAttrValueToUlong(
+		dxl_memory_manager, attrs, EdxltokenPartIndexId,
+		EdxltokenPhysicalAppend, true /* is_optional */,
+		gpos::ulong_max /* default_value */);
 
 	ULongPtrArray *selector_ids = nullptr;
-	if (scan_id != -1)
+	if (scan_id != gpos::ulong_max)
 	{
 		selector_ids = ExtractConvertValuesToArray(dxl_memory_manager, attrs,
 												   EdxltokenSelectorIds,

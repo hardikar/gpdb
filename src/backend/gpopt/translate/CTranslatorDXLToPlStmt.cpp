@@ -3459,7 +3459,7 @@ CTranslatorDXLToPlStmt::TranslateDXLAppend(
 	// If this append was create from a DynamicTableScan node in ORCA, it will
 	// contain the table descriptor of the root partitioned table. Add that to
 	// the range table in the PlStmt.
-	if (phy_append_dxlop->GetScanId() != -1)
+	if (phy_append_dxlop->GetScanId() != gpos::ulong_max)
 	{
 		GPOS_ASSERT(nullptr != phy_append_dxlop->GetDXLTableDesc());
 

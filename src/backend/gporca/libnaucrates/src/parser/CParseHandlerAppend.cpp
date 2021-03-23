@@ -76,7 +76,7 @@ CParseHandlerAppend::SetupInitialHandlers(const Attributes &attrs)
 	m_parse_handler_mgr->ActivateParseHandler(proj_list_parse_handler);
 
 	CParseHandlerBase *table_descr_parse_handler = nullptr;
-	if (m_dxl_op->GetScanId() != -1)
+	if (m_dxl_op->GetScanId() != gpos::ulong_max)
 	{
 		// parse handler for table descriptor
 		table_descr_parse_handler = CParseHandlerFactory::GetParseHandler(
@@ -93,7 +93,7 @@ CParseHandlerAppend::SetupInitialHandlers(const Attributes &attrs)
 	m_parse_handler_mgr->ActivateParseHandler(prop_parse_handler);
 
 	this->Append(prop_parse_handler);
-	if (m_dxl_op->GetScanId() != -1)
+	if (m_dxl_op->GetScanId() != gpos::ulong_max)
 	{
 		GPOS_ASSERT(nullptr != table_descr_parse_handler);
 		this->Append(table_descr_parse_handler);
@@ -175,7 +175,7 @@ CParseHandlerAppend::EndElement(const XMLCh *const,	 // element_uri,
 	// construct node from the created child nodes
 	CParseHandlerProperties *prop_parse_handler =
 		dynamic_cast<CParseHandlerProperties *>((*this)[child_index++]);
-	if (m_dxl_op->GetScanId() != -1)
+	if (m_dxl_op->GetScanId() != gpos::ulong_max)
 	{
 		CParseHandlerTableDescr *table_descr_parse_handler =
 			dynamic_cast<CParseHandlerTableDescr *>((*this)[child_index++]);

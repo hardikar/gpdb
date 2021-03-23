@@ -50,7 +50,8 @@ private:
 	BOOL m_is_zapped = false;
 
 	// scan id from the CPhysicalDynamicTableScan (a.k.a part_index_id)
-	INT m_scan_id = -1;
+	// when m_scan_id != gpos::ulong_max
+	ULONG m_scan_id = gpos::ulong_max;
 
 	// table descr of the root partitioned table (when translated from a CPhysicalDynamicTableScan)
 	CDXLTableDescr *m_dxl_table_descr = nullptr;
@@ -65,7 +66,7 @@ public:
 
 	// ctor for partitioned table scan
 	CDXLPhysicalAppend(CMemoryPool *mp, BOOL fIsTarget, BOOL fIsZapped,
-					   INT scan_id, CDXLTableDescr *dxl_table_desc,
+					   ULONG scan_id, CDXLTableDescr *dxl_table_desc,
 					   ULongPtrArray *selector_ids);
 
 	// dtor
@@ -90,7 +91,7 @@ public:
 		m_dxl_table_descr = dxl_table_desc;
 	}
 
-	INT
+	ULONG
 	GetScanId()
 	{
 		return m_scan_id;
