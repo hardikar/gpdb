@@ -2011,7 +2011,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:TableScan>
-          <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="-1" SelectorIds="">
+          <dxl:Append IsTarget="false" IsZapped="false">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="398.022298" Rows="18.525000" Width="12"/>
             </dxl:Properties>

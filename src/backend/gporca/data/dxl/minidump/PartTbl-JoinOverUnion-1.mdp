@@ -1835,7 +1835,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
               <dxl:Ident ColId="19" ColName="b" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="-1" SelectorIds="">
+          <dxl:Append IsTarget="false" IsZapped="false">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="862.437800" Rows="20000.000000" Width="8"/>
             </dxl:Properties>

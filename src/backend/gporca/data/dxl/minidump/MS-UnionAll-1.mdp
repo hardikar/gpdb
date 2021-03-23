@@ -6318,7 +6318,7 @@
                     </dxl:SortingColumnList>
                     <dxl:LimitCount/>
                     <dxl:LimitOffset/>
-                    <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="-1" SelectorIds="">
+                    <dxl:Append IsTarget="false" IsZapped="false">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="0" TotalCost="5603.009647" Rows="1.000000" Width="24"/>
                       </dxl:Properties>

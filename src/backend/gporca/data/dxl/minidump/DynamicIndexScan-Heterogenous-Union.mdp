@@ -747,7 +747,7 @@
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="-1" SelectorIds="">
+        <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="818.966671" Rows="1.000000" Width="8"/>
           </dxl:Properties>
@@ -1030,7 +1030,7 @@
               </dxl:TableDescriptor>
             </dxl:TableScan>
           </dxl:Append>
-          <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="-1" SelectorIds="">
+          <dxl:Append IsTarget="false" IsZapped="false">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="387.966633" Rows="1.000000" Width="8"/>
             </dxl:Properties>
