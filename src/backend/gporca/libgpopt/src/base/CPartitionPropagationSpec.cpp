@@ -377,13 +377,13 @@ CPartitionPropagationSpec::AppendEnforcers(CMemoryPool *mp,
 		info->m_root_rel_mdid->AddRef();
 		info->m_filter_expr->AddRef();
 		expr->AddRef();
-		// FIXME: Compute partkeys correctly.
-		CExpression *part_selector = GPOS_NEW(mp) CExpression(
-			mp,
-			GPOS_NEW(mp) CPhysicalPartitionSelector(
-				mp, info->m_scan_id, selector_id, info->m_root_rel_mdid,
-				nullptr /* part keys */, info->m_filter_expr),
-			expr);
+
+		CExpression *part_selector = GPOS_NEW(mp)
+			CExpression(mp,
+						GPOS_NEW(mp) CPhysicalPartitionSelector(
+							mp, info->m_scan_id, selector_id,
+							info->m_root_rel_mdid, info->m_filter_expr),
+						expr);
 
 		IStatistics *stats = exprhdl.Pstats();
 
@@ -397,74 +397,6 @@ CPartitionPropagationSpec::AppendEnforcers(CMemoryPool *mp,
 		pdrgpexpr->Append(part_selector);
 	}
 }
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPartitionPropagationSpec::PexprFilter
-//
-//	@doc:
-//		Return the filter expression for the given Scan Id
-//
-//---------------------------------------------------------------------------
-//CExpression *
-//CPartitionPropagationSpec::PexprFilter(CMemoryPool *mp, ULONG scan_id)
-//{
-//	CExpression *pexprScalar = m_ppfm->Pexpr(scan_id);
-//	GPOS_ASSERT(NULL != pexprScalar);
-//
-//	if (CUtils::FScalarIdent(pexprScalar))
-//	{
-//		// condition of the form "pkey": translate into pkey = true
-//		pexprScalar->AddRef();
-//		pexprScalar = CUtils::PexprScalarEqCmp(
-//			mp, pexprScalar,
-//			CUtils::PexprScalarConstBool(mp, true /*value*/,
-//										 false /*is_null*/));
-//	}
-//	else if (CPredicateUtils::FNot(pexprScalar) &&
-//			 CUtils::FScalarIdent((*pexprScalar)[0]))
-//	{
-//		// condition of the form "!pkey": translate into pkey = false
-//		CExpression *pexprId = (*pexprScalar)[0];
-//		pexprId->AddRef();
-//
-//		pexprScalar = CUtils::PexprScalarEqCmp(
-//			mp, pexprId,
-//			CUtils::PexprScalarConstBool(mp, false /*value*/,
-//										 false /*is_null*/));
-//	}
-//	else
-//	{
-//		pexprScalar->AddRef();
-//	}
-//
-//	return pexprScalar;
-//}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPartitionPropagationSpec::PcrsKeys
-//
-//	@doc:
-//		Return a colrefset containing all the part keys
-//
-//---------------------------------------------------------------------------
-//CColRefSet *
-//CPartitionPropagationSpec::PcrsKeys(CMemoryPool *mp,
-//									CColRef2dArray *pdrgpdrgpcrKeys)
-//{
-//	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
-//
-//	const ULONG ulLevels = pdrgpdrgpcrKeys->Size();
-//	for (ULONG ul = 0; ul < ulLevels; ul++)
-//	{
-//		CColRef *colref = CUtils::PcrExtractPartKey(pdrgpdrgpcrKeys, ul);
-//		pcrs->Include(colref);
-//	}
-//
-//	return pcrs;
-//}
-
 
 //---------------------------------------------------------------------------
 //	@function:

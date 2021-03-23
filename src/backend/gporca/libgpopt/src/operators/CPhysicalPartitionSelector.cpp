@@ -29,20 +29,19 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalPartitionSelector::CPhysicalPartitionSelector(
-	CMemoryPool *mp, ULONG scan_id, ULONG selector_id, IMDId *mdid, CColRef2dArray *pdrgpdrgpcr,
-	CExpression *pexprScalar)
+CPhysicalPartitionSelector::CPhysicalPartitionSelector(CMemoryPool *mp,
+													   ULONG scan_id,
+													   ULONG selector_id,
+													   IMDId *mdid,
+													   CExpression *pexprScalar)
 	: CPhysical(mp),
 	  m_scan_id(scan_id),
 	  m_selector_id(selector_id),
 	  m_mdid(mdid),
-	  m_pdrgpdrgpcr(pdrgpdrgpcr),
 	  m_filter_expr(pexprScalar)
 {
 	GPOS_ASSERT(0 < scan_id);
 	GPOS_ASSERT(mdid->IsValid());
-	// FIXME: GPOS_ASSERT(nullptr != pdrgpdrgpcr);
-	// GPOS_ASSERT(0 < pdrgpdrgpcr->Size());
 }
 
 //---------------------------------------------------------------------------
@@ -55,7 +54,6 @@ CPhysicalPartitionSelector::CPhysicalPartitionSelector(
 //---------------------------------------------------------------------------
 CPhysicalPartitionSelector::~CPhysicalPartitionSelector()
 {
-	CRefCount::SafeRelease(m_pdrgpdrgpcr);
 	m_mdid->Release();
 	CRefCount::SafeRelease(m_filter_expr);
 }
@@ -81,13 +79,8 @@ CPhysicalPartitionSelector::Matches(COperator *pop) const
 
 	BOOL fScanIdCmp = popPartSelector->ScanId() == m_scan_id;
 	BOOL fMdidCmp = popPartSelector->MDId()->Equals(MDId());
-	BOOL fColRefCmp =
-		CColRef::Equals(popPartSelector->Pdrgpdrgpcr(), m_pdrgpdrgpcr);
-	// FIXME:
-	//	BOOL fEqPredCmp = FMatchExprMaps(popPartSelector->m_phmulexprEqPredicates,
-	//									 m_phmulexprEqPredicates);
 
-	return fScanIdCmp && fMdidCmp && fColRefCmp;
+	return fScanIdCmp && fMdidCmp;
 }
 
 //---------------------------------------------------------------------------

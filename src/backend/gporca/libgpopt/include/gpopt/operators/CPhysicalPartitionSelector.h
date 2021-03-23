@@ -40,9 +40,6 @@ private:
 	// mdid of partitioned table
 	IMDId *m_mdid;
 
-	// partition keys
-	CColRef2dArray *m_pdrgpdrgpcr;
-
 	// partition selection predicate
 	CExpression *m_filter_expr;
 
@@ -52,7 +49,6 @@ public:
 	// ctor
 	CPhysicalPartitionSelector(CMemoryPool *mp, ULONG scan_id,
 							   ULONG selector_id, IMDId *mdid,
-							   CColRef2dArray *pdrgpdrgpcr,
 							   CExpression *pexprScalar);
 
 	// dtor
@@ -90,13 +86,6 @@ public:
 	MDId() const
 	{
 		return m_mdid;
-	}
-
-	// partition keys
-	CColRef2dArray *
-	Pdrgpdrgpcr() const
-	{
-		return m_pdrgpdrgpcr;
 	}
 
 	// return the partition selection predicate
