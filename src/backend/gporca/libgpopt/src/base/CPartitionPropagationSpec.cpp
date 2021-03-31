@@ -19,6 +19,31 @@
 using namespace gpos;
 using namespace gpopt;
 
+// used for determining equality in memo (e.g in optimization contexts)
+BOOL
+CPartitionPropagationSpec::SPartPropSpecInfo::Equals(
+	const SPartPropSpecInfo *other) const
+{
+	GPOS_ASSERT_IMP(m_scan_id == other->m_scan_id,
+					m_root_rel_mdid->Equals(other->m_root_rel_mdid));
+	return m_scan_id == other->m_scan_id && m_type == other->m_type &&
+		   m_selector_ids->Equals(other->m_selector_ids);
+}
+
+BOOL
+CPartitionPropagationSpec::SPartPropSpecInfo::FSatisfies(
+	const SPartPropSpecInfo *other) const
+{
+	GPOS_ASSERT_IMP(m_scan_id == other->m_scan_id,
+					m_root_rel_mdid->Equals(other->m_root_rel_mdid));
+	return m_scan_id == other->m_scan_id && m_type == other->m_type;
+}
+
+// used for sorting SPartPropSpecInfo in an array
+// NB: this serves a different purpose than  Equals(); it is used only to
+// maintain a sorted array in CPartitionPropagationSpec.
+// Eg, consumer<1>(10) and consumer<1>(10,11) will be treated as equal by
+// CmpFunc, but as non-equal by Equals
 INT
 CPartitionPropagationSpec::SPartPropSpecInfo::CmpFunc(const void *val1,
 													  const void *val2)
@@ -29,22 +54,6 @@ CPartitionPropagationSpec::SPartPropSpecInfo::CmpFunc(const void *val1,
 	return info1->m_scan_id - info2->m_scan_id;
 }
 
-BOOL
-CPartitionPropagationSpec::SPartPropSpecInfo::Equals(
-	const SPartPropSpecInfo *other) const
-{
-	return m_scan_id == other->m_scan_id && m_type == other->m_type &&
-		   m_root_rel_mdid->Equals(other->m_root_rel_mdid) &&
-		   m_selector_ids->Equals(other->m_selector_ids);
-}
-
-BOOL
-CPartitionPropagationSpec::SPartPropSpecInfo::FSatisfies(
-	const SPartPropSpecInfo *other) const
-{
-	return m_scan_id == other->m_scan_id && m_type == other->m_type &&
-		   m_root_rel_mdid->Equals(other->m_root_rel_mdid);
-}
 
 CPartitionPropagationSpec::CPartitionPropagationSpec(CMemoryPool *mp)
 {
@@ -59,14 +68,6 @@ CPartitionPropagationSpec::~CPartitionPropagationSpec()
 	m_scan_ids->Release();
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CPartitionPropagationSpec::Matches
-//
-//	@doc:
-//		Check whether two partition propagation specs are equal
-//
-//---------------------------------------------------------------------------
 BOOL
 CPartitionPropagationSpec::Equals(const CPartitionPropagationSpec *pps) const
 {
@@ -192,17 +193,15 @@ CPartitionPropagationSpec::InsertAll(CPartitionPropagationSpec *pps)
 			continue;
 		}
 
-		if (found_info->m_type == EpptConsumer &&
-			other_info->m_type == EpptConsumer)
-		{
-			found_info->m_selector_ids->Union(other_info->m_selector_ids);
-		}
+		GPOS_ASSERT(found_info->m_root_rel_mdid == other_info->m_root_rel_mdid);
 
-		// for a given scan_id, the request type must be either a consumer or
-		// propagator; so bail when asked to insert one of another type
-		GPOS_RTL_ASSERT(found_info->m_type == other_info->m_type &&
-						found_info->m_root_rel_mdid ==
-						other_info->m_root_rel_mdid);
+		// for a given scan-id, only a consumer request can be merged with an
+		// existing consumer request; so bail in all other cases; eg: merging a
+		// a propagator or merging a consumer when a propagator was already inserted
+		GPOS_RTL_ASSERT(found_info->m_type == EpptConsumer &&
+						other_info->m_type == EpptConsumer);
+
+		found_info->m_selector_ids->Union(other_info->m_selector_ids);
 	}
 }
 
@@ -236,11 +235,13 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 			continue;
 		}
 
-		// for a given scan_id, the request type must be either a consumer or
-		// propagator; so bail when asked to insert one of another type
-		GPOS_RTL_ASSERT(found_info->m_type == other_info->m_type &&
-						found_info->m_root_rel_mdid ==
-							other_info->m_root_rel_mdid);
+		GPOS_ASSERT(found_info->m_root_rel_mdid == other_info->m_root_rel_mdid);
+
+		// for a given scan-id, only a consumer request can be merged with an
+		// existing consumer request; so bail in all other cases; eg: merging a
+		// a propagator or merging a consumer when a propagator was already inserted
+		GPOS_RTL_ASSERT(found_info->m_type == EpptConsumer &&
+						other_info->m_type == EpptConsumer);
 
 		found_info->m_selector_ids->Union(other_info->m_selector_ids);
 	}
@@ -268,17 +269,15 @@ CPartitionPropagationSpec::InsertAllExcept(CPartitionPropagationSpec *pps,
 			continue;
 		}
 
-		if (found_info->m_type == EpptConsumer &&
-			other_info->m_type == EpptConsumer)
-		{
-			found_info->m_selector_ids->Union(other_info->m_selector_ids);
-		}
+		GPOS_ASSERT(found_info->m_root_rel_mdid == other_info->m_root_rel_mdid);
 
-		// for a given scan_id, the request type must be either a consumer or
-		// propagator; so ensure when asked to insert one of another type
-		GPOS_RTL_ASSERT(found_info->m_type == other_info->m_type &&
-						found_info->m_root_rel_mdid ==
-							other_info->m_root_rel_mdid);
+		// for a given scan-id, only a consumer request can be merged with an
+		// existing consumer request; so bail in all other cases; eg: merging a
+		// a propagator or merging a consumer when a propagator was already inserted
+		GPOS_RTL_ASSERT(found_info->m_type == EpptConsumer &&
+						other_info->m_type == EpptConsumer);
+
+		found_info->m_selector_ids->Union(other_info->m_selector_ids);
 	}
 }
 
@@ -326,16 +325,16 @@ CPartitionPropagationSpec::InsertAllResolve(CPartitionPropagationSpec *pps)
 
 BOOL
 CPartitionPropagationSpec::FSatisfies(
-	const CPartitionPropagationSpec *pps) const
+	const CPartitionPropagationSpec *pps_reqd) const
 {
-	if (pps->m_part_prop_spec_infos == nullptr)
+	if (pps_reqd->m_part_prop_spec_infos == nullptr)
 	{
 		return true;
 	}
 
-	for (ULONG ul = 0; ul < pps->m_part_prop_spec_infos->Size(); ul++)
+	for (ULONG ul = 0; ul < pps_reqd->m_part_prop_spec_infos->Size(); ul++)
 	{
-		SPartPropSpecInfo *reqd_info = (*pps->m_part_prop_spec_infos)[ul];
+		SPartPropSpecInfo *reqd_info = (*pps_reqd->m_part_prop_spec_infos)[ul];
 		SPartPropSpecInfo *found_info =
 			FindPartPropSpecInfo(reqd_info->m_scan_id);
 

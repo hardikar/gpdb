@@ -77,10 +77,12 @@ private:
 
 		IOstream &OsPrint(IOstream &os) const;
 
+		// used for determining equality in memo (e.g in optimization contexts)
 		BOOL Equals(const SPartPropSpecInfo *) const;
 
 		BOOL FSatisfies(const SPartPropSpecInfo *) const;
 
+		// used for sorting SPartPropSpecInfo in an array
 		static INT CmpFunc(const void *val1, const void *val2);
 	};
 
@@ -138,11 +140,11 @@ public:
 
 	BOOL ContainsAnyConsumers() const;
 
-	// equality function
+	// equality check to determine compatibility of derived & required properties
 	BOOL Equals(const CPartitionPropagationSpec *ppps) const;
 
 	// satisfies function
-	BOOL FSatisfies(const CPartitionPropagationSpec *ppps) const;
+	BOOL FSatisfies(const CPartitionPropagationSpec *pps_reqd) const;
 
 
 	SPartPropSpecInfo *FindPartPropSpecInfo(ULONG scan_id) const;

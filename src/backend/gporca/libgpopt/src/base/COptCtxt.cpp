@@ -14,13 +14,11 @@
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 
-#include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDefaultComparator.h"
 #include "gpopt/cost/ICostModel.h"
 #include "gpopt/eval/IConstExprEvaluator.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "naucrates/traceflags/traceflags.h"
-#include "../../include/gpopt/base/COptCtxt.h"
 
 
 using namespace gpopt;

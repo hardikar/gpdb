@@ -137,7 +137,6 @@ CDrvdPropPlan::CopyCTEProducerPlanProps(CMemoryPool *mp, CDrvdPropCtxt *pdpctxt,
 		pdpplan->Prs()->AddRef();
 		m_prs = pdpplan->Prs();
 
-		// FIXME: Is the right thing to do?
 		// no need to copy the part index map. return an empty one. This is to
 		// distinguish between a CTE consumer and the inlined expression
 		m_ppps = GPOS_NEW(mp) CPartitionPropagationSpec(mp);

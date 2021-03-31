@@ -163,7 +163,6 @@ CPartPruneStepsBuilder::PartPruneStepFromScalarBoolExpr(CDXLNode *node,
 	{
 		case Edxlnot:
 		{
-			GPOS_RTL_ASSERT(false);
 			GPOS_RAISE(
 				gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
 				GPOS_WSZ_LIT("NOT expressions in DPE filter expr unsupported"));

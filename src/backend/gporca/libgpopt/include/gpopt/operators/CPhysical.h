@@ -405,7 +405,7 @@ public:
 	virtual CEnfdProp::EPropEnforcingType EpetRewindability(
 		CExpressionHandle &exprhdl, const CEnfdRewindability *per) const = 0;
 
-	// return rewindability property enforcing type for this operator
+	// return partition propagation property enforcing type for this operator
 	virtual CEnfdProp::EPropEnforcingType EpetPartitionPropagation(
 		CExpressionHandle &exprhdl, const CEnfdPartitionPropagation *per) const;
 

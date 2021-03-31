@@ -987,16 +987,14 @@ CPhysical::EpetPartitionPropagation(
 {
 	GPOS_ASSERT(NULL != pps_reqd);
 
-	// get distribution delivered by the physical node
 	CPartitionPropagationSpec *pps_drvd =
 		CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Ppps();
 	if (pps_reqd->FCompatible(pps_drvd))
 	{
-		// required distribution is already provided
+		// all requests are resolved
 		return CEnfdProp::EpetUnnecessary;
 	}
 
-	// required distribution will be enforced on Assert's output
 	return CEnfdProp::EpetRequired;
 }
 

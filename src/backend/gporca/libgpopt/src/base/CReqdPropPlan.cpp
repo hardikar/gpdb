@@ -200,11 +200,7 @@ CReqdPropPlan::Pps(ULONG ul) const
 			return m_per->PrsRequired();
 
 		case CPropSpec::EpstPartPropagation:
-			if (NULL != m_pepp)
-			{
-				return m_pepp->PppsRequired();
-			}
-			return NULL;
+			return m_pepp->PppsRequired();
 
 		default:
 			GPOS_ASSERT(!"Invalid property spec index");
