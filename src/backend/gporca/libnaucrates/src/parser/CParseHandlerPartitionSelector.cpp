@@ -177,9 +177,6 @@ CParseHandlerPartitionSelector::EndElement(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarResidualFilter),
 				 element_local_name) ||
 		0 == XMLString::compareString(
-				 CDXLTokens::XmlstrToken(EdxltokenScalarPropagationExpr),
-				 element_local_name) ||
-		0 == XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarPartFilterExpr),
 				 element_local_name))
 	{

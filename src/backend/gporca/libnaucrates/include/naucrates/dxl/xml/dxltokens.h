@@ -218,7 +218,6 @@ enum Edxltoken
 	EdxltokenScalarPartListValues,
 	EdxltokenScalarPartListNullTest,
 	EdxltokenScalarResidualFilter,
-	EdxltokenScalarPropagationExpr,
 	EdxltokenScalarPartFilterExpr,
 	EdxltokenScalarBitmapIndexProbe,
 	EdxltokenScalarValuesList,

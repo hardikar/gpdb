@@ -259,7 +259,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenScalarPartListValues, GPOS_WSZ_LIT("PartListValues")},
 		{EdxltokenScalarPartListNullTest, GPOS_WSZ_LIT("PartListNullTest")},
 		{EdxltokenScalarResidualFilter, GPOS_WSZ_LIT("ResidualFilter")},
-		{EdxltokenScalarPropagationExpr, GPOS_WSZ_LIT("PropagationExpression")},
 		{EdxltokenScalarPartFilterExpr, GPOS_WSZ_LIT("PartFilterExpr")},
 
 		{EdxltokenScalarSubPlanParamList, GPOS_WSZ_LIT("ParamList")},
