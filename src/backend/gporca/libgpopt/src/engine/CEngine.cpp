@@ -2082,7 +2082,7 @@ CEngine::FCheckEnfdProps(CMemoryPool *mp, CGroupExpression *pgexpr,
 
 	// check whether the current physical operator satisfies the CTE requirements
 	// and whether it is a motion over unresolved part consumers
-	if (!FValidCTEAndPartitionProperties(mp, exprhdl, prpp))
+	if (!popPhysical->FProvidesReqdCTEs(exprhdl, prpp->Pcter()))
 	{
 		pcc->Release();
 		return false;
@@ -2167,28 +2167,6 @@ CEngine::FCheckEnfdProps(CMemoryPool *mp, CGroupExpression *pgexpr,
 
 	return FOptimize(epetOrder, epetDistribution, epetRewindability,
 					 epetPartitionPropagation);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CEngine::FValidCTEAndPartitionProperties
-//
-//	@doc:
-//		Check if the given expression has valid cte and partition properties
-//		with respect to the given requirements. This function returns true iff
-//		ALL the following conditions are met:
-//		1. The expression satisfies the CTE requirements
-//		2. The root of the expression is not a motion over an unresolved part consumer
-//		3. The expression does not have an unneeded part propagator
-//
-//---------------------------------------------------------------------------
-BOOL
-CEngine::FValidCTEAndPartitionProperties(CMemoryPool *,
-										 CExpressionHandle &exprhdl,
-										 CReqdPropPlan *prpp)
-{
-	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
-	return popPhysical->FProvidesReqdCTEs(exprhdl, prpp->Pcter());
 }
 
 //---------------------------------------------------------------------------

@@ -267,12 +267,6 @@ public:
 						 COptimizationContext *poc, ULONG ulOptReq,
 						 COptimizationContextArray *pdrgpoc);
 
-	// check if the given expression has valid cte and partition properties
-	// with respect to the given requirements
-	BOOL FValidCTEAndPartitionProperties(CMemoryPool *mp,
-										 CExpressionHandle &exprhdl,
-										 CReqdPropPlan *prpp);
-
 #ifdef GPOS_DEBUG
 	// apply all exploration xforms
 	void Explore();
