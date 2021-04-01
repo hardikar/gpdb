@@ -87,30 +87,9 @@ public:
 	}
 
 	// matching function
-	BOOL
-	Matches(CEnfdPartitionPropagation *pepp)
-	{
-		GPOS_ASSERT(NULL != pepp);
+	BOOL Matches(CEnfdPartitionPropagation *pepp);
 
-		return m_eppm == pepp->Eppm() && m_ppps->Equals(pepp->PppsRequired());
-	}
-
-	BOOL
-	FCompatible(CPartitionPropagationSpec *pps_drvd) const
-	{
-		GPOS_ASSERT(NULL != pps_drvd);
-
-		switch (m_eppm)
-		{
-			case EppmSatisfy:
-				return pps_drvd->FSatisfies(m_ppps);
-
-			case EppmSentinel:
-				GPOS_ASSERT("invalid matching type");
-		}
-
-		return false;
-	}
+	BOOL FCompatible(CPartitionPropagationSpec *pps_drvd) const;
 
 	// print function
 	IOstream &OsPrint(IOstream &os) const override;
