@@ -33,7 +33,7 @@ using namespace gpos;
 class CEnfdPartitionPropagation : public CEnfdProp
 {
 public:
-	// type of distribution matching function
+	// type of partition matching function(s)
 	enum EPartitionPropagationMatching
 	{
 		EppmSatisfy = 0,
@@ -44,7 +44,7 @@ private:
 	// partition propagation spec
 	CPartitionPropagationSpec *m_ppps;
 
-	// distribution matching type
+	// partition propagation matching type
 	EPartitionPropagationMatching m_eppm;
 
 
