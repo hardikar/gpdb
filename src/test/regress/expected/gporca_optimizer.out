@@ -12596,8 +12596,6 @@ CREATE TABLE part_tbl_varchar(a varchar(15) NOT NULL, b varchar(8) NOT NULL)
 DISTRIBUTED BY (a)
 PARTITION BY RANGE(b) (start('v1') end('v5'), start('v5') end('v9'), default partition def);
 insert into part_tbl_varchar values ('v3','v3'), ('v5','v5');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: DML on partitioned tables
 select * from part_tbl_varchar where b between 'v3' and 'v4';
  a  | b  
 ----+----
