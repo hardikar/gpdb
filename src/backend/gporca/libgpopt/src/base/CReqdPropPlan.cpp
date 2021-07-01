@@ -688,7 +688,7 @@ CReqdPropPlan::PrppRemapForCTE(CMemoryPool *mp, CReqdPropPlan *prppInput,
 
 	CEnfdOrder *peo = NULL;
 
-	if (pdpplanInput->Pos()->UlSortColumns() <= 1)
+	if (true)
 	{
 		// a single order column, remap it to the equivalent CTE producer column
 		COrderSpec *pos = pdpplanInput->Pos()->PosCopyWithRemappedColumns(
@@ -714,7 +714,7 @@ CReqdPropPlan::PrppRemapForCTE(CMemoryPool *mp, CReqdPropPlan *prppInput,
 	CDistributionSpec *pdsDerived = pdpplanInput->Pds();
 	CColRefSet *distCols = pdsDerived->PcrsUsed(mp);
 	CEnfdDistribution *ped = NULL;
-	if (distCols->Size() <= 1 && pdsDerived->FRequirable())
+	if (pdsDerived->FRequirable())
 	{
 		CDistributionSpec *pdsNoEquiv = pdsDerived->StripEquivColumns(mp);
 		CDistributionSpec *pds = pdsNoEquiv->PdsCopyWithRemappedColumns(
